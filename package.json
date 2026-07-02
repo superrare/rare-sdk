@@ -1,0 +1,50 @@
+{
+  "name": "@rareprotocol/rare-sdk",
+  "version": "0.1.0",
+  "description": "SuperRare / Rare Protocol TypeScript SDK: marketplace, minting, auctions, offers, releases, and the Rare API client",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/superrare/rare-sdk"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./contracts": {
+      "import": "./dist/contracts.js",
+      "types": "./dist/contracts.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils.js",
+      "types": "./dist/utils.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
+    "prepublishOnly": "npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "merkletreejs": "0.6.0",
+    "openapi-fetch": "0.17.0",
+    "viem": "2.48.8"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "openapi-typescript": "7.13.0",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3"
+  }
+}
