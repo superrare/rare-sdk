@@ -10,44 +10,104 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/sdk/index.js",
-      "types": "./dist/sdk/index.d.ts"
+      "import": {
+        "types": "./dist/sdk/index.d.ts",
+        "default": "./dist/sdk/index.js"
+      },
+      "require": {
+        "types": "./dist/sdk/index.d.cts",
+        "default": "./dist/sdk/index.cjs"
+      }
     },
     "./client": {
-      "import": "./dist/sdk/index.js",
-      "types": "./dist/sdk/index.d.ts"
+      "import": {
+        "types": "./dist/sdk/index.d.ts",
+        "default": "./dist/sdk/index.js"
+      },
+      "require": {
+        "types": "./dist/sdk/index.d.cts",
+        "default": "./dist/sdk/index.cjs"
+      }
     },
     "./contracts": {
-      "import": "./dist/sdk/contracts.js",
-      "types": "./dist/sdk/contracts.d.ts"
+      "import": {
+        "types": "./dist/sdk/contracts.d.ts",
+        "default": "./dist/sdk/contracts.js"
+      },
+      "require": {
+        "types": "./dist/sdk/contracts.d.cts",
+        "default": "./dist/sdk/contracts.cjs"
+      }
     },
     "./utils": {
-      "import": "./dist/sdk/public-utils.js",
-      "types": "./dist/sdk/public-utils.d.ts"
-    },
-    "./contracts/*": {
-      "import": "./dist/contracts/*",
-      "types": "./dist/contracts/*"
+      "import": {
+        "types": "./dist/sdk/public-utils.d.ts",
+        "default": "./dist/sdk/public-utils.js"
+      },
+      "require": {
+        "types": "./dist/sdk/public-utils.d.cts",
+        "default": "./dist/sdk/public-utils.cjs"
+      }
     },
     "./data-access": {
-      "import": "./dist/data-access/index.js",
-      "types": "./dist/data-access/index.d.ts"
+      "import": {
+        "types": "./dist/data-access/index.d.ts",
+        "default": "./dist/data-access/index.js"
+      },
+      "require": {
+        "types": "./dist/data-access/index.d.cts",
+        "default": "./dist/data-access/index.cjs"
+      }
+    },
+    "./contracts/*": {
+      "import": {
+        "types": "./dist/contracts/*.d.ts",
+        "default": "./dist/contracts/*.js"
+      },
+      "require": {
+        "types": "./dist/contracts/*.d.cts",
+        "default": "./dist/contracts/*.cjs"
+      }
     },
     "./data-access/*": {
-      "import": "./dist/data-access/*",
-      "types": "./dist/data-access/*"
+      "import": {
+        "types": "./dist/data-access/*.d.ts",
+        "default": "./dist/data-access/*.js"
+      },
+      "require": {
+        "types": "./dist/data-access/*.d.cts",
+        "default": "./dist/data-access/*.cjs"
+      }
     },
     "./liquid/*": {
-      "import": "./dist/liquid/*",
-      "types": "./dist/liquid/*"
+      "import": {
+        "types": "./dist/liquid/*.d.ts",
+        "default": "./dist/liquid/*.js"
+      },
+      "require": {
+        "types": "./dist/liquid/*.d.cts",
+        "default": "./dist/liquid/*.cjs"
+      }
     },
     "./swap/*": {
-      "import": "./dist/swap/*",
-      "types": "./dist/swap/*"
+      "import": {
+        "types": "./dist/swap/*.d.ts",
+        "default": "./dist/swap/*.js"
+      },
+      "require": {
+        "types": "./dist/swap/*.d.cts",
+        "default": "./dist/swap/*.cjs"
+      }
     },
     "./*": {
-      "import": "./dist/sdk/*",
-      "types": "./dist/sdk/*"
+      "import": {
+        "types": "./dist/sdk/*.d.ts",
+        "default": "./dist/sdk/*.js"
+      },
+      "require": {
+        "types": "./dist/sdk/*.d.cts",
+        "default": "./dist/sdk/*.cjs"
+      }
     }
   },
   "files": [
@@ -55,7 +115,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json && cp src/data-access/schema.d.ts dist/data-access/schema.d.ts",
+    "build": "tsdown && cp src/data-access/schema.d.ts dist/data-access/schema.d.ts",
     "typecheck": "tsc --noEmit",
     "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
     "prepublishOnly": "npm run typecheck && npm run build"
@@ -68,6 +128,7 @@
   "devDependencies": {
     "@types/node": "25.6.0",
     "openapi-typescript": "7.13.0",
+    "tsdown": "^0.22.2",
     "typescript": "5.9.3"
   }
 }
