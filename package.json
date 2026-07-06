@@ -126,7 +126,7 @@
   "dependencies": {
     "merkletreejs": "0.6.0",
     "openapi-fetch": "0.17.0",
-    "viem": "2.48.8"
+    "viem": "2.54.6"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -174,5 +174,8 @@
         "./dist/swap/*"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
