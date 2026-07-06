@@ -742,7 +742,7 @@ function normalizeBytes32(value: unknown, field: string): Hex {
   return normalized;
 }
 
-/* eslint-disable functional/no-let, functional/immutable-data, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable functional/no-let, functional/immutable-data */
 function parseCsvRows(input: string): Array<{ fields: string[]; number: number }> {
   const rows: Array<{ fields: string[]; number: number }> = [];
   let row: string[] = [];
@@ -802,7 +802,7 @@ function parseCsvRows(input: string): Array<{ fields: string[]; number: number }
   rows.push({ fields: row, number: rowNumber });
   return rows;
 }
-/* eslint-enable functional/no-let, functional/immutable-data, @typescript-eslint/no-non-null-assertion */
+/* eslint-enable functional/no-let, functional/immutable-data */
 
 function findAllowlistAddressColumn(fields: string[]): number {
   return fields.findIndex((field) => {

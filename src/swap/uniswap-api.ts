@@ -109,8 +109,7 @@ function requireApiKey(options?: UniswapApiRequestOptions): string {
   if (!apiKey) {
     throw new Error(
       'A Uniswap API key is required to use the Uniswap route. ' +
-        'Run: rare configure --chain <chain> --uniswap-api-key <key> ' +
-        'or rare configure --chain <chain> --uniswap-api-key-ref <op://...>.',
+        'Pass `apiKey` in the Uniswap request options.',
     );
   }
   return apiKey;

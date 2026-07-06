@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/superrare/rare-sdk"
+    "url": "git+https://github.com/superrare/rare-sdk.git"
   },
   "exports": {
     ".": {
@@ -108,17 +108,20 @@
         "types": "./dist/sdk/*.d.cts",
         "default": "./dist/sdk/*.cjs"
       }
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsdown && cp src/data-access/schema.d.ts dist/data-access/schema.d.ts",
+    "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
-    "prepublishOnly": "npm run typecheck && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
+    "lint": "eslint src test",
+    "test": "npm run build && vitest run"
   },
   "dependencies": {
     "merkletreejs": "0.6.0",
@@ -126,9 +129,50 @@
     "viem": "2.48.8"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "25.6.0",
+    "eslint": "10.3.0",
+    "eslint-plugin-functional": "^9.0.4",
+    "globals": "17.6.0",
     "openapi-typescript": "7.13.0",
     "tsdown": "^0.22.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.2",
+    "vitest": "4.1.5"
+  },
+  "main": "./dist/sdk/index.cjs",
+  "module": "./dist/sdk/index.js",
+  "types": "./dist/sdk/index.d.cts",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "sideEffects": false,
+  "typesVersions": {
+    "*": {
+      "client": [
+        "./dist/sdk/index.d.ts"
+      ],
+      "contracts": [
+        "./dist/sdk/contracts.d.ts"
+      ],
+      "utils": [
+        "./dist/sdk/public-utils.d.ts"
+      ],
+      "data-access": [
+        "./dist/data-access/index.d.ts"
+      ],
+      "contracts/*": [
+        "./dist/contracts/*"
+      ],
+      "data-access/*": [
+        "./dist/data-access/*"
+      ],
+      "liquid/*": [
+        "./dist/liquid/*"
+      ],
+      "swap/*": [
+        "./dist/swap/*"
+      ]
+    }
   }
 }
