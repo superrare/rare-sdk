@@ -1,6 +1,6 @@
 {
   "name": "@rareprotocol/rare-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SuperRare / Rare Protocol TypeScript SDK: marketplace, minting, auctions, offers, releases, and the Rare API client",
   "type": "module",
   "license": "MIT",
