@@ -25,6 +25,7 @@ import type { OfferNamespace } from './offer.js';
 import type { SwapNamespace } from './swap.js';
 import type { TokenNamespace } from './token.js';
 import type { UtilsNamespace } from './utils.js';
+import type { NftTransferNamespace } from './nft.js';
 
 /**
  * Configuration for {@link createRareClient}.
@@ -100,6 +101,7 @@ export type SearchNamespace = {
 
 export type NftNamespace = {
   get: (params: RareClientNftGetParams) => Promise<Nft>;
+  transfer: NftTransferNamespace;
 }
 
 export type UserNamespace = {
