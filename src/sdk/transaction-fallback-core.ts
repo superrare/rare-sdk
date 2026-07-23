@@ -1,5 +1,7 @@
 import { concatHex, type DataSuffix, type Hash, type Hex } from 'viem';
 
+// Reown social-login wallets can surface a CAIP-2 chain ID where Viem expects
+// a numeric ID: https://github.com/reown-com/appkit/issues/5242
 const caipChainIdConversionPattern = /Cannot convert eip155:\d+ to a BigInt/i;
 const maxCauseDepth = 10;
 
