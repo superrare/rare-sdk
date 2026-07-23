@@ -1,4 +1,4 @@
-import type { Hash } from 'viem';
+import { concatHex, type DataSuffix, type Hash, type Hex } from 'viem';
 
 const caipChainIdConversionPattern = /Cannot convert eip155:\d+ to a BigInt/i;
 const maxCauseDepth = 10;
@@ -46,4 +46,20 @@ export function getCallsTransactionHash(params: {
   }
 
   return transactionHash;
+}
+
+/** Resolves Viem's request-over-client suffix precedence and applies it once. */
+export function resolveTransactionData(params: {
+  readonly data?: Hex;
+  readonly requestDataSuffix?: Hex;
+  readonly clientDataSuffix?: DataSuffix;
+}): Hex | undefined {
+  const clientDataSuffix = typeof params.clientDataSuffix === 'string'
+    ? params.clientDataSuffix
+    : params.clientDataSuffix?.value;
+  const dataSuffix = params.requestDataSuffix ?? clientDataSuffix;
+
+  return dataSuffix === undefined
+    ? params.data
+    : concatHex([params.data ?? '0x', dataSuffix]);
 }

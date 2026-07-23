@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getCallsTransactionHash,
   isCaipChainIdConversionError,
+  resolveTransactionData,
 } from '../src/sdk/transaction-fallback-core.js';
 
 describe('isCaipChainIdConversionError', () => {
@@ -56,5 +57,32 @@ describe('getCallsTransactionHash', () => {
       bundleId: 'bundle-id',
       receipts: [],
     })).toThrow('sendCalls bundle bundle-id completed without a transaction receipt.');
+  });
+});
+
+describe('resolveTransactionData', () => {
+  it('uses an explicit request suffix instead of the client suffix', () => {
+    expect(resolveTransactionData({
+      data: '0x1234',
+      requestDataSuffix: '0xabcd',
+      clientDataSuffix: { value: '0xffff', required: true },
+    })).toBe('0x1234abcd');
+  });
+
+  it('uses a string client suffix when the request does not override it', () => {
+    expect(resolveTransactionData({
+      data: '0x1234',
+      clientDataSuffix: '0xabcd',
+    })).toBe('0x1234abcd');
+  });
+
+  it('supports a suffix-only transaction', () => {
+    expect(resolveTransactionData({
+      requestDataSuffix: '0xabcd',
+    })).toBe('0xabcd');
+  });
+
+  it('preserves absent data when there is no effective suffix', () => {
+    expect(resolveTransactionData({})).toBeUndefined();
   });
 });

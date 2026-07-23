@@ -1,5 +1,4 @@
 import {
-  concatHex,
   encodeFunctionData,
   type Address,
   type Hash,
@@ -11,6 +10,7 @@ import { sendCalls, waitForCallsStatus } from 'viem/actions';
 import {
   getCallsTransactionHash,
   isCaipChainIdConversionError,
+  resolveTransactionData,
 } from './transaction-fallback-core.js';
 
 export type FallbackCall = {
@@ -52,19 +52,23 @@ export async function executeWithCallsFallback(params: {
  * Decorates the wallet once at the SDK boundary so every contract write uses
  * the same fallback policy while retaining viem's call-site type inference.
  */
-export function createWalletClientWithCallsFallback(
+export function createWalletClientWithCallsFallback<Wallet extends WalletClient>(
   publicClient: PublicClient,
-  walletClient: WalletClient,
-): WalletClient {
+  walletClient: Wallet,
+): Wallet {
+  const callsWalletClient = withoutDataSuffix(walletClient);
   const writeContract: WalletClient['writeContract'] = async (parameters) => {
     const encodedData = encodeContractCall(parameters);
-    const data = parameters.dataSuffix === undefined
-      ? encodedData
-      : concatHex([encodedData, parameters.dataSuffix]);
+    const data = resolveTransactionData({
+      data: encodedData,
+      requestDataSuffix: parameters.dataSuffix,
+      clientDataSuffix: walletClient.dataSuffix,
+    });
 
     return executeWalletActionWithCallsFallback({
       publicClient,
-      walletClient,
+      callsWalletClient,
+      receiptWalletClient: walletClient,
       account: parameters.account,
       call: {
         to: parameters.address,
@@ -82,11 +86,16 @@ export function createWalletClientWithCallsFallback(
 
     return executeWalletActionWithCallsFallback({
       publicClient,
-      walletClient,
+      callsWalletClient,
+      receiptWalletClient: walletClient,
       account: parameters.account,
       call: {
         to: parameters.to,
-        data: parameters.data,
+        data: resolveTransactionData({
+          data: parameters.data,
+          requestDataSuffix: parameters.dataSuffix,
+          clientDataSuffix: walletClient.dataSuffix,
+        }),
         value: parameters.value,
       },
       executePrimary: () => walletClient.sendTransaction(parameters),
@@ -107,6 +116,16 @@ export function createWalletClientWithCallsFallback(
   });
 }
 
+function withoutDataSuffix<Wallet extends WalletClient>(walletClient: Wallet): Wallet {
+  return new Proxy(walletClient, {
+    get(target, property, receiver) {
+      return property === 'dataSuffix'
+        ? undefined
+        : Reflect.get(target, property, receiver);
+    },
+  });
+}
+
 function encodeContractCall(parameters: EncodableContractCall): Hex {
   return Array.isArray(parameters.args)
     ? encodeFunctionData({
@@ -122,7 +141,8 @@ function encodeContractCall(parameters: EncodableContractCall): Hex {
 
 async function executeWalletActionWithCallsFallback(params: {
   readonly publicClient: PublicClient;
-  readonly walletClient: WalletClient;
+  readonly callsWalletClient: WalletClient;
+  readonly receiptWalletClient: WalletClient;
   readonly account: Parameters<WalletClient['sendCalls']>[0]['account'];
   readonly call: FallbackCall;
   readonly executePrimary: () => Promise<Hash>;
@@ -139,12 +159,12 @@ async function executeWalletActionWithCallsFallback(params: {
         );
       }
 
-      const { id } = await sendCalls(params.walletClient, {
+      const { id } = await sendCalls(params.callsWalletClient, {
         account: params.account,
         chain,
         calls: [call],
       });
-      const status = await waitForCallsStatus(params.walletClient, {
+      const status = await waitForCallsStatus(params.receiptWalletClient, {
         id,
         throwOnFailure: true,
       });

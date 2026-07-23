@@ -1,6 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { base } from 'viem/chains';
-import type { PublicClient, WalletClient } from 'viem';
+import {
+  createWalletClient,
+  custom,
+  encodeFunctionData,
+  type PublicClient,
+  type WalletClient,
+} from 'viem';
 
 const walletActions = vi.hoisted(() => ({
   sendCalls: vi.fn(),
@@ -25,6 +31,13 @@ const approvalAbi = [{
     { name: 'spender', type: 'address' },
     { name: 'amount', type: 'uint256' },
   ],
+  outputs: [],
+}] as const;
+const payableAbi = [{
+  type: 'function',
+  name: 'buy',
+  stateMutability: 'payable',
+  inputs: [],
   outputs: [],
 }] as const;
 
@@ -62,7 +75,7 @@ describe('createWalletClientWithCallsFallback', () => {
 
     expect(result).toBe(transactionHash);
     expect(writeContract).toHaveBeenCalledOnce();
-    expect(walletActions.sendCalls).toHaveBeenCalledWith(originalWallet, {
+    expect(walletActions.sendCalls).toHaveBeenCalledWith(expect.anything(), {
       account,
       chain: base,
       calls: [{
@@ -104,7 +117,10 @@ describe('createWalletClientWithCallsFallback', () => {
     const sendTransaction = vi.fn().mockRejectedValue(
       new Error('Cannot convert eip155:8453 to a BigInt'),
     );
-    const originalWallet = { sendTransaction } as unknown as WalletClient;
+    const originalWallet = {
+      sendTransaction,
+      dataSuffix: '0xffff',
+    } as unknown as WalletClient;
     walletActions.sendCalls.mockResolvedValue({ id: 'bundle-id' });
     walletActions.waitForCallsStatus.mockResolvedValue({
       receipts: [{ transactionHash }],
@@ -120,16 +136,112 @@ describe('createWalletClientWithCallsFallback', () => {
       chain: undefined,
       to: contractAddress,
       data: '0x1234',
+      dataSuffix: '0xabcd',
       value: 42n,
     })).resolves.toBe(transactionHash);
-    expect(walletActions.sendCalls).toHaveBeenCalledWith(originalWallet, {
+    expect(walletActions.sendCalls).toHaveBeenCalledWith(expect.anything(), {
       account,
       chain: base,
       calls: [{
         to: contractAddress,
-        data: '0x1234',
+        data: '0x1234abcd',
         value: 42n,
       }],
     });
+    const callsWalletClient = walletActions.sendCalls.mock.calls[0]?.[0];
+    expect(callsWalletClient).not.toBe(originalWallet);
+    expect(callsWalletClient?.dataSuffix).toBeUndefined();
+  });
+
+  it('preserves payable writeContract value and request-over-client suffix precedence', async () => {
+    const writeContract = vi.fn().mockRejectedValue(
+      new Error('Cannot convert eip155:8453 to a BigInt'),
+    );
+    const originalWallet = {
+      writeContract,
+      dataSuffix: { value: '0xffff', required: true },
+    } as unknown as WalletClient;
+    walletActions.sendCalls.mockResolvedValue({ id: 'bundle-id' });
+    walletActions.waitForCallsStatus.mockResolvedValue({
+      receipts: [{ transactionHash }],
+      status: 200,
+    });
+    const wallet = createWalletClientWithCallsFallback(
+      { chain: base } as unknown as PublicClient,
+      originalWallet,
+    );
+
+    await expect(wallet.writeContract({
+      account,
+      address: contractAddress,
+      abi: payableAbi,
+      functionName: 'buy',
+      value: 42n,
+      dataSuffix: '0xabcd',
+      chain: undefined,
+    })).resolves.toBe(transactionHash);
+    expect(walletActions.sendCalls).toHaveBeenCalledWith(expect.anything(), {
+      account,
+      chain: base,
+      calls: [{
+        to: contractAddress,
+        data: `${encodeFunctionData({ abi: payableAbi, functionName: 'buy' })}abcd`,
+        value: 42n,
+      }],
+    });
+    const callsWalletClient = walletActions.sendCalls.mock.calls[0]?.[0];
+    expect(callsWalletClient?.dataSuffix).toBeUndefined();
+  });
+
+  it('applies the client suffix once when sendTransaction has no request override', async () => {
+    const sendTransaction = vi.fn().mockRejectedValue(
+      new Error('Cannot convert eip155:8453 to a BigInt'),
+    );
+    const originalWallet = {
+      sendTransaction,
+      dataSuffix: '0xabcd',
+    } as unknown as WalletClient;
+    walletActions.sendCalls.mockResolvedValue({ id: 'bundle-id' });
+    walletActions.waitForCallsStatus.mockResolvedValue({
+      receipts: [{ transactionHash }],
+      status: 200,
+    });
+    const wallet = createWalletClientWithCallsFallback(
+      { chain: base } as unknown as PublicClient,
+      originalWallet,
+    );
+
+    await wallet.sendTransaction({
+      account,
+      chain: undefined,
+      to: contractAddress,
+      data: '0x1234',
+    });
+    expect(walletActions.sendCalls).toHaveBeenCalledWith(expect.anything(), {
+      account,
+      chain: base,
+      calls: [{
+        to: contractAddress,
+        data: '0x1234abcd',
+        value: undefined,
+      }],
+    });
+  });
+
+  it('preserves a concrete wallet client type and custom extensions', () => {
+    const concreteWallet = createWalletClient({
+      account,
+      chain: base,
+      transport: custom({ request: vi.fn() }),
+    }).extend(() => ({
+      customAction: () => 'preserved' as const,
+    }));
+    const wallet = createWalletClientWithCallsFallback(
+      { chain: base } as unknown as PublicClient,
+      concreteWallet,
+    );
+
+    expectTypeOf(wallet).toEqualTypeOf(concreteWallet);
+    expect(wallet.customAction()).toBe('preserved');
   });
 });
