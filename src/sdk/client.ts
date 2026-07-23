@@ -26,6 +26,7 @@ import {
   createErc1155ListingNamespace,
   createErc1155OfferNamespace,
 } from './erc1155.js';
+import { createWalletClientWithCallsFallback } from './transaction-fallback-shell.js';
 
 export type * from './types/client.js';
 
@@ -75,6 +76,12 @@ export type * from './types/client.js';
  */
 export function createRareClient(config: RareClientConfig): RareClient {
   const { publicClient } = config;
+  const runtimeConfig: RareClientConfig = config.walletClient === undefined
+    ? config
+    : {
+        ...config,
+        walletClient: createWalletClientWithCallsFallback(publicClient, config.walletClient),
+      };
   const chain = resolveChainFromPublicClient(publicClient);
   const chainId = chainIds[chain];
   const addresses = getContractAddresses(chain);
@@ -82,13 +89,13 @@ export function createRareClient(config: RareClientConfig): RareClient {
     baseUrl: config.apiBaseUrl,
     fetch: config.apiFetch,
   });
-  const release = createReleaseNamespace(publicClient, config, chain, addresses);
+  const release = createReleaseNamespace(publicClient, runtimeConfig, chain, addresses);
   const collectionDeploy = {
-    ...createDeployNamespace(publicClient, config, addresses),
-    ...createErc1155DeployNamespace(publicClient, config, chain, addresses),
+    ...createDeployNamespace(publicClient, runtimeConfig, addresses),
+    ...createErc1155DeployNamespace(publicClient, runtimeConfig, chain, addresses),
   };
-  const collectionMint = createCollectionMint(publicClient, config);
-  const erc1155Collection = createErc1155CollectionNamespace(publicClient, config);
+  const collectionMint = createCollectionMint(publicClient, runtimeConfig);
+  const erc1155Collection = createErc1155CollectionNamespace(publicClient, runtimeConfig);
   const batchListingAddresses = {
     get batchListing(): Address {
       if (!addresses.batchListing) {
@@ -126,19 +133,19 @@ export function createRareClient(config: RareClientConfig): RareClient {
     chainId,
   };
   const auction = {
-    ...createAuctionNamespace(publicClient, config, chain, addresses),
-    batch: createBatchAuctionNamespace(publicClient, config, chain),
+    ...createAuctionNamespace(publicClient, runtimeConfig, chain, addresses),
+    batch: createBatchAuctionNamespace(publicClient, runtimeConfig, chain),
   };
   const offer = {
-    ...createOfferNamespace(publicClient, config, chain, addresses),
-    erc1155: createErc1155OfferNamespace(publicClient, config, chain, addresses),
-    batch: createBatchOfferNamespace(publicClient, config, chain),
+    ...createOfferNamespace(publicClient, runtimeConfig, chain, addresses),
+    erc1155: createErc1155OfferNamespace(publicClient, runtimeConfig, chain, addresses),
+    batch: createBatchOfferNamespace(publicClient, runtimeConfig, chain),
   };
   const listing = {
-    ...createListingNamespace(publicClient, config, chain, addresses),
-    erc1155: createErc1155ListingNamespace(publicClient, config, chain, addresses),
+    ...createListingNamespace(publicClient, runtimeConfig, chain, addresses),
+    erc1155: createErc1155ListingNamespace(publicClient, runtimeConfig, chain, addresses),
     release,
-    batch: createBatchListingNamespace(publicClient, config, batchListingAddresses),
+    batch: createBatchListingNamespace(publicClient, runtimeConfig, batchListingAddresses),
   };
 
   return {
@@ -165,9 +172,9 @@ export function createRareClient(config: RareClientConfig): RareClient {
       swapRouter: addresses.swapRouter,
       v4Quoter: addresses.v4Quoter,
     },
-    liquidEdition: createLiquidNamespace(config, chain, addresses),
-    bridge: createBridgeNamespace(publicClient, config, chain),
-    swap: createSwapNamespace(config, chain, chainId, addresses),
+    liquidEdition: createLiquidNamespace(runtimeConfig, chain, addresses),
+    bridge: createBridgeNamespace(publicClient, runtimeConfig, chain),
+    swap: createSwapNamespace(runtimeConfig, chain, chainId, addresses),
     auction,
     offer,
     listing,
@@ -202,7 +209,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
     },
     collection: createCollectionNamespace(
       publicClient,
-      config,
+      runtimeConfig,
       chain,
       {
         async get(id) {
