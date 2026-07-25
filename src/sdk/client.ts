@@ -20,6 +20,7 @@ import { createReleaseNamespace } from './release.js';
 import { createCollectionNamespace } from './collection.js';
 import { createUtilsNamespace } from './utils.js';
 import { buildNftUniversalTokenId } from './nft-core.js';
+import { createNftTransferNamespace } from './nft.js';
 import {
   createErc1155CollectionNamespace,
   createErc1155DeployNamespace,
@@ -147,6 +148,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
     release,
     batch: createBatchListingNamespace(publicClient, runtimeConfig, batchListingAddresses),
   };
+  const nftTransfer = createNftTransferNamespace(publicClient, runtimeConfig);
 
   return {
     chain,
@@ -206,6 +208,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
         assertNoClientChainOverride(params, 'rare.nft.get', chain);
         return api.getNft(buildNftUniversalTokenId({ ...params, chainId }));
       },
+      transfer: nftTransfer,
     },
     collection: createCollectionNamespace(
       publicClient,
