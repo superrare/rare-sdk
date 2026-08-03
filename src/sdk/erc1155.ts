@@ -109,6 +109,7 @@ type Erc1155Addresses = {
   erc1155Marketplace: Address;
   erc1155ContractFactory: Address;
   erc1155ApprovalManager: Address;
+  erc20ApprovalManager: Address;
   marketplaceSettings: Address;
 }
 
@@ -571,7 +572,7 @@ export function createErc1155ListingNamespace(
           type: 'erc20',
           approvalTxHash: payment.approvalTxHash,
           target: plan.currency,
-          spender: erc1155.erc1155Marketplace,
+          spender: erc1155.erc20ApprovalManager,
         }],
         run: async () => {
           const targetTxHash = await walletClient.writeContract({
@@ -670,7 +671,7 @@ export function createErc1155ListingNamespace(
           walletClient,
           account,
           accountAddress,
-          spenderAddress: erc1155.erc1155Marketplace,
+          spenderAddress: erc1155.erc20ApprovalManager,
           currency: requirement.currencyAddress,
           requiredAmount: requirement.requiredAmount,
           autoApprove: params.autoApprove,
@@ -687,7 +688,7 @@ export function createErc1155ListingNamespace(
           type: 'erc20',
           approvalTxHash: payment.approvalTxHash,
           target: payment.currencyAddress,
-          spender: erc1155.erc1155Marketplace,
+          spender: erc1155.erc20ApprovalManager,
         })),
         run: async () => {
           const finalPreflight = await simulateErc1155Checkout({
@@ -808,7 +809,7 @@ export function createErc1155OfferNamespace(
           type: 'erc20',
           approvalTxHash: payment.approvalTxHash,
           target: plan.currency,
-          spender: erc1155.erc1155Marketplace,
+          spender: erc1155.erc20ApprovalManager,
         }],
         run: async () => {
           const targetTxHash = await walletClient.writeContract({
@@ -1323,7 +1324,7 @@ function createErc1155ReleaseNamespace(
       });
       const { txHash, receipt } = await runWithApprovalSideEffectAlert({
         operation: 'erc1155 release mint',
-        approvals: [{ type: 'erc20', approvalTxHash: payment.approvalTxHash, target: currency, spender: addresses.erc1155Marketplace }],
+        approvals: [{ type: 'erc20', approvalTxHash: payment.approvalTxHash, target: currency, spender: addresses.erc20ApprovalManager }],
         run: async () => {
           const targetTxHash = await walletClient.writeContract({
             address: addresses.erc1155Marketplace,
@@ -1453,12 +1454,13 @@ async function uploadErc1155ReleaseAllowlistArtifact(
 }
 
 function requireErc1155Addresses(chain: SupportedChain, addresses: ContractAddresses): Erc1155Addresses {
-  if (!addresses.erc1155Marketplace || !addresses.erc1155ContractFactory || !addresses.erc1155ApprovalManager || !addresses.marketplaceSettings) {
+  if (!addresses.erc1155Marketplace || !addresses.erc1155ContractFactory || !addresses.erc1155ApprovalManager || !addresses.erc20ApprovalManager || !addresses.marketplaceSettings) {
     const deployed = Object.entries(contractAddresses)
       .filter(([, set]) => (
         set.erc1155Marketplace !== undefined &&
         set.erc1155ContractFactory !== undefined &&
         set.erc1155ApprovalManager !== undefined &&
+        set.erc20ApprovalManager !== undefined &&
         set.marketplaceSettings !== undefined
       ))
       .map(([name]) => name);
@@ -1468,6 +1470,7 @@ function requireErc1155Addresses(chain: SupportedChain, addresses: ContractAddre
     erc1155Marketplace: addresses.erc1155Marketplace,
     erc1155ContractFactory: addresses.erc1155ContractFactory,
     erc1155ApprovalManager: addresses.erc1155ApprovalManager,
+    erc20ApprovalManager: addresses.erc20ApprovalManager,
     marketplaceSettings: addresses.marketplaceSettings,
   };
 }
@@ -1482,6 +1485,9 @@ function lazyErc1155Addresses(chain: SupportedChain, addresses: ContractAddresse
     },
     get erc1155ApprovalManager(): Address {
       return requireErc1155Addresses(chain, addresses).erc1155ApprovalManager;
+    },
+    get erc20ApprovalManager(): Address {
+      return requireErc1155Addresses(chain, addresses).erc20ApprovalManager;
     },
     get marketplaceSettings(): Address {
       return requireErc1155Addresses(chain, addresses).marketplaceSettings;
@@ -1737,7 +1743,7 @@ async function prepareMarketplacePayment(opts: {
     walletClient: opts.walletClient,
     account: opts.account,
     accountAddress: opts.accountAddress,
-    spenderAddress: opts.addresses.erc1155Marketplace,
+    spenderAddress: opts.addresses.erc20ApprovalManager,
     currency: opts.currency,
     requiredAmount,
     autoApprove: opts.autoApprove,
