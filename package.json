@@ -85,7 +85,6 @@
     "docs:build": "typedoc",
     "package:check": "tsx scripts/validate-package.ts",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
-    "release:check": "npm run prepublishOnly && npm run docs:build && npm run package:check",
     "lint": "eslint src test scripts eslint-local-rules",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
     "test": "npm run build && npm run test:typecheck && SDK_TEST_MODE=routine vitest run --config vitest.config.ts",
