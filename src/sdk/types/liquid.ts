@@ -99,7 +99,7 @@ export type SetLiquidEditionRenderContractResult = {
 } & TransactionResult
 
 export type LiquidEditionNamespace = {
-  getFactoryConfig: () => Promise<LiquidFactoryConfig>;
+  getFactoryConfig: (params?: { totalSupply?: AmountInput }) => Promise<LiquidFactoryConfig>;
   generatePresetCurves: (params: GeneratePresetCurvesParams) => Promise<GeneratePresetCurvesResult>;
   validateCurves: (params: ValidateLiquidCurvesParams) => Promise<LiquidCurvePreview>;
   deploy: {
