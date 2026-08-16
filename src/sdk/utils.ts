@@ -1,32 +1,43 @@
-import type { UtilsNamespace } from './types/utils.js';
+import type { RareUtilsNamespace } from './types/utils.js';
 import {
   buildBatchTokenTreeArtifact,
   getBatchTokenProof,
   verifyBatchTokenProof,
 } from './batch-core.js';
 import { buildMerkleProofArtifact } from './merkle-core.js';
+import { getCurvePresetDefinition, parseCurveConfig } from '../liquid/curve-config.js';
 
 export type * from './types/utils.js';
 
-export function createUtilsNamespace(): UtilsNamespace {
+export function createUtilsNamespace(): RareUtilsNamespace {
   return {
     tree: {
-      build(params): ReturnType<UtilsNamespace['tree']['build']> {
+      build(params): ReturnType<RareUtilsNamespace['tree']['build']> {
         return buildBatchTokenTreeArtifact(params);
       },
 
-      proof(params): ReturnType<UtilsNamespace['tree']['proof']> {
+      proof(params): ReturnType<RareUtilsNamespace['tree']['proof']> {
         return getBatchTokenProof(params);
       },
 
-      verify(params): ReturnType<UtilsNamespace['tree']['verify']> {
+      verify(params): ReturnType<RareUtilsNamespace['tree']['verify']> {
         return verifyBatchTokenProof(params);
       },
     },
 
     merkle: {
-      proof(params): ReturnType<UtilsNamespace['merkle']['proof']> {
+      proof(params): ReturnType<RareUtilsNamespace['merkle']['proof']> {
         return buildMerkleProofArtifact(params.artifact, params.contract, params.tokenId, params.buyer);
+      },
+    },
+
+    liquidCurve: {
+      getPresetDefinition(preset): ReturnType<RareUtilsNamespace['liquidCurve']['getPresetDefinition']> {
+        return getCurvePresetDefinition(preset);
+      },
+
+      parseConfig(params): ReturnType<RareUtilsNamespace['liquidCurve']['parseConfig']> {
+        return parseCurveConfig(params.value, params.totalCurveSupplyTokens, params.tickSpacing);
       },
     },
   };

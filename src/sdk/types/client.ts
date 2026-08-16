@@ -24,7 +24,7 @@ import type { ListingNamespace } from './listing.js';
 import type { OfferNamespace } from './offer.js';
 import type { SwapNamespace } from './swap.js';
 import type { TokenNamespace } from './token.js';
-import type { UtilsNamespace } from './utils.js';
+import type { RareUtilsNamespace } from './utils.js';
 
 /**
  * Configuration for {@link createRareClient}.
@@ -148,7 +148,7 @@ export type RareClient = {
   auction: AuctionNamespace;
   offer: OfferNamespace;
   listing: ListingNamespace;
-  utils: UtilsNamespace;
+  utils: RareUtilsNamespace;
   search: SearchNamespace;
   nft: NftNamespace;
   collection: CollectionNamespace;
