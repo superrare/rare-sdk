@@ -258,6 +258,7 @@ export function createLiquidNamespace(
           factoryConfig.baseToken,
           liquidFactory,
           initialRareLiquidity,
+          params.autoApprove,
         );
 
         const { txHash, receipt, contract } = await runWithApprovalSideEffectAlert({
