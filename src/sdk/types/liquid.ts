@@ -27,6 +27,7 @@ export type DeployLiquidEditionParams = {
   initialRareLiquidity?: AmountInput;
   totalSupply?: AmountInput;
   curves: LiquidCurveSegment[];
+  autoApprove?: boolean;
 }
 
 export type DeployLiquidEditionResult = {
