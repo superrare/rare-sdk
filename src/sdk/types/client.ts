@@ -24,6 +24,7 @@ import type { ListingNamespace } from './listing.js';
 import type { OfferNamespace } from './offer.js';
 import type { SwapNamespace } from './swap.js';
 import type { TokenNamespace } from './token.js';
+import type { CartNamespace } from './cart.js';
 import type { RareUtilsNamespace } from './utils.js';
 
 /**
@@ -90,6 +91,8 @@ export type RareClientContracts = {
   liquidFactory?: Address;
   swapRouter?: Address;
   v4Quoter?: Address;
+  cart?: Address;
+  cartLens?: Address;
 }
 
 export type SearchNamespace = {
@@ -158,6 +161,7 @@ export type RareClient = {
   import: ImportNamespace;
   token: TokenNamespace;
   currency: CurrencyNamespace;
+  cart: CartNamespace;
 }
 
 export type { IntegerInput };
