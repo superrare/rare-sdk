@@ -84,6 +84,7 @@
     "generate:types": "tsx scripts/generate-openapi-types.ts",
     "docs:build": "typedoc",
     "package:check": "tsx scripts/validate-package.ts",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "lint": "eslint src test scripts eslint-local-rules",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
