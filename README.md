@@ -72,11 +72,21 @@ const { listings: selectedListings, authorization } = rare.cart.listing.buildAut
   { artifact: storedArtifact, listingDigest: storedArtifact.entries[1].listingDigest },
 ]);
 
-const route = rare.utils.cart.buildRoute({ paymentCurrency, legs });
+// Server-side checkout preparation can discover a wallet-independent route for
+// exact settlement obligations. Exact-output is the default; exact-input is
+// available when its Universal Router execution semantics are preferable.
+const routingQuote = await rare.cart.routing.quote({
+  paymentCurrency,
+  obligations: settlementObligations,
+  mode: 'exact-output',
+});
+rare.cart.routing.assertFresh(routingQuote);
+
+const route = routingQuote.route;
 const unsigned = rare.cart.order.build({
   orderId,
   paymentCurrency,
-  paymentAmount,
+  paymentAmount: BigInt(routingQuote.maximumPaymentInput),
   deadline,
   lines,
   route,
@@ -108,6 +118,11 @@ amounts, while favorable routing variance is protocol spread. The signed route
 also carries the exact native `routerValue` forwarded to Universal Router.
 Pure portable
 builders are also available from `@rareprotocol/rare-sdk/utils`.
+Cart routing uses the client-level `uniswapApiKey` (or
+`resolveUniswapApiKey`) and requires no wallet, account, approval, or write.
+The result contains JSON-safe exact settlements, expected and protected input
+amounts, expiration, and normalized quote evidence. Once the platform accepts
+and signs the route, execution never requotes or substitutes it.
 Methods return structured results and reject on RPC, API, wallet, or validation
 failure.
 
