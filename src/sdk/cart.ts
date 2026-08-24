@@ -12,9 +12,11 @@ import { requireWallet } from './wallet-shell.js';
 import { validateCartListingPublication } from './cart-listing-publication-core.js';
 import { createCartApiNamespace } from './cart-api.js';
 import type { CartCheckoutPreparation } from './types/cart-api.js';
+import { createCartRoutingNamespace } from './cart-routing.js';
 
 export type * from './types/cart.js';
 export type * from './types/cart-api.js';
+export type * from './types/cart-routing.js';
 
 export class CartPreparationError extends Error {
   readonly code: string;
@@ -99,6 +101,7 @@ export function createCartNamespace(
       approve({ contract: tokenContract }) { return setApproval(tokenContract, true); },
       revoke({ contract: tokenContract }) { return setApproval(tokenContract, false); },
     },
+    routing: createCartRoutingNamespace(config, chain, addresses.cart),
     listing: {
       async prepare(intent) {
         const validation = validateCartListingIntent(intent);
