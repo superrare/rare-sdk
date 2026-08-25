@@ -5,6 +5,10 @@ project follows semantic versioning.
 
 ## Unreleased
 
+- Preserve safe Uniswap provider status, request ID, and failure reason on Cart
+  routing errors, and require a strict Sepolia cross-currency quote smoke test.
+- Request Permit2-compatible Uniswap quote and swap compilation for Cart's
+  temporary exact Permit2 allowance flow while preserving existing swap defaults.
 - Align Cart route hashing, ABIs, Lens deployment, and prepared-purchase wire
   data with the signed Universal Router `routerValue` settlement boundary.
 - Add wallet-independent Cart routing quotes for exact settlement obligations,
