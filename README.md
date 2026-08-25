@@ -120,6 +120,12 @@ Pure portable
 builders are also available from `@rareprotocol/rare-sdk/utils`.
 Cart routing uses the client-level `uniswapApiKey` (or
 `resolveUniswapApiKey`) and requires no wallet, account, approval, or write.
+It asks Uniswap for the protected quote and compiled `/swap` transaction,
+extracts the opaque Universal Router program, and validates only the Cart
+command-family policy and transaction envelope. Universal Router remains the
+authority for paths, pools, recipients, payer flags, exact-input/output
+semantics, refunds, and internal V4 actions. Existing Liquid Editions routing
+continues to use its established SDK flow.
 The result contains JSON-safe exact settlements, expected and protected input
 amounts, expiration, and normalized quote evidence. Once the platform accepts
 and signs the route, execution never requotes or substitutes it.

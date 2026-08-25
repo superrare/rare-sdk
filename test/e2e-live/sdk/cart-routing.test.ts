@@ -23,7 +23,7 @@ describeLive('SDK Cart routing integration', () => {
         paymentCurrency: payment.address,
         obligations: [{ settlementCurrency: payment.address, amount: payment.amount }],
       });
-      expect(direct.route).toEqual({ commands: '0x', inputs: [] });
+      expect(direct.route).toEqual({ commands: '0x', inputs: [], routerValue: 0n });
 
       for (const settlement of currencies) {
         if (isAddressEqual(payment.address, settlement.address)) continue;
@@ -33,7 +33,7 @@ describeLive('SDK Cart routing integration', () => {
         }));
         expect(BigInt(quote.maximumPaymentInput)).toBeGreaterThanOrEqual(BigInt(quote.expectedPaymentInput));
         expect(quote.settlements).toEqual([{ settlementCurrency: settlement.address, amount: settlement.amount.toString(), routed: true }]);
-        await expectRoutePolicy(publicClient, lens, cart, payment.address, [settlement.address], quote.route);
+        await expectRoutePolicy(publicClient, lens, cart, quote.route);
       }
     }
   }, 120_000);
@@ -51,8 +51,7 @@ describeLive('SDK Cart routing integration', () => {
       }));
       expect(quote.mode).toBe(mode);
       expect(quote.route.inputs).toHaveLength(2);
-      await expectRoutePolicy(publicClient, lens, cart, currencies[1].address,
-        [currencies[0].address, currencies[2].address], quote.route);
+      await expectRoutePolicy(publicClient, lens, cart, quote.route);
     }
   }, 120_000);
 });
@@ -61,15 +60,13 @@ async function expectRoutePolicy(
   publicClient: ReturnType<typeof createTestSepoliaPublicClient>,
   lens: Address,
   cart: Address,
-  inputCurrency: Address,
-  outputCurrencies: Address[],
-  route: { commands: `0x${string}`; inputs: readonly `0x${string}`[] },
+  route: { commands: `0x${string}`; inputs: readonly `0x${string}`[]; routerValue: bigint },
 ) {
   const preview = await publicClient.readContract({
     address: lens,
     abi: cartLensAbi,
     functionName: 'previewRoute',
-    args: [cart, inputCurrency, outputCurrencies, route],
+    args: [cart, route],
   });
   expect(preview.valid, `Cart route policy code ${preview.code}, reason ${preview.reason}`).toBe(true);
 }
