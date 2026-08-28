@@ -141,7 +141,7 @@ export function createCartNamespace(
           { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
         ] }, message: root });
         const signedArtifact = { ...artifact, signature };
-        const publishedRoot = await api.listing.publish(signedArtifact);
+        const publishedRoot = await api.listing.publish(params.preparation.intent, signedArtifact);
         return { preparation: params.preparation, signedArtifact, publishedRoot,
           approvalTxHashes: approvals.map(({ txHash }) => txHash),
           approvalReceipts: approvals.map(({ receipt }) => receipt) };
@@ -205,7 +205,7 @@ async function purchaseCartCheckout(
     }
   }
 
-  const preparedPurchase = await api.checkout.prepare(params.preparation.intent);
+  const preparedPurchase = await api.checkout.prepare(params.preparation.preparationReference);
   const execution = await executeCartCheckout(publicClient, config, chainId, cart, lens, {
     ...preparedPurchase.executePurchase,
     autoApprove: params.autoApprove,
