@@ -100,6 +100,7 @@ export type RareClientContracts = {
   v4Quoter?: Address;
   cart?: Address;
   cartLens?: Address;
+  cartHashes?: Address;
 }
 
 export type SearchNamespace = {
