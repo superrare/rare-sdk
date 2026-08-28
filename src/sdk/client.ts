@@ -174,6 +174,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
       v4Quoter: addresses.v4Quoter,
       cart: addresses.cart,
       cartLens: addresses.cartLens,
+      cartHashes: addresses.cartHashes,
     },
     liquidEdition: createLiquidNamespace(runtimeConfig, chain, addresses),
     bridge: createBridgeNamespace(publicClient, runtimeConfig, chain),
