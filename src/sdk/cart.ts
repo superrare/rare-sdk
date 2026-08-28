@@ -146,7 +146,7 @@ export function createCartNamespace(
         ] }, message: root });
         const signedArtifact = { ...artifact, signature };
         await params.onSigned?.(structuredClone(signedArtifact));
-        const publishedRoot = await api.listing.publish(signedArtifact);
+        const publishedRoot = await api.listing.publish(preparation.intent, signedArtifact);
         return { preparation, signedArtifact, publishedRoot,
           approvalTxHashes: approvals.map(({ txHash }) => txHash),
           approvalReceipts: approvals.map(({ receipt }) => receipt) };
@@ -233,7 +233,7 @@ async function authorizeCartCheckout(
 ) {
   const validation = validateCartCheckoutPreparationForPurchase(preparation, { chainId: BigInt(chainId), cart });
   if (!validation.isValid) throw new CartPreparationError('invalid_preparation', 'Cart checkout preparation cannot be authorized.', validation.issues);
-  const preparedPurchase = await api.checkout.prepare(preparation.intent);
+  const preparedPurchase = await api.checkout.prepare(preparation.preparationReference);
   const swapValidation = validateCartApprovedSwapOutputs(preparation.lines, preparedPurchase.executePurchase.lines);
   if (!swapValidation.isValid) {
     throw new CartPreparationError('quote_changed', 'The quoted token outputs changed. Review a fresh quote before purchasing.', swapValidation.issues);
