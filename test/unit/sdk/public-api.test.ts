@@ -20,6 +20,7 @@ describe('public SDK API surface', () => {
       'ApprovalSideEffectError',
       'CartExecutionError',
       'CartPreparationError',
+      'CartRoutingError',
       'CartVerificationError',
       'Erc1155CheckoutAllItemsSkippedError',
       'MinterApprovalRequiredError',
@@ -55,8 +56,8 @@ describe('public SDK API surface', () => {
     expect(rare.cart.listing.prepare).toBeTypeOf('function');
     expect(rare.cart.listing.publish).toBeTypeOf('function');
     expect(rare.cart.checkout.prepare).toBeTypeOf('function');
+    expect(rare.cart.checkout.execute).toBeTypeOf('function');
     expect(rare.cart.checkout.purchase).toBeTypeOf('function');
-    expect(rare.cart.checkout).not.toHaveProperty('execute');
     expect(rare.cart).not.toHaveProperty('order');
     expect(rare.cart.approval.status).toBeTypeOf('function');
     expect(rare.cart.approval.approve).toBeTypeOf('function');
@@ -66,6 +67,8 @@ describe('public SDK API surface', () => {
     expect(rare.cart.listing).not.toHaveProperty('buildRoot');
     expect(rare.cart.listing).not.toHaveProperty('signRoot');
     expect(rare.cart.listing).not.toHaveProperty('buildAuthorization');
+    expect(rare.cart.routing.quote).toBeTypeOf('function');
+    expect(rare.cart.routing.assertFresh).toBeTypeOf('function');
   });
 
   it('exposes contract building blocks from the contracts subpath', () => {

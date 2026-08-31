@@ -49,15 +49,18 @@ export type UniswapQuotePayload = {
   input: {
     amount: string;
     token: Address;
+    maximumAmount?: string;
   };
   output: {
     amount: string;
     token: Address;
     recipient: Address;
+    minimumAmount?: string;
   };
   swapper: Address;
   route: UniswapQuoteRouteHop[][];
-  slippage: number;
+  slippage?: number;
+  slippageTolerance?: number;
   tradeType: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   quoteId: string;
   routeString?: string;
@@ -78,15 +81,30 @@ export type UniswapQuoteResponse = {
   permitData: unknown;
 }
 
-type UniswapSwapResponse = {
+export type UniswapSwapResponse = {
   requestId: string;
   swap: UniswapTransactionRequest;
   gasFee?: string;
 }
 
+export class UniswapApiError extends Error {
+  readonly status: number;
+  readonly requestId?: string;
+  readonly reason?: string;
+
+  constructor(status: number, statusText: string, requestId?: string, reason?: string) {
+    super(`Uniswap API request failed with status ${status}${statusText ? ` ${statusText}` : ''}.`);
+    this.name = 'UniswapApiError';
+    this.status = status;
+    this.requestId = requestId;
+    this.reason = reason;
+  }
+}
+
 type UniswapApiRequestOptions = {
   apiKey?: string;
   baseUrl?: string;
+  permit2Disabled?: boolean;
 }
 
 type QuoteRequestParams = {
@@ -98,6 +116,8 @@ type QuoteRequestParams = {
   amount: bigint;
   swapper: Address;
   slippageBps: number;
+  tradeType?: UniswapQuotePayload['tradeType'];
+  permit2Disabled?: boolean;
 }
 
 function getBaseUrl(options?: UniswapApiRequestOptions): string {
@@ -135,6 +155,10 @@ function parseNumber(value: unknown, field: string): number {
     throw new Error(`Uniswap API response field "${field}" must be a finite number.`);
   }
   return value;
+}
+
+function parseOptionalNumber(value: unknown, field: string): number | undefined {
+  return value === undefined ? undefined : parseNumber(value, field);
 }
 
 function parseAddress(value: unknown, field: string): Address {
@@ -230,18 +254,22 @@ function parseQuoteRoute(value: unknown, field: string): UniswapQuoteRouteHop[][
 
 function parseQuoteInput(value: unknown, field: string): UniswapQuotePayload['input'] {
   const record = parseRecord(value, field);
+  const maximumAmount = parseOptionalString(record.maximumAmount, `${field}.maximumAmount`);
   return {
     amount: parseString(record.amount, `${field}.amount`),
     token: parseAddress(record.token, `${field}.token`),
+    ...(maximumAmount !== undefined ? { maximumAmount } : {}),
   };
 }
 
 function parseQuoteOutput(value: unknown, field: string): UniswapQuotePayload['output'] {
   const record = parseRecord(value, field);
+  const minimumAmount = parseOptionalString(record.minimumAmount, `${field}.minimumAmount`);
   return {
     amount: parseString(record.amount, `${field}.amount`),
     token: parseAddress(record.token, `${field}.token`),
     recipient: parseAddress(record.recipient, `${field}.recipient`),
+    ...(minimumAmount !== undefined ? { minimumAmount } : {}),
   };
 }
 
@@ -270,6 +298,8 @@ function parseAggregatedOutputs(value: unknown, field: string): UniswapQuotePayl
 function parseQuotePayload(value: unknown, field: string): UniswapQuotePayload {
   const record = parseRecord(value, field);
   const routeString = parseOptionalString(record.routeString, `${field}.routeString`);
+  const slippage = parseOptionalNumber(record.slippage, `${field}.slippage`);
+  const slippageTolerance = parseOptionalNumber(record.slippageTolerance, `${field}.slippageTolerance`);
   const aggregatedOutputs = parseAggregatedOutputs(record.aggregatedOutputs, `${field}.aggregatedOutputs`);
   const txFailureReasons =
     record.txFailureReasons === undefined
@@ -283,7 +313,8 @@ function parseQuotePayload(value: unknown, field: string): UniswapQuotePayload {
     output: parseQuoteOutput(record.output, `${field}.output`),
     swapper: parseAddress(record.swapper, `${field}.swapper`),
     route: parseQuoteRoute(record.route, `${field}.route`),
-    slippage: parseNumber(record.slippage, `${field}.slippage`),
+    ...(slippage !== undefined ? { slippage } : {}),
+    ...(slippageTolerance !== undefined ? { slippageTolerance } : {}),
     tradeType: parseTradeType(record.tradeType, `${field}.tradeType`),
     quoteId: parseString(record.quoteId, `${field}.quoteId`),
     ...(routeString !== undefined ? { routeString } : {}),
@@ -351,9 +382,11 @@ function parseUniswapSwapResponse(value: unknown): UniswapSwapResponse {
   };
 }
 
-function getErrorMessage(parsed: unknown): string | undefined {
-  if (isRecord(parsed) && typeof parsed.message === 'string') {
-    return parsed.message;
+function getSafeErrorField(parsed: unknown, fields: readonly string[]): string | undefined {
+  if (!isRecord(parsed)) return undefined;
+  for (const field of fields) {
+    const value = parsed[field];
+    if (typeof value === 'string' && /^[\w .:/-]{1,160}$/u.test(value)) return value;
   }
   return undefined;
 }
@@ -363,8 +396,10 @@ async function parseJsonResponse<T>(response: Response, parse: (value: unknown) 
   const parsed = parseJsonOrNull(text);
 
   if (!response.ok) {
-    const message = getErrorMessage(parsed) ?? (text.length > 0 ? text : response.statusText);
-    throw new Error(`Uniswap API ${response.status} ${response.statusText}: ${message}`);
+    const requestId = getSafeErrorField(parsed, ['requestId', 'request_id']) ??
+      response.headers.get('x-request-id') ?? undefined;
+    const reason = getSafeErrorField(parsed, ['detail', 'message', 'error', 'errorCode', 'code']);
+    throw new UniswapApiError(response.status, response.statusText, requestId, reason);
   }
 
   return parse(parsed);
@@ -386,7 +421,7 @@ function buildHeaders(options?: UniswapApiRequestOptions): HeadersInit {
     Accept: 'application/json',
     'Content-Type': 'application/json',
     'x-api-key': requireApiKey(options),
-    'x-permit2-disabled': 'true',
+    'x-permit2-disabled': String(options?.permit2Disabled ?? true),
     'x-universal-router-version': '2.0',
   };
 }
@@ -396,7 +431,7 @@ export async function requestUniswapQuote(params: QuoteRequestParams): Promise<U
     method: 'POST',
     headers: buildHeaders(params),
     body: JSON.stringify({
-      type: 'EXACT_INPUT',
+      type: params.tradeType ?? 'EXACT_INPUT',
       tokenInChainId: params.chainId,
       tokenOutChainId: params.chainId,
       amount: params.amount.toString(),
@@ -405,7 +440,6 @@ export async function requestUniswapQuote(params: QuoteRequestParams): Promise<U
       swapper: params.swapper,
       protocols: ['V4', 'V3', 'V2'],
       routingPreference: 'BEST_PRICE',
-      urgency: 'normal',
       slippageTolerance: params.slippageBps / 100,
     }),
   });
@@ -445,6 +479,8 @@ export async function requestUniswapSwap(params: {
   baseUrl?: string;
   quote: UniswapQuotePayload;
   deadline?: number;
+  permit2Disabled?: boolean;
+  simulateTransaction?: boolean;
 }): Promise<UniswapSwapResponse> {
   const response = await fetch(`${getBaseUrl(params)}/swap`, {
     method: 'POST',
@@ -452,7 +488,7 @@ export async function requestUniswapSwap(params: {
     body: JSON.stringify({
       quote: params.quote,
       refreshGasPrice: true,
-      simulateTransaction: true,
+      simulateTransaction: params.simulateTransaction ?? true,
       safetyMode: 'SAFE',
       urgency: 'normal',
       ...(params.deadline !== undefined ? { deadline: params.deadline } : {}),

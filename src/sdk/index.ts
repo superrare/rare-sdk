@@ -18,6 +18,7 @@ export type * from './types/collection.js';
 export type * from './types/utils.js';
 export type * from './types/cart.js';
 export type * from './types/cart-api.js';
+export type * from './types/cart-routing.js';
 export type { CurvePresetKey, LiquidCurvePreview, LiquidCurveSegment } from '../liquid/curve-config.js';
 export type { LiquidFactoryConfig } from '../liquid/factory-config.js';
 
@@ -26,6 +27,7 @@ export type { ApprovalSideEffect } from './approvals-shell.js';
 export { PaymentApprovalRequiredError, PaymentBalanceInsufficientError } from './payments-shell.js';
 export { Erc1155CheckoutAllItemsSkippedError } from './erc1155.js';
 export { CartExecutionError, CartPreparationError, CartVerificationError } from './cart.js';
+export { CartRoutingError } from './cart-routing.js';
 export type {
   CollectionSearchParams,
   EventSearchParams,
