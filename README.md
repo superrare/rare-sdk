@@ -47,8 +47,65 @@ Features are grouped by intent under `rare.listing`, `rare.offer`,
 Batch listings and release configuration are available through
 `rare.listing.batch` and `rare.listing.release`; ERC-1155 collection,
 listing, and offer behavior is nested under its corresponding intent namespace.
+
+Cart commerce is grouped under `rare.cart.catalog`, `rare.cart.listing`, and
+`rare.cart.checkout`. Sellers select a Rare API-generated SKU from the public
+catalogue, prepare and publish Listings, and buyers prepare and purchase a
+fixed quote. The payer is always the transaction sender and may be a collector,
+processor, or another third party.
+Each Listing carries a client-generated `listingSalt`; its complete EIP-712
+`listingDigest` is the immutable public identity referenced by Order Lines,
+Merkle artifacts, cancellation, fill state, and order-book APIs.
+
+```ts
+const variants = await rare.cart.catalog.variants.search({
+  nft: { contract: collectionAddress, tokenId },
+});
+const sku = variants.data[0]!.sku;
+
+// Listing preparation resolves SKU fulfillment through Rare API, reads the
+// current seller nonce, and builds an unsigned, non-durable batch artifact.
+const listingPreparation = await rare.cart.listing.prepare({
+  seller: sellerAddress,
+  listings: [{ sku, unitPrice, settlementCurrency, quantity }],
+  deadline,
+});
+const published = await rare.cart.listing.publish({
+  preparation: listingPreparation,
+  autoApprove: true,
+});
+
+// Preparation is wallet-independent and creates no signature, approval,
+// persistence, or transaction.
+const preparation = await rare.cart.checkout.prepare({
+  paymentCurrency,
+  items: [{ listingDigest, quantity: 1n, recipient: buyerAddress }],
+});
+
+// Purchase revalidates, obtains the platform-signed immutable order, performs
+// preflight, optionally approves, executes, and verifies the receipt.
+const purchase = await rare.cart.checkout.purchase({ preparation, autoApprove: true });
+```
+
+`autoApprove` defaults to `false`. Cart collects the exact platform-signed
+`paymentAmount`; settlement recipients receive their exact signed Order Line
+amounts, while favorable routing variance is protocol spread. The signed route
+also carries the exact native `routerValue` forwarded to Universal Router.
+Pure portable Listing Root, authorization, order, route, hashing, and Merkle
+builders are available from `@rareprotocol/rare-sdk/utils` for advanced use.
 Methods return structured results and reject on RPC, API, wallet, or validation
 failure.
+
+Sellers can later remove the collection-wide authorization with
+`rare.cart.approval.revoke(collectionAddress)`.
+
+Backend integrations can use the same `utils` entry point for Cart protocol
+hashing and verification: `buildCartEip712Domain`, `hashCartListing`,
+`hashCartListingRoot`, `hashCartPurchaseOrder`, `hashCartOrderLines`,
+`hashCartPayoutRoute`, `hashCartFulfillmentActions`,
+`deriveCartListingMerkleLeaf`, `computeCartListingMerkleRoot`, and
+`verifyCartListingMerkleProof`. Chain-bound helpers accept safe numeric chain
+IDs or bigint chain IDs without numeric coercion.
 
 The package intentionally exposes only these supported entry points:
 
