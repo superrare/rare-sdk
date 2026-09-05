@@ -27,6 +27,7 @@ import {
   createErc1155OfferNamespace,
 } from './erc1155.js';
 import { createWalletClientWithCallsFallback } from './transaction-fallback-shell.js';
+import { createCartNamespace } from './cart.js';
 
 export type * from './types/client.js';
 
@@ -171,6 +172,9 @@ export function createRareClient(config: RareClientConfig): RareClient {
       liquidFactory: addresses.liquidFactory,
       swapRouter: addresses.swapRouter,
       v4Quoter: addresses.v4Quoter,
+      cart: addresses.cart,
+      cartLens: addresses.cartLens,
+      cartHashes: addresses.cartHashes,
     },
     liquidEdition: createLiquidNamespace(runtimeConfig, chain, addresses),
     bridge: createBridgeNamespace(publicClient, runtimeConfig, chain),
@@ -181,6 +185,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
     utils: createUtilsNamespace(),
     token: createTokenNamespace(publicClient, chain),
     currency: createCurrencyNamespace(publicClient, chain),
+    cart: createCartNamespace(publicClient, runtimeConfig, chain, chainId, addresses),
     search: {
       async nfts(params = {}): ReturnType<RareClient['search']['nfts']> {
         assertNoClientChainOverride(params, 'rare.search.nfts', chain);

@@ -60,6 +60,9 @@ export type ContractAddresses = {
   liquidFactory?: Address;
   swapRouter?: Address;
   v4Quoter?: Address;
+  cart?: Address;
+  cartLens?: Address;
+  cartHashes?: Address;
 };
 
 export type CanonicalV4Pools = {
@@ -88,6 +91,9 @@ export const contractAddresses: Partial<Record<SupportedChain, ContractAddresses
     liquidFactory: getAddress('0xb1777091C953fa2aC1fD67f2b3e2f61343F5Ce5e'),
     swapRouter: getAddress('0x429c3Ee66E7f6CDA12C5BadE4104aF3277aA2305'),
     v4Quoter: getAddress('0x61B3f2011A92d183C7dbaDBdA940a7555Ccf9227'),
+    cart: getAddress('0x1EBF35b3A76caEf60a009d2786A66A91D42A38Bc'),
+    cartLens: getAddress('0xF8780bA2627F4431D69EaA4B948a433c73183e1B'),
+    cartHashes: getAddress('0x7cF7626AA1881FFeb2004705886DA42605Ec9A0F'),
   },
   mainnet: {
     factory: getAddress('0xAe8E375a268Ed6442bEaC66C6254d6De5AeD4aB1'),
@@ -469,6 +475,18 @@ export function getV4QuoterAddress(chain: SupportedChain): Address {
     throw new Error(`Uniswap V4 quoter is not configured for "${chain}". Supported chains: mainnet, sepolia, base, base-sepolia`);
   }
   return address;
+}
+
+export function getCartAddress(chain: SupportedChain): Address {
+  return requireContractAddress(chain, 'cart');
+}
+
+export function getCartLensAddress(chain: SupportedChain): Address | undefined {
+  return getContractAddresses(chain).cartLens;
+}
+
+export function getCartHashesAddress(chain: SupportedChain): Address | undefined {
+  return getContractAddresses(chain).cartHashes;
 }
 
 export function getCanonicalRareEthPool(chain: SupportedChain): CanonicalV4Pool {

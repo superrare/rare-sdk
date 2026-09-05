@@ -8,6 +8,7 @@ import {
   validateBatchTokenProofInputMatchesTarget,
   verifyBatchTokenProof as verifyBatchTokenProofInternal,
 } from './batch-core.js';
+import type { Address, Hex } from 'viem';
 import { buildMerkleProofArtifact, validateProofArtifact, validateRootArtifact } from './merkle-core.js';
 import {
   parseBatchListingCreateRootArtifactInput,
@@ -41,6 +42,43 @@ import type {
   NormalizeReleaseAllowlistConfigParams,
 } from './types/utils.js';
 import type { UtilsMerkleProofArtifact, UtilsMerkleProofParams } from './types/utils.js';
+import {
+  applyCartQuoteSpread,
+  buildCartListingAuthorization,
+  buildCartListingRootArtifact,
+  buildCartOrder,
+  buildCartPayoutRoute,
+  cartDomain,
+  computeCartListingMerkleRoot,
+  deriveCartListingMerkleLeaf,
+  getCartListingArtifactEntry,
+  hashCartFulfillmentActions,
+  hashCartListing,
+  hashCartListingRoot,
+  hashCartOrderLines,
+  hashCartPayoutRoute,
+  hashCartPurchaseOrder,
+  parseCartListingRootArtifact,
+  validateCartListingRootArtifact,
+  verifyCartListingMerkleProof,
+  type CartChainId,
+} from './cart-core.js';
+import type {
+  BuildCartListingRootParams,
+  BuildCartOrderParams,
+  BuildCartRouteParams,
+  CartFulfillmentAction,
+  CartListing,
+  CartListingAuthorizationBundle,
+  CartListingRoot,
+  CartListingRootArtifact,
+  CartListingRootArtifactEntry,
+  CartListingSelection,
+  CartOrderLine,
+  CartPayoutRoute,
+  CartPurchaseOrder,
+  CartSignedOrder,
+} from './types/cart.js';
 
 export type {
   BuildBatchTokenTreeParams,
@@ -56,6 +94,8 @@ export type {
   NormalizeReleaseAllowlistConfigParams,
   NormalizedReleaseAllowlistConfig,
 } from './types/utils.js';
+export type { BuildCartListingRootParams, BuildCartOrderParams, BuildCartRouteParams, CartListingAuthorizationBundle, CartListingRootArtifact, CartListingRootArtifactEntry, CartListingSelection } from './types/cart.js';
+export type { CartChainId } from './cart-core.js';
 
 export function buildBatchTokenTree(params: BuildBatchTokenTreeParams): BatchTokenTreeArtifact {
   return buildBatchTokenTreeInternal(params);
@@ -128,3 +168,50 @@ export function normalizeReleaseAllowlistConfig(
   return planReleaseAllowlistConfig(params);
 }
 export const parseReleaseAllowlistArtifact = parseReleaseAllowlistArtifactJson;
+
+export function buildCartListingRoot(params: BuildCartListingRootParams): CartListingRootArtifact {
+  return buildCartListingRootArtifact(params);
+}
+
+export function buildCartEip712Domain(chainId: CartChainId, cart: Address): ReturnType<typeof cartDomain> {
+  return cartDomain(chainId, cart);
+}
+
+export {
+  computeCartListingMerkleRoot,
+  deriveCartListingMerkleLeaf,
+  hashCartFulfillmentActions,
+  hashCartListing,
+  hashCartListingRoot,
+  hashCartOrderLines,
+  hashCartPayoutRoute,
+  hashCartPurchaseOrder,
+  verifyCartListingMerkleProof,
+};
+
+export type {
+  CartFulfillmentAction,
+  CartListing,
+  CartListingRoot,
+  CartOrderLine,
+  CartPayoutRoute,
+  CartPurchaseOrder,
+};
+export function parseCartListingArtifact(content: string): CartListingRootArtifact { return parseCartListingRootArtifact(content); }
+export const validateCartListingArtifact = validateCartListingRootArtifact;
+export function getCartListingEntry(artifact: CartListingRootArtifact, listingDigest: Hex): CartListingRootArtifactEntry | undefined {
+  return getCartListingArtifactEntry(artifact, listingDigest);
+}
+export function buildCartListingPurchaseAuthorization(selections: readonly CartListingSelection[]): CartListingAuthorizationBundle {
+  return buildCartListingAuthorization(selections);
+}
+
+export function buildCartPurchaseOrder(params: BuildCartOrderParams): Omit<CartSignedOrder, 'platformSignature'> {
+  return buildCartOrder(params);
+}
+
+export { applyCartQuoteSpread };
+
+export function buildCartRoute(params: BuildCartRouteParams): CartPayoutRoute {
+  return buildCartPayoutRoute(params);
+}
