@@ -10,9 +10,11 @@ import type { RareClientConfig } from './types/client.js';
 import { cartFulfillmentKinds, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
 import { requireWallet } from './wallet-shell.js';
 import { createCartApiNamespace } from './cart-api.js';
+import { createCartRoutingNamespace } from './cart-routing.js';
 
 export type * from './types/cart.js';
 export type * from './types/cart-api.js';
+export type * from './types/cart-routing.js';
 
 export class CartPreparationError extends Error {
   readonly code: string;
@@ -96,6 +98,7 @@ export function createCartNamespace(
       approve(tokenContract) { return setApproval(tokenContract, true); },
       revoke(tokenContract) { return setApproval(tokenContract, false); },
     },
+    routing: createCartRoutingNamespace(config, chain, addresses.cart),
     listing: {
       async prepare(intent) {
         const validation = validateCartListingIntent(intent);
@@ -138,7 +141,7 @@ export function createCartNamespace(
           { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
         ] }, message: root });
         const signedArtifact = { ...artifact, signature };
-        const publishedRoot = await api.listing.publish(signedArtifact);
+        const publishedRoot = await api.listing.publish(params.preparation.intent, signedArtifact);
         return { preparation: params.preparation, signedArtifact, publishedRoot,
           approvalTxHashes: approvals.map(({ txHash }) => txHash),
           approvalReceipts: approvals.map(({ receipt }) => receipt) };
@@ -156,6 +159,7 @@ export function createCartNamespace(
         return api.checkout.preview(validation.value);
       },
       purchase(params) { return purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, params); },
+      execute(params) { return executeCartCheckout(publicClient, config, chainId, requireCart(), addresses.cartLens, params); },
     },
   };
 }
@@ -202,7 +206,7 @@ async function purchaseCartCheckout(
     }
   }
 
-  const preparedPurchase = await api.checkout.prepare(params.preparation.intent);
+  const preparedPurchase = await api.checkout.prepare(params.preparation.preparationReference);
   const execution = await executeCartCheckout(publicClient, config, chainId, cart, lens, {
     ...preparedPurchase.executePurchase,
     autoApprove: params.autoApprove,
