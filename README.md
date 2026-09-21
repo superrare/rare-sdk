@@ -66,7 +66,8 @@ unwrapped `LiquidEdition`. Full-text search uses `query` (sent as `q`), matching
 NFT search. All API filters are supported: contract, creator and holder addresses,
 approved creator and current price flags, display-price currency, inclusive USD
 price bounds, media type, tags (match any), sort order, and pagination. Defaults
-are page 1, 20 results (maximum 100), and `newest` sorting. Search text is limited
+are page 1, 20 results (maximum 100), and `newest` sorting. Sort options are
+`newest`, `oldest`, `priceAsc`, `priceDesc`, `holderCountAsc`, and `holderCountDesc`. Search text is limited
 to 500 characters and tags to 50 entries. `IMAGE` includes GIFs.
 
 For all-chain discovery, use the standalone API client and omit `chainId`:

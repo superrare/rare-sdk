@@ -64,7 +64,7 @@ export type LiquidEditionListQuery = {
   /** Match any supplied tag; at most 50 tags. */
   tags?: string[];
   /** Defaults to newest. Price sorting requires a current price. */
-  sortBy?: 'newest' | 'oldest' | 'priceAsc' | 'priceDesc';
+  sortBy?: 'newest' | 'oldest' | 'priceAsc' | 'priceDesc' | 'holderCountAsc' | 'holderCountDesc';
   /** Defaults to 1. */
   page?: number;
   /** Defaults to 20; maximum 100. */

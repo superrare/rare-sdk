@@ -132,6 +132,16 @@ describe.skipIf(process.env.RARE_API_INTEGRATION !== '1')('live liquid edition d
     expect(result.pagination.totalCount).toBe(0);
   }, testTimeout);
 
+  it.each(['holderCountAsc', 'holderCountDesc'] as const)(
+    'orders live editions by %s', async (sortBy) => {
+      const result = await rare.search.liquidEditions({ sortBy, perPage: 20 });
+      expect(result.data.length).toBeGreaterThan(1);
+      const counts = result.data.map((edition) => edition.stats.holderCount);
+      expect(counts.every((count) => Number.isInteger(count) && count >= 0)).toBe(true);
+      expect(counts).toEqual(counts.toSorted((a, b) => sortBy === 'holderCountAsc' ? a - b : b - a));
+    }, testTimeout,
+  );
+
   it('preserves a real validation error for contradictory price filters', async () => {
     await expect(api.searchLiquidEditions({ hasCurrentPrice: false, sortBy: 'priceAsc' }))
       .rejects.toMatchObject({ name: 'RareApiError', status: 400, path: '/v1/liquid-editions' });
