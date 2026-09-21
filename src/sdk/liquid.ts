@@ -1,3 +1,4 @@
+import { buildLiquidEditionId } from './liquid-discovery-core.js';
 import { type Address, type Hash, type PublicClient, type TransactionReceipt, parseEventLogs, parseUnits } from 'viem';
 import type { SupportedChain } from '../contracts/addresses.js';
 import { liquidEditionAbi } from '../contracts/abis/liquid-edition.js';
@@ -5,7 +6,7 @@ import { liquidFactoryAbi } from '../contracts/abis/liquid-factory.js';
 import { buildCurvePreview, generatePresetCurves, validateCurves, type LiquidCurvePreview } from '../liquid/curve-config.js';
 import { fetchLiquidFactoryConfig, type LiquidFactoryConfig } from '../liquid/factory-config.js';
 import { resolveLiquidFactoryConfigForSupply } from '../liquid/factory-config-core.js';
-import { getTokenPrice } from './api.js';
+import { createRareApi, getTokenPrice } from './api.js';
 import {
   ensureTokenAllowance,
   toTokenAmount,
@@ -180,8 +181,12 @@ export function createLiquidNamespace(
   addresses: { liquidFactory?: Address },
 ): LiquidEditionNamespace {
   const { publicClient } = config;
+  const api = createRareApi({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch });
 
   return {
+    async get(params) {
+      return api.getLiquidEdition(buildLiquidEditionId(chain, params));
+    },
     async getFactoryConfig(): Promise<LiquidFactoryConfig> {
       const liquidFactory = requireConfiguredAddress(addresses.liquidFactory, 'Liquid Editions factory', chain);
       return fetchLiquidFactoryConfig(publicClient, liquidFactory);

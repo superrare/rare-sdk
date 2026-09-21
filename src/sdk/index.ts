@@ -24,6 +24,9 @@ export type { ApprovalSideEffect } from './approvals-shell.js';
 export { PaymentApprovalRequiredError } from './payments-shell.js';
 export { Erc1155CheckoutAllItemsSkippedError } from './erc1155.js';
 export type {
+  LiquidEdition,
+  LiquidEditionMediaItem,
+  LiquidEditionSearchParams,
   CollectionSearchParams,
   EventSearchParams,
   ImportErc721Params,

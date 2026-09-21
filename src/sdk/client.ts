@@ -182,6 +182,10 @@ export function createRareClient(config: RareClientConfig): RareClient {
     token: createTokenNamespace(publicClient, chain),
     currency: createCurrencyNamespace(publicClient, chain),
     search: {
+      async liquidEditions(params = {}): ReturnType<RareClient['search']['liquidEditions']> {
+        assertNoClientChainOverride(params, 'rare.search.liquidEditions', chain);
+        return api.searchLiquidEditions({ ...params, chainId });
+      },
       async nfts(params = {}): ReturnType<RareClient['search']['nfts']> {
         assertNoClientChainOverride(params, 'rare.search.nfts', chain);
         const requestParams = { ...params, chainId };

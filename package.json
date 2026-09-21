@@ -121,7 +121,8 @@
     "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "lint": "eslint src test",
-    "test": "npm run build && vitest run"
+    "test": "npm run build && vitest run",
+    "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration"
   },
   "dependencies": {
     "merkletreejs": "0.6.0",

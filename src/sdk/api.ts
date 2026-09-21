@@ -1,3 +1,5 @@
+import type { LiquidEdition } from '../data-access/liquid-editions.js';
+import { buildLiquidEditionSearchQuery, type LiquidEditionSearchParams } from './liquid-discovery-core.js';
 import { createApiClient, type ApiClient } from '../data-access/index.js';
 import type { components, paths } from '../data-access/schema.js';
 import { resolveEventSearchTarget, type EventSearchTargetParams } from './event-search-core.js';
@@ -21,12 +23,18 @@ import {
   type PinMetadataParams,
 } from './api-core.js';
 
+export type { LiquidEdition, LiquidEditionMediaItem } from '../data-access/liquid-editions.js';
+
+export type { LiquidEditionSearchParams } from './liquid-discovery-core.js';
+
 export type RareApiOptions = {
   baseUrl?: string;
   fetch?: typeof globalThis.fetch;
 };
 
 export type RareApi = {
+  searchLiquidEditions: (params?: LiquidEditionSearchParams) => Promise<SearchPageResponse<LiquidEdition>>;
+  getLiquidEdition: (id: string) => Promise<LiquidEdition>;
   pinFile: (buffer: Uint8Array, filename: string) => Promise<IpfsUploadResult>;
   pinJson: (value: unknown, filename?: string) => Promise<IpfsUploadResult>;
   uploadMedia: (buffer: Uint8Array, filename: string) => Promise<NftMediaEntry>;
@@ -116,6 +124,8 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     uploadMedia: async (buffer, filename) => uploadMediaWithClient(client, fetchImpl, buffer, filename),
     pinMetadata: async (opts) => pinMetadataWithClient(client, opts),
     importErc721: async (opts) => importErc721WithClient(client, opts),
+    searchLiquidEditions: async (params = {}) => searchLiquidEditionsWithClient(client, params),
+    getLiquidEdition: async (id) => getLiquidEditionWithClient(client, id),
     searchNfts: async (params = {}) => searchNftsWithClient(client, params),
     searchCollections: async (params = {}) => searchCollectionsWithClient(client, params),
     searchEvents: async (params) => searchEventsWithClient(client, params),
@@ -412,5 +422,33 @@ async function getTokenPriceWithClient(
   });
   if (!data) throw new Error(`Token price not found: ${symbol}`);
 
+  return data.data;
+}
+
+export async function searchLiquidEditions(params: LiquidEditionSearchParams = {}): Promise<SearchPageResponse<LiquidEdition>> {
+  return createDefaultRareApi().searchLiquidEditions(params);
+}
+
+async function searchLiquidEditionsWithClient(
+  client: ApiClient,
+  params: LiquidEditionSearchParams,
+): Promise<SearchPageResponse<LiquidEdition>> {
+  const { data } = await client.GET('/v1/liquid-editions', {
+    params: { query: buildLiquidEditionSearchQuery(params) },
+  });
+  if (!data) throw new Error('Failed to search liquid editions');
+  return data;
+}
+
+/** Fetch indexed discovery data by chainId-contractAddress. */
+export async function getLiquidEdition(id: string): Promise<LiquidEdition> {
+  return createDefaultRareApi().getLiquidEdition(id);
+}
+
+async function getLiquidEditionWithClient(client: ApiClient, id: string): Promise<LiquidEdition> {
+  const { data } = await client.GET('/v1/liquid-editions/{id}', {
+    params: { path: { id } },
+  });
+  if (!data) throw new Error(`Failed to get liquid edition: ${id}`);
   return data.data;
 }

@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from 'openapi-fetch';
-import type { paths } from './schema.js';
+import type { ApiPaths as paths } from './liquid-editions.js';
 import { RareApiError } from './errors.js';
 import { resolveRareApiBaseUrl } from './base-url.js';
 

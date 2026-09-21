@@ -1,3 +1,4 @@
+import type { LiquidEdition } from '../api.js';
 import type { Address, Hex } from 'viem';
 import type { CurvePresetKey, LiquidCurvePreview, LiquidCurveSegment } from '../../liquid/curve-config.js';
 import type { LiquidFactoryConfig } from '../../liquid/factory-config.js';
@@ -99,6 +100,8 @@ export type SetLiquidEditionRenderContractResult = {
 } & TransactionResult
 
 export type LiquidEditionNamespace = {
+  /** Indexed public discovery data for an edition on the client chain. */
+  get: (params: { contract: Address }) => Promise<LiquidEdition>;
   getFactoryConfig: () => Promise<LiquidFactoryConfig>;
   generatePresetCurves: (params: GeneratePresetCurvesParams) => Promise<GeneratePresetCurvesResult>;
   validateCurves: (params: ValidateLiquidCurvesParams) => Promise<LiquidCurvePreview>;
