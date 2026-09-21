@@ -27,7 +27,7 @@ const editions = [
 ] as const;
 
 const baseUrl = process.env.RARE_API_INTEGRATION_URL
-  ?? 'https://rare-api-c1d8-25x4ysoo5a-ue.a.run.app';
+  ?? 'https://rare-api-devmainnet-784573620320.us-east1.run.app';
 const requestTimeout = 20_000;
 const testTimeout = 50_000;
 const fetchWithTimeout: typeof fetch = (input, init) =>
@@ -41,7 +41,7 @@ function expectEdition(edition: LiquidEdition, fixture: typeof editions[number])
     creatorAddress: fixture.creatorAddress,
     name: fixture.name,
     mediaType: fixture.mediaType,
-    creator: { defaultAddress: fixture.creatorAddress },
+    creator: { address: fixture.creatorAddress },
     stats: {
       decimals: expect.any(Number),
       totalSupply: expect.stringMatching(/^\d+$/),
@@ -51,6 +51,9 @@ function expectEdition(edition: LiquidEdition, fixture: typeof editions[number])
       image: { uri: expect.any(String), mimeType: expect.any(String) },
     },
   });
+  for (const field of ['username', 'fullName', 'avatar'] as const) {
+    expect(edition.creator[field] === null || typeof edition.creator[field] === 'string').toBe(true);
+  }
   const media = fixture.mediaType === 'HTML' ? edition.media?.html : edition.media?.image;
   expect(media).toMatchObject({ uri: expect.any(String), mimeType: fixture.mimeType });
   expect(Number.isNaN(Date.parse(edition.createdAt))).toBe(false);

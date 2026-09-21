@@ -99,7 +99,8 @@ until the deployed OpenAPI schema can be regenerated with these endpoints.
 npm run test:integration
 ```
 
-This opt-in, read-only suite targets the dev API above using two known public
+This opt-in, read-only suite targets
+`https://rare-api-devmainnet-784573620320.us-east1.run.app` using two known public
 Sepolia editions: **LQE 9/21** (`0x1a9e355ba82542ef9d0654347026a63b09e53b26`)
 and **Liquid Lens HTML Example** (`0xeedad60508165cffebb8f8b71a68bea3cc6ad235`).
 It checks both detail interfaces, response fields and GIF/HTML media, combined

@@ -21,12 +21,10 @@ export type LiquidEdition = {
   creatorAddress: string;
   isApprovedCreator: boolean;
   creator: {
-    defaultAddress: string;
-    profile: {
-      username: string | null;
-      fullName: string | null;
-      avatar: string | null;
-    } | null;
+    address: string;
+    username: string | null;
+    fullName: string | null;
+    avatar: string | null;
   };
   mediaType: 'IMAGE' | 'HTML' | 'THREE_D' | 'VIDEO' | null;
   tags: string[];
