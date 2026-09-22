@@ -129,7 +129,10 @@ export type CurrencyNamespace = {
 /**
  * Chain-bound RARE SDK surface returned by {@link createRareClient}.
  */
+import type { MessagingClient } from '../messaging.js';
+
 export type RareClient = {
+  messaging: MessagingClient;
   /**
    * Supported RARE chain inferred from the viem public client.
    */

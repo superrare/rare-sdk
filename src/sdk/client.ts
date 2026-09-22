@@ -1,6 +1,7 @@
 import { getContractAddresses, chainIds } from '../contracts/addresses.js';
 import type { Address } from 'viem';
 import { createRareApi } from './api.js';
+import { createMessagingClient } from './messaging.js';
 import type { RareClientConfig, RareClient } from './types/client.js';
 import { resolveChainFromPublicClient } from './wallet-shell.js';
 import { createDeployNamespace } from './deploy.js';
@@ -179,6 +180,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
     offer,
     listing,
     utils: createUtilsNamespace(),
+    messaging: createMessagingClient({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }),
     token: createTokenNamespace(publicClient, chain),
     currency: createCurrencyNamespace(publicClient, chain),
     search: {
