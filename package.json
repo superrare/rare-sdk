@@ -118,7 +118,7 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "generate:types": "openapi-typescript api/openapi.json -o src/data-access/schema.d.ts",
+    "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "lint": "eslint src test",
     "test": "npm run build && vitest run",

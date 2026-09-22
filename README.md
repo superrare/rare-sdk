@@ -41,19 +41,15 @@ Subpath exports mirror the ones previously published by the CLI package:
 
 ## Regenerating the Rare API types
 
-The SDK contract is pinned in `api/openapi.json`. All endpoint and response types
-are generated from this contract; liquid-edition exports are aliases of those
-generated types. Regeneration is reproducible and does not depend on a running
-API service:
+Generate endpoint and response types from the production Rare API:
 
 ```bash
 npm run generate:types
 ```
 
-The snapshot was sourced from the devmainnet service's `/doc` on 2026-09-22.
-When adopting an API contract update, replace `api/openapi.json` with the intended
-release's OpenAPI document, regenerate, and run typecheck and integration tests.
-Keep the snapshot and generated schema in the same commit.
+Commit the regenerated schema with SDK changes that use the updated contract.
+API changes must be deployed to production before merging the corresponding SDK
+support.
 
 ## Liquid edition discovery
 
