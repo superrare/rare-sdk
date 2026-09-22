@@ -41,9 +41,19 @@ Subpath exports mirror the ones previously published by the CLI package:
 
 ## Regenerating the Rare API types
 
+The SDK contract is pinned in `api/openapi.json`. All endpoint and response types
+are generated from this contract; liquid-edition exports are aliases of those
+generated types. Regeneration is reproducible and does not depend on a running
+API service:
+
 ```bash
 npm run generate:types
 ```
+
+The snapshot was sourced from the devmainnet service's `/doc` on 2026-09-22.
+When adopting an API contract update, replace `api/openapi.json` with the intended
+release's OpenAPI document, regenerate, and run typecheck and integration tests.
+Keep the snapshot and generated schema in the same commit.
 
 ## Liquid edition discovery
 
@@ -89,9 +99,8 @@ Price bounds and price sorting exclude editions without a current price and
 cannot be combined with `hasCurrentPrice: false`. API validation errors (`400`),
 missing editions (`404`), and unavailable discovery (`503`) propagate as
 `RareApiError` from `@rareprotocol/rare-sdk/data-access`, retaining `status` and
-`path`. These endpoints require deployment of rare-api PR #2041 and v3 index
-activation. Their temporary types live in `src/data-access/liquid-editions.ts`
-until the deployed OpenAPI schema can be regenerated with these endpoints.
+`path`. The SDK uses the production Rare API by default. Set `apiBaseUrl` on
+`createRareClient`, or `baseUrl` on `createRareApi`, to use another deployment.
 
 ## Live integration tests
 

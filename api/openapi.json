@@ -1,0 +1,6580 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Rare API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "LiquidEdition": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "string"
+          },
+          "contractAddress": {
+            "type": "string"
+          },
+          "baseToken": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "collectionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "creatorAddress": {
+            "type": "string"
+          },
+          "isApprovedCreator": {
+            "type": "boolean"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/User"
+          },
+          "mediaType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "IMAGE",
+              "HTML",
+              "THREE_D",
+              "VIDEO",
+              null
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "media": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "image": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "width",
+                      "height"
+                    ]
+                  }
+                },
+                "required": [
+                  "uri",
+                  "mimeType",
+                  "size",
+                  "dimensions"
+                ]
+              },
+              "html": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "width",
+                      "height"
+                    ]
+                  }
+                },
+                "required": [
+                  "uri",
+                  "mimeType",
+                  "size",
+                  "dimensions"
+                ]
+              },
+              "threeD": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "width",
+                      "height"
+                    ]
+                  }
+                },
+                "required": [
+                  "uri",
+                  "mimeType",
+                  "size",
+                  "dimensions"
+                ]
+              },
+              "video": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "width",
+                      "height"
+                    ]
+                  }
+                },
+                "required": [
+                  "uri",
+                  "mimeType",
+                  "size",
+                  "dimensions"
+                ]
+              }
+            },
+            "required": [
+              "image",
+              "html",
+              "threeD",
+              "video"
+            ]
+          },
+          "currentPrice": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "cryptoAmount": {
+                "type": "string"
+              },
+              "usdAmount": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string"
+                  },
+                  "decimals": {
+                    "type": "number"
+                  },
+                  "symbol": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "address",
+                  "decimals",
+                  "symbol"
+                ]
+              }
+            },
+            "required": [
+              "cryptoAmount",
+              "usdAmount",
+              "currency"
+            ]
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "decimals": {
+                "type": "number"
+              },
+              "totalSupply": {
+                "type": "string"
+              },
+              "holderCount": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "decimals",
+              "totalSupply",
+              "holderCount"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "chainId",
+          "contractAddress",
+          "baseToken",
+          "name",
+          "collectionName",
+          "description",
+          "createdAt",
+          "creatorAddress",
+          "isApprovedCreator",
+          "creator",
+          "mediaType",
+          "tags",
+          "media",
+          "currentPrice",
+          "stats"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true,
+            "example": "satoshi"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://example.com/avatar.png"
+          },
+          "fullName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Satoshi Nakamoto"
+          }
+        },
+        "required": [
+          "address",
+          "username",
+          "avatar",
+          "fullName"
+        ]
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "perPage": {
+            "type": "number",
+            "example": 20
+          },
+          "totalCount": {
+            "type": "number",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "page",
+          "perPage",
+          "totalCount",
+          "totalPages"
+        ]
+      },
+      "ChainId": {
+        "type": "integer",
+        "example": 1,
+        "description": "Supported blockchain network id"
+      },
+      "EthereumAddress": {
+        "type": "string",
+        "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350",
+        "description": "Checksummed Ethereum address"
+      },
+      "Nft": {
+        "type": "object",
+        "properties": {
+          "universalTokenId": {
+            "type": "string",
+            "example": "1-0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0-12345"
+          },
+          "contractAddress": {
+            "type": "string",
+            "example": "0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"
+          },
+          "chainId": {
+            "type": "string",
+            "example": "1"
+          },
+          "tokenId": {
+            "type": "string",
+            "example": "12345"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ERC721",
+              "ERC1155"
+            ],
+            "example": "ERC721"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/User"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+                },
+                "balance": {
+                  "type": "string",
+                  "example": "1"
+                }
+              },
+              "required": [
+                "address",
+                "balance"
+              ]
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "nullable": true,
+                "example": "Genesis"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true,
+                "example": "A unique digital artwork"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "art",
+                  "digital"
+                ]
+              },
+              "mediaType": {
+                "type": "string",
+                "nullable": true,
+                "example": "image/png"
+              },
+              "imageUri": {
+                "type": "string",
+                "nullable": true,
+                "example": "https://example.com/image.png"
+              },
+              "videoUri": {
+                "type": "string",
+                "nullable": true,
+                "example": null
+              },
+              "previewImageUri": {
+                "type": "string",
+                "nullable": true,
+                "example": "https://superrare-artworks.imgix.net/asset/image.png?w=600"
+              },
+              "previewVideoUri": {
+                "type": "string",
+                "nullable": true,
+                "example": "https://stream.mux.com/playback-id/medium.mp4"
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "tags",
+              "mediaType",
+              "imageUri",
+              "videoUri",
+              "previewImageUri",
+              "previewVideoUri"
+            ]
+          },
+          "market": {
+            "type": "object",
+            "properties": {
+              "listings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              },
+              "offers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Offer"
+                }
+              },
+              "auctions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Auction"
+                }
+              }
+            },
+            "required": [
+              "listings",
+              "offers",
+              "auctions"
+            ]
+          },
+          "lastSale": {
+            "$ref": "#/components/schemas/LastSale"
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "property": {
+                  "type": "string",
+                  "example": "Background"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "Blue"
+                }
+              },
+              "required": [
+                "property",
+                "value"
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "number",
+            "example": 1704067200
+          }
+        },
+        "required": [
+          "universalTokenId",
+          "contractAddress",
+          "chainId",
+          "tokenId",
+          "type",
+          "creator",
+          "owner",
+          "metadata",
+          "market",
+          "lastSale",
+          "attributes",
+          "createdAt"
+        ]
+      },
+      "Listing": {
+        "type": "object",
+        "properties": {
+          "contractAddress": {
+            "type": "string",
+            "example": "0x1234567890abcdef1234567890abcdef12345678"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SALE_PRICE",
+              "BATCH_SALE_PRICE"
+            ],
+            "example": "SALE_PRICE"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          },
+          "seller": {
+            "type": "string",
+            "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+          },
+          "merkleRoot": {
+            "type": "string",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "allowlist": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "root": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "root"
+            ]
+          }
+        },
+        "required": [
+          "contractAddress",
+          "type",
+          "price",
+          "seller"
+        ]
+      },
+      "CryptoValue": {
+        "type": "object",
+        "properties": {
+          "cryptoAmount": {
+            "type": "string",
+            "example": "1000000000000000000"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "usdAmount": {
+            "type": "number",
+            "nullable": true,
+            "example": 3500
+          }
+        },
+        "required": [
+          "cryptoAmount",
+          "currency",
+          "usdAmount"
+        ]
+      },
+      "Currency": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "example": "0x0000000000000000000000000000000000000000"
+          },
+          "symbol": {
+            "type": "string",
+            "example": "ETH"
+          },
+          "decimals": {
+            "type": "number",
+            "example": 18
+          },
+          "chainId": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "address",
+          "symbol",
+          "decimals",
+          "chainId"
+        ]
+      },
+      "Offer": {
+        "type": "object",
+        "properties": {
+          "contractAddress": {
+            "type": "string",
+            "example": "0x1234567890abcdef1234567890abcdef12345678"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "OFFER",
+              "BATCH_OFFER"
+            ],
+            "example": "OFFER"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          },
+          "buyer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "buyerAddress": {
+            "type": "string",
+            "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+          }
+        },
+        "required": [
+          "contractAddress",
+          "type",
+          "price",
+          "buyer",
+          "buyerAddress"
+        ]
+      },
+      "Auction": {
+        "type": "object",
+        "properties": {
+          "contractAddress": {
+            "type": "string",
+            "example": "0x1234567890abcdef1234567890abcdef12345678"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RESERVE_AUCTION",
+              "BATCH_RESERVE_AUCTION",
+              "SCHEDULED_AUCTION"
+            ],
+            "example": "RESERVE_AUCTION"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "UNSETTLED"
+            ],
+            "example": "RUNNING"
+          },
+          "startTime": {
+            "type": "string",
+            "nullable": true,
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "endTime": {
+            "type": "string",
+            "nullable": true,
+            "example": "2024-01-02T00:00:00.000Z"
+          },
+          "currencyAddress": {
+            "type": "string",
+            "example": "0x0000000000000000000000000000000000000000"
+          },
+          "sellerAddress": {
+            "type": "string",
+            "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+          },
+          "currentBid": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CryptoValue"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "reservePrice": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CryptoValue"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "highestBidder": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "merkleRoot": {
+            "type": "string",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          }
+        },
+        "required": [
+          "contractAddress",
+          "type",
+          "state",
+          "startTime",
+          "endTime",
+          "currencyAddress",
+          "sellerAddress",
+          "currentBid",
+          "reservePrice",
+          "highestBidder"
+        ]
+      },
+      "LastSale": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          }
+        },
+        "required": [
+          "eventId",
+          "price"
+        ]
+      },
+      "UniversalTokenId": {
+        "type": "string",
+        "example": "1-0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0-12345",
+        "description": "Canonical NFT identifier in chainId-contractAddress-tokenId format."
+      },
+      "NftEvent": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SaleEvent"
+          },
+          {
+            "$ref": "#/components/schemas/TransferEvent"
+          },
+          {
+            "$ref": "#/components/schemas/CreationEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ListingEvent"
+          },
+          {
+            "$ref": "#/components/schemas/OfferEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AuctionBidEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AuctionLifecycleEvent"
+          }
+        ]
+      },
+      "SaleEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "SETTLE_AUCTION",
+              "TAKE_LISTING",
+              "TAKE_OFFER"
+            ]
+          },
+          "buyer": {
+            "$ref": "#/components/schemas/User"
+          },
+          "seller": {
+            "$ref": "#/components/schemas/User"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "buyer",
+          "seller",
+          "price"
+        ]
+      },
+      "TransferEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "TRANSFER_NFT",
+              "TRANSFER_NFT_SUPPLY"
+            ]
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "to": {
+            "$ref": "#/components/schemas/User"
+          },
+          "amount": {
+            "type": "string",
+            "example": "1"
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "from",
+          "to"
+        ]
+      },
+      "CreationEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "CREATE_NFT",
+              "CREATE_NFT_SUPPLY"
+            ]
+          },
+          "creator": {
+            "$ref": "#/components/schemas/User"
+          },
+          "amount": {
+            "type": "string",
+            "example": "100"
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "creator"
+        ]
+      },
+      "ListingEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "MAKE_LISTING"
+            ]
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          },
+          "targetBuyer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "price",
+          "targetBuyer"
+        ]
+      },
+      "OfferEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "MAKE_OFFER",
+              "CANCEL_OFFER"
+            ]
+          },
+          "buyer": {
+            "$ref": "#/components/schemas/User"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "buyer",
+          "price"
+        ]
+      },
+      "AuctionBidEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "MAKE_AUCTION_BID"
+            ]
+          },
+          "bidder": {
+            "$ref": "#/components/schemas/User"
+          },
+          "price": {
+            "$ref": "#/components/schemas/CryptoValue"
+          },
+          "previousBidder": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "extendsAuction": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "bidder",
+          "price",
+          "previousBidder",
+          "extendsAuction"
+        ]
+      },
+      "AuctionLifecycleEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "evt_123"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "transactionHash": {
+            "type": "string",
+            "nullable": true,
+            "example": "0xabc123"
+          },
+          "blockNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 12345678
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "CREATE_RESERVE_AUCTION",
+              "CREATE_SCHEDULED_AUCTION",
+              "START_AUCTION",
+              "END_AUCTION",
+              "CANCEL_AUCTION",
+              "CLOSE_AUCTION"
+            ]
+          },
+          "seller": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "buyer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "price": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CryptoValue"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "minimumBid": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CryptoValue"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "startTime": {
+            "type": "string",
+            "nullable": true,
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "eventId",
+          "createdAt",
+          "transactionHash",
+          "blockNumber",
+          "eventType",
+          "seller",
+          "buyer",
+          "price",
+          "minimumBid",
+          "startTime"
+        ]
+      },
+      "CreateNftMetadataResponse": {
+        "type": "object",
+        "properties": {
+          "cid": {
+            "type": "string"
+          },
+          "ipfsUrl": {
+            "type": "string"
+          },
+          "gatewayUrl": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "image": {
+                "type": "string"
+              },
+              "media": {
+                "type": "object",
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "number"
+                  },
+                  "dimensions": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "uri",
+                  "mimeType"
+                ]
+              },
+              "animation_url": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attributes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "trait_type": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    },
+                    "display_type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "trait_type",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "image",
+              "media",
+              "tags"
+            ]
+          }
+        },
+        "required": [
+          "cid",
+          "ipfsUrl",
+          "gatewayUrl",
+          "metadata"
+        ]
+      },
+      "CreateNftMetadataRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "My NFT"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "example": "A beautiful artwork"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "example": [
+              "art",
+              "digital"
+            ]
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trait_type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "display_type": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "trait_type",
+                "value"
+              ]
+            }
+          },
+          "nftMedia": {
+            "$ref": "#/components/schemas/NftMediaInput"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "tags",
+          "nftMedia"
+        ]
+      },
+      "NftMediaInput": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/MediaAsset"
+          },
+          "video": {
+            "$ref": "#/components/schemas/MediaAsset"
+          },
+          "threeD": {
+            "$ref": "#/components/schemas/MediaAsset"
+          },
+          "html": {
+            "$ref": "#/components/schemas/MediaAsset"
+          }
+        },
+        "required": [
+          "image"
+        ]
+      },
+      "MediaAsset": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "ipfs://QmExample"
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "example": "image/png"
+          },
+          "size": {
+            "type": "number",
+            "minimum": 0,
+            "example": 1024000
+          },
+          "dimensions": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ]
+          }
+        },
+        "required": [
+          "url",
+          "mimeType",
+          "size"
+        ]
+      },
+      "CreateMediaUploadResponse": {
+        "type": "object",
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "example": "abc123"
+          },
+          "key": {
+            "type": "string",
+            "example": "a1b2c3d4/artwork.png"
+          },
+          "bucket": {
+            "type": "string",
+            "example": "superrare-ipfs"
+          },
+          "partSize": {
+            "type": "number",
+            "example": 10000000
+          },
+          "presignedUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gatewayBaseUrl": {
+            "type": "string",
+            "example": "https://superrare.myfilebase.com"
+          }
+        },
+        "required": [
+          "uploadId",
+          "key",
+          "bucket",
+          "partSize",
+          "presignedUrls",
+          "gatewayBaseUrl"
+        ]
+      },
+      "CreateMediaUploadRequest": {
+        "type": "object",
+        "properties": {
+          "fileSize": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 5000000
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "example": "artwork.png"
+          }
+        },
+        "required": [
+          "fileSize"
+        ]
+      },
+      "IpfsUploadResponse": {
+        "type": "object",
+        "properties": {
+          "cid": {
+            "type": "string",
+            "example": "QmExampleCid"
+          },
+          "ipfsUrl": {
+            "type": "string",
+            "example": "ipfs://QmExampleCid"
+          },
+          "gatewayUrl": {
+            "type": "string",
+            "example": "https://superrare.myfilebase.com/ipfs/QmExampleCid"
+          }
+        },
+        "required": [
+          "cid",
+          "ipfsUrl",
+          "gatewayUrl"
+        ]
+      },
+      "CompleteMediaUploadRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "example": "a1b2c3d4/artwork.png"
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "abc123"
+          },
+          "bucket": {
+            "type": "string",
+            "minLength": 1,
+            "example": "superrare-ipfs"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ETag": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "PartNumber": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                }
+              },
+              "required": [
+                "ETag",
+                "PartNumber"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "key",
+          "uploadId",
+          "bucket",
+          "parts"
+        ]
+      },
+      "GenerateMediaResponse": {
+        "type": "object",
+        "properties": {
+          "media": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "mimeType": {
+                "type": "string"
+              },
+              "size": {
+                "type": "number"
+              },
+              "dimensions": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "uri",
+              "mimeType"
+            ]
+          }
+        },
+        "required": [
+          "media"
+        ]
+      },
+      "GenerateMediaRequest": {
+        "type": "object",
+        "properties": {
+          "uri": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ipfs://QmMediaCid"
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "example": "image/png"
+          }
+        },
+        "required": [
+          "uri",
+          "mimeType"
+        ]
+      },
+      "Collection": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "example": "col_123"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "example": "SuperRare Genesis"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "The original SuperRare collection"
+          },
+          "symbol": {
+            "type": "string",
+            "nullable": true,
+            "example": "SUPR"
+          },
+          "bannerImage": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://example.com/banner.png"
+          },
+          "previewImage": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://example.com/preview.png"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "tokenCount": {
+                "type": "number",
+                "example": 1000
+              },
+              "collectorCount": {
+                "type": "number",
+                "example": 250
+              },
+              "floorPriceUsd": {
+                "type": "number",
+                "nullable": true,
+                "example": 500
+              },
+              "topOfferUsd": {
+                "type": "number",
+                "nullable": true,
+                "example": 10000
+              },
+              "saleVolumeUsd": {
+                "type": "number",
+                "nullable": true,
+                "example": 5000000
+              }
+            },
+            "required": [
+              "tokenCount",
+              "collectorCount",
+              "floorPriceUsd",
+              "topOfferUsd",
+              "saleVolumeUsd"
+            ]
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Background",
+              "Eyes",
+              "Mouth"
+            ]
+          },
+          "chainIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "example": [
+              1
+            ]
+          },
+          "collectionType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "CONTRACT",
+              "LAZY_MINT",
+              "ASYNC_BLUEPRINT",
+              "GENERAL",
+              "MULTI_CONTRACT",
+              null
+            ],
+            "example": "CONTRACT",
+            "description": "High-level collection category. Null if unknown."
+          },
+          "nftContractType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "GENERIC_ERC_721_NFT_CONTRACT",
+              "GENERIC_ERC_1155_NFT_CONTRACT",
+              "RARE_PROTOCOL_ERC_1155_NFT_CONTRACT",
+              "OLD_ASYNC_BLUEPRINT",
+              "ASYNC_BLUEPRINT",
+              "RARE_PROTOCOL_SOVEREIGN_NFT",
+              "RARE_PROTOCOL_LAZY_SOVEREIGN_NFT",
+              "RARE_PROTOCOL_SOVEREIGN_BATCH_MINT",
+              "SUPERRARE_V_1",
+              "SUPERRARE_V_2",
+              "RARE_SPACE_NFT_CONTRACT",
+              "LIQUID_LENS_ERC_721_CONTRACT",
+              null
+            ],
+            "example": "RARE_PROTOCOL_LAZY_SOVEREIGN_NFT",
+            "description": "On-chain contract standard/protocol backing the collection. Use this to determine which minting API/path applies. Null if not a single-contract collection or unknown."
+          },
+          "createdAt": {
+            "type": "number",
+            "example": 1704067200
+          }
+        },
+        "required": [
+          "collectionId",
+          "name",
+          "description",
+          "symbol",
+          "bannerImage",
+          "previewImage",
+          "owner",
+          "stats",
+          "attributes",
+          "chainIds",
+          "collectionType",
+          "nftContractType",
+          "createdAt"
+        ]
+      },
+      "ImportCollectionResponse": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "boolean"
+          },
+          "collection": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "symbol": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "symbol"
+            ]
+          }
+        },
+        "required": [
+          "imported"
+        ]
+      },
+      "ImportCollectionRequest": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contractAddress": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "ownerAddress": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          }
+        },
+        "required": [
+          "chainId",
+          "contractAddress",
+          "ownerAddress"
+        ]
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "example": "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+          },
+          "username": {
+            "type": "string",
+            "example": "satoshi"
+          },
+          "fullName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Satoshi Nakamoto"
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number",
+                "example": 42
+              },
+              "owned": {
+                "type": "number",
+                "example": 15
+              },
+              "followerCount": {
+                "type": "number",
+                "example": 1000
+              },
+              "isCollector": {
+                "type": "boolean",
+                "example": true
+              },
+              "isCreator": {
+                "type": "boolean",
+                "example": true
+              }
+            },
+            "required": [
+              "created",
+              "owned",
+              "followerCount",
+              "isCollector",
+              "isCreator"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "username",
+          "fullName",
+          "stats"
+        ]
+      },
+      "TokenPriceResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string"
+              },
+              "priceUsd": {
+                "type": "number"
+              },
+              "decimals": {
+                "type": "integer"
+              },
+              "chainId": {
+                "type": "integer"
+              },
+              "address": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "symbol",
+              "priceUsd",
+              "decimals",
+              "chainId",
+              "address"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TokenSymbol": {
+        "type": "string",
+        "example": "rare",
+        "description": "Token symbol (case-insensitive)"
+      },
+      "GenerateNftMerkleRootResponse": {
+        "type": "object",
+        "properties": {
+          "merkleRoot": {
+            "type": "string",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "key": {
+            "type": "string",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13.json"
+          }
+        },
+        "required": [
+          "merkleRoot",
+          "key"
+        ]
+      },
+      "GenerateNftMerkleRootRequest": {
+        "type": "object",
+        "properties": {
+          "nfts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NftMerkleRootEntry"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "nfts"
+        ]
+      },
+      "NftMerkleRootEntry": {
+        "type": "object",
+        "properties": {
+          "contractAddress": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            ],
+            "example": "12345"
+          }
+        },
+        "required": [
+          "contractAddress",
+          "tokenId"
+        ]
+      },
+      "GenerateAddressMerkleRootResponse": {
+        "type": "object",
+        "properties": {
+          "merkleRoot": {
+            "type": "string",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MerkleRootLocation"
+            }
+          }
+        },
+        "required": [
+          "merkleRoot",
+          "locations"
+        ]
+      },
+      "MerkleRootLocation": {
+        "type": "object",
+        "properties": {
+          "storageTarget": {
+            "type": "string",
+            "enum": [
+              "batch-listing",
+              "collection-allowlist"
+            ]
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "publicUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "storageTarget",
+          "bucket",
+          "key",
+          "publicUrl"
+        ]
+      },
+      "GenerateAddressMerkleRootJsonRequest": {
+        "type": "object",
+        "properties": {
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "minItems": 1
+          },
+          "storageTarget": {
+            "$ref": "#/components/schemas/MerkleRootStorageTarget"
+          }
+        },
+        "required": [
+          "addresses"
+        ]
+      },
+      "MerkleRootStorageTarget": {
+        "type": "string",
+        "enum": [
+          "batch-listing",
+          "collection-allowlist",
+          "both"
+        ],
+        "default": "both",
+        "example": "both",
+        "description": "Storage destination for address merkle roots"
+      },
+      "GenerateAddressMerkleRootFormRequest": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "CSV file with an address column"
+          },
+          "storageTarget": {
+            "$ref": "#/components/schemas/MerkleRootStorageTarget"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "GenerateNftMerkleProofResponse": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "contractAddress": {
+            "type": "string",
+            "example": "0x8Db4B93Fa258E1c265d46f861ae9EbDE0B938670"
+          },
+          "tokenId": {
+            "type": "string",
+            "example": "12345"
+          },
+          "leaf": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0x83a68bd27e04afae4b40e8647019086ae8b4915bb243a4cf186f6271e1e65341"
+          },
+          "proof": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{64}$"
+            }
+          }
+        },
+        "required": [
+          "root",
+          "contractAddress",
+          "tokenId",
+          "leaf",
+          "proof"
+        ]
+      },
+      "GenerateNftMerkleProofRequest": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 1
+          },
+          "contractAddress": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            ],
+            "example": "12345"
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "context": {
+            "$ref": "#/components/schemas/NftMerkleProofContext"
+          },
+          "creator": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EthereumAddress"
+              },
+              {
+                "description": "Context actor used to disambiguate root lookup. For batch-listing this is the seller address. For batch-offer this is the offer maker address, represented in indexed offer state as buyerAddress; it is not the artwork creator."
+              }
+            ]
+          }
+        },
+        "required": [
+          "chainId",
+          "contractAddress",
+          "tokenId"
+        ]
+      },
+      "NftMerkleProofContext": {
+        "type": "string",
+        "enum": [
+          "batch-listing",
+          "batch-auction",
+          "batch-offer"
+        ],
+        "example": "batch-listing",
+        "description": "Optional for legacy batch-listing and batch-auction root lookup. Required for batch-offer root lookup so the creator field can be interpreted as the offer maker address."
+      },
+      "GenerateAddressMerkleProofResponse": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "address": {
+            "type": "string",
+            "example": "0x8Db4B93Fa258E1c265d46f861ae9EbDE0B938670"
+          },
+          "leaf": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0x83a68bd27e04afae4b40e8647019086ae8b4915bb243a4cf186f6271e1e65341"
+          },
+          "proof": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{64}$"
+            }
+          }
+        },
+        "required": [
+          "root",
+          "address",
+          "leaf",
+          "proof"
+        ]
+      },
+      "GenerateAddressMerkleProofRequest": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "address": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "storageTarget": {
+            "$ref": "#/components/schemas/MerkleRootProofStorageTarget"
+          }
+        },
+        "required": [
+          "root",
+          "address"
+        ]
+      },
+      "MerkleRootProofStorageTarget": {
+        "type": "string",
+        "enum": [
+          "batch-listing",
+          "collection-allowlist"
+        ],
+        "default": "collection-allowlist",
+        "example": "collection-allowlist",
+        "description": "Storage source for address merkle proof generation"
+      },
+      "CreateConnectIntentResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "intentId": {
+                "type": "string",
+                "example": "connect_intent_placeholder"
+              },
+              "url": {
+                "type": "string",
+                "example": "https://connect.superrare.com/action/connect_intent_placeholder"
+              },
+              "expiresAt": {
+                "type": "string",
+                "example": "2026-06-19T20:00:00.000Z"
+              }
+            },
+            "required": [
+              "intentId",
+              "url",
+              "expiresAt"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ConnectErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "CreateConnectIntentRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ConnectActionInput"
+          },
+          "initiatingOrigin": {
+            "type": "string",
+            "example": "https://artist.example",
+            "description": "Optional SDK-reported window.location.origin. Must match the Origin header when provided."
+          },
+          "returnPath": {
+            "type": "string",
+            "minLength": 1,
+            "example": "/checkout/complete",
+            "description": "Relative path on the initiating origin."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "example": "state_123"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/ConnectIntentPayment"
+          }
+        },
+        "required": [
+          "action",
+          "state"
+        ]
+      },
+      "ConnectActionInput": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "login"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "buy"
+                ]
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721DirectListingTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721BatchListingTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "erc721-direct-listing": "#/components/schemas/ConnectErc721DirectListingTarget",
+                    "erc721-batch-listing": "#/components/schemas/ConnectErc721BatchListingTarget"
+                  }
+                }
+              },
+              "expected": {
+                "$ref": "#/components/schemas/ConnectExpectedPriceTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "buy"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc1155ListingTarget"
+              },
+              "expected": {
+                "$ref": "#/components/schemas/ConnectExpectedUnitPriceTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "bid"
+                ]
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721ReserveAuctionTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721BatchReserveAuctionTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "erc721-reserve-auction": "#/components/schemas/ConnectErc721ReserveAuctionTarget",
+                    "erc721-batch-reserve-auction": "#/components/schemas/ConnectErc721BatchReserveAuctionTarget"
+                  }
+                }
+              },
+              "bid": {
+                "$ref": "#/components/schemas/ConnectBidTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "bid"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "settle"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc721ReserveAuctionTarget"
+              }
+            },
+            "required": [
+              "type",
+              "target"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "mint"
+                ]
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721ReleaseTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectErc1155ReleaseTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "erc721-release": "#/components/schemas/ConnectErc721ReleaseTarget",
+                    "erc1155-release": "#/components/schemas/ConnectErc1155ReleaseTarget"
+                  }
+                }
+              },
+              "purchase": {
+                "$ref": "#/components/schemas/ConnectPurchaseTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "purchase"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "checkout"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc1155CheckoutTarget"
+              }
+            },
+            "required": [
+              "type",
+              "target"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc721OfferTarget"
+              },
+              "offer": {
+                "$ref": "#/components/schemas/ConnectOfferTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "offer"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc721BatchOfferCreateTarget"
+              },
+              "offer": {
+                "$ref": "#/components/schemas/ConnectBatchOfferCreateTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "offer"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer-accept"
+                ]
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721OfferTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectErc721BatchOfferAcceptTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "erc721-offer": "#/components/schemas/ConnectErc721OfferTarget",
+                    "erc721-batch-offer": "#/components/schemas/ConnectErc721BatchOfferAcceptTarget"
+                  }
+                }
+              },
+              "expected": {
+                "$ref": "#/components/schemas/ConnectExpectedOfferTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer-cancel"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc721OfferTarget"
+              },
+              "offer": {
+                "$ref": "#/components/schemas/ConnectCancelOfferTerms"
+              }
+            },
+            "required": [
+              "type",
+              "target",
+              "offer"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "offer-cancel"
+                ]
+              },
+              "target": {
+                "$ref": "#/components/schemas/ConnectErc721BatchOfferRefTarget"
+              }
+            },
+            "required": [
+              "type",
+              "target"
+            ]
+          }
+        ]
+      },
+      "ConnectErc721DirectListingTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-direct-listing"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          },
+          "target": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectErc721BatchListingTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-batch-listing"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "creator",
+          "root",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectExpectedPriceTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "price": {
+            "type": "string",
+            "minLength": 1,
+            "example": "1.2"
+          }
+        },
+        "required": [
+          "currency",
+          "price"
+        ]
+      },
+      "ConnectErc1155ListingTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc1155-listing"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "seller": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "example": "2"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract",
+          "seller",
+          "tokenId",
+          "quantity"
+        ]
+      },
+      "ConnectExpectedUnitPriceTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "unitPrice": {
+            "type": "string",
+            "minLength": 1,
+            "example": "1.2"
+          }
+        },
+        "required": [
+          "currency",
+          "unitPrice"
+        ]
+      },
+      "ConnectErc721ReserveAuctionTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-reserve-auction"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectErc721BatchReserveAuctionTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-batch-reserve-auction"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "creator",
+          "root",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectBidTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "amount": {
+            "type": "string",
+            "minLength": 1,
+            "example": "1.2"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ]
+      },
+      "ConnectErc721ReleaseTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-release"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract"
+        ]
+      },
+      "ConnectErc1155ReleaseTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc1155-release"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectPurchaseTerms": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "example": "2"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "unitPrice": {
+            "type": "string",
+            "minLength": 1,
+            "example": "1.2"
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "ConnectErc1155CheckoutTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc1155-checkout"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ConnectErc1155CheckoutReleaseItem"
+                },
+                {
+                  "$ref": "#/components/schemas/ConnectErc1155CheckoutListingItem"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "release": "#/components/schemas/ConnectErc1155CheckoutReleaseItem",
+                  "listing": "#/components/schemas/ConnectErc1155CheckoutListingItem"
+                }
+              }
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "items"
+        ]
+      },
+      "ConnectErc1155CheckoutReleaseItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "release"
+            ]
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "example": "2"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/ConnectExpectedUnitPriceTerms"
+          }
+        },
+        "required": [
+          "kind",
+          "contract",
+          "tokenId",
+          "quantity"
+        ]
+      },
+      "ConnectErc1155CheckoutListingItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "listing"
+            ]
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "seller": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "example": "2"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/ConnectExpectedUnitPriceTerms"
+          }
+        },
+        "required": [
+          "kind",
+          "contract",
+          "seller",
+          "tokenId",
+          "quantity",
+          "expected"
+        ]
+      },
+      "ConnectErc721OfferTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-offer"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectOfferTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "description": "Amount in the currency's raw base units (e.g. wei).",
+            "example": "1000000000000000000"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ]
+      },
+      "ConnectErc721BatchOfferCreateTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-batch-offer"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "tokens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contract": {
+                  "$ref": "#/components/schemas/EthereumAddress"
+                },
+                "tokenId": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)$",
+                  "example": "123"
+                }
+              },
+              "required": [
+                "contract",
+                "tokenId"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "tokens"
+        ]
+      },
+      "ConnectBatchOfferCreateTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "description": "Amount in the currency's raw base units (e.g. wei).",
+            "example": "1000000000000000000"
+          },
+          "expiresAt": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "1789800000",
+            "description": "Offer expiry as a Unix timestamp in seconds."
+          }
+        },
+        "required": [
+          "currency",
+          "amount",
+          "expiresAt"
+        ]
+      },
+      "ConnectErc721BatchOfferAcceptTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-batch-offer"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "tokenId": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)$",
+            "example": "123"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "creator",
+          "root",
+          "contract",
+          "tokenId"
+        ]
+      },
+      "ConnectExpectedOfferTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*$",
+            "description": "Amount in the currency's raw base units (e.g. wei).",
+            "example": "1000000000000000000"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ]
+      },
+      "ConnectCancelOfferTerms": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ETH"
+          }
+        },
+        "required": [
+          "currency"
+        ]
+      },
+      "ConnectErc721BatchOfferRefTarget": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "erc721-batch-offer"
+            ]
+          },
+          "chainId": {
+            "$ref": "#/components/schemas/ChainId"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+          }
+        },
+        "required": [
+          "kind",
+          "chainId",
+          "creator",
+          "root"
+        ]
+      },
+      "ConnectIntentPayment": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "card",
+              "wallet"
+            ],
+            "description": "Restricts or pre-selects how the hosted checkout is paid. Omit to offer every supported method. Set 'wallet' to keep the checkout wallet-only (no card option; card preparation is refused) \u2014 REQUIRED when the sale settles on a custom contract whose mint/transfer logic depends on the receiving wallet: card settlement executes through a buy-proxy that receives the asset itself and re-transfers it, so the on-chain receiver is the proxy, not the buyer, and such sales revert only after the card was charged. Set 'card' to pre-select card checkout delivering to 'recipient'.",
+            "example": "wallet"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "example": "collector@example.com"
+          }
+        }
+      },
+      "GetConnectIntentResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConnectIntent"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ConnectIntent": {
+        "type": "object",
+        "properties": {
+          "intentId": {
+            "type": "string",
+            "example": "connect_intent_placeholder"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ConnectActionType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConnectIntentStatus"
+          },
+          "initiatingOrigin": {
+            "type": "string",
+            "example": "https://artist.example"
+          },
+          "returnPath": {
+            "type": "string",
+            "example": "/checkout/complete"
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-06-19T20:00:00.000Z"
+          },
+          "resolvedActionSnapshot": {
+            "$ref": "#/components/schemas/ConnectResolvedActionSnapshot"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ConnectIntentResult"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ConnectFlowError"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/ConnectIntentPaymentResponse"
+          }
+        },
+        "required": [
+          "intentId",
+          "type",
+          "status",
+          "returnPath",
+          "expiresAt"
+        ]
+      },
+      "ConnectActionType": {
+        "type": "string",
+        "enum": [
+          "login",
+          "checkout",
+          "bid",
+          "buy",
+          "mint",
+          "offer",
+          "offer-accept",
+          "offer-cancel",
+          "settle"
+        ],
+        "example": "checkout"
+      },
+      "ConnectIntentStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "requires_user",
+          "processing",
+          "completed",
+          "failed",
+          "cancelled",
+          "expired"
+        ],
+        "example": "pending"
+      },
+      "ConnectResolvedActionSnapshot": {
+        "type": "object",
+        "properties": {
+          "actionKey": {
+            "type": "string"
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "checkout",
+              "bid",
+              "buy",
+              "mint",
+              "offer",
+              "offer-accept",
+              "offer-cancel",
+              "settle"
+            ]
+          },
+          "resolvedAt": {
+            "type": "string"
+          },
+          "targetKind": {
+            "$ref": "#/components/schemas/ConnectActionTargetKind"
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string"
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "buyer": {
+                "type": "string"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "expiry": {
+                "type": "string"
+              },
+              "marketplace": {
+                "type": "string"
+              },
+              "merkleRoot": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+              },
+              "merkleProof": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^0x[a-fA-F0-9]{64}$",
+                  "example": "0xcf6398559ea0e93d7d7233ca93b09912da8ff57b45ebe7a3ede9c74d17a76f13"
+                }
+              },
+              "price": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "string"
+              },
+              "quantityAvailable": {
+                "type": "string"
+              },
+              "seller": {
+                "type": "string"
+              },
+              "unitPrice": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "available"
+            ]
+          }
+        },
+        "required": [
+          "actionKey",
+          "actionType",
+          "resolvedAt",
+          "targetKind",
+          "terms"
+        ]
+      },
+      "ConnectActionTargetKind": {
+        "type": "string",
+        "enum": [
+          "erc721-direct-listing",
+          "erc721-batch-listing",
+          "erc1155-listing",
+          "erc721-reserve-auction",
+          "erc721-batch-reserve-auction",
+          "erc721-release",
+          "erc1155-release",
+          "erc1155-checkout",
+          "erc721-offer",
+          "erc721-batch-offer"
+        ]
+      },
+      "ConnectIntentResult": {
+        "type": "object",
+        "properties": {
+          "approvalTxHash": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "paymentId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "coinflow_payment_placeholder",
+            "description": "Coinflow payment id for a card settlement, persisted so the eventual settlement hash can be reconciled even when the card success arrives without one."
+          },
+          "sessionId": {
+            "type": "string",
+            "example": "connect_session_placeholder"
+          },
+          "transactionHash": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      },
+      "ConnectFlowError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "example": "transaction_rejected"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "example": "The wallet transaction was rejected."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ConnectIntentPaymentResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConnectIntentPayment"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "recipientBoundByCheckout": {
+                "type": "boolean",
+                "example": true,
+                "description": "True when the recipient was pinned by a card checkout preparation rather than supplied when the intent was created."
+              }
+            }
+          }
+        ]
+      },
+      "UpdateConnectIntentExecutionResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConnectIntent"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "UpdateConnectIntentExecutionRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "processing"
+                ]
+              },
+              "approvalTxHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "paymentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "transactionHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed"
+                ]
+              },
+              "approvalTxHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "transactionHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              }
+            },
+            "required": [
+              "status",
+              "transactionHash"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "failed"
+                ]
+              },
+              "approvalTxHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "error": {
+                "$ref": "#/components/schemas/ConnectFlowError"
+              },
+              "transactionHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "cancelled"
+                ]
+              },
+              "error": {
+                "$ref": "#/components/schemas/ConnectFlowError"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "ExchangeConnectIntentExecutionSessionResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "executionToken": {
+                "type": "string",
+                "minLength": 1,
+                "example": "connect_execution_placeholder"
+              }
+            },
+            "required": [
+              "executionToken"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ExchangeConnectIntentExecutionSessionRequest": {
+        "type": "object",
+        "properties": {
+          "executionSessionId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "connect_execution_session_placeholder"
+          }
+        },
+        "required": [
+          "executionSessionId"
+        ]
+      },
+      "CompleteHostedConnectAuthResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "example": "connect_auth_code_placeholder"
+              },
+              "intentId": {
+                "type": "string",
+                "minLength": 1,
+                "example": "connect_intent_placeholder"
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "example": "state_123"
+              },
+              "returnTarget": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://artist.example/account?intentId=connect_intent_placeholder&state=state_123&code=connect_auth_code_placeholder"
+              },
+              "expiresAt": {
+                "type": "string",
+                "example": "2026-06-19T20:00:00.000Z"
+              }
+            },
+            "required": [
+              "code",
+              "intentId",
+              "state",
+              "returnTarget",
+              "expiresAt"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CompleteHostedConnectAuthRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "intentId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "connect_intent_placeholder"
+          }
+        },
+        "required": [
+          "intentId"
+        ]
+      },
+      "ExchangeConnectAuthResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "$ref": "#/components/schemas/ConnectSession"
+              }
+            },
+            "required": [
+              "session"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ConnectSession": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "example": "connect_session_placeholder"
+          },
+          "userId": {
+            "type": "string",
+            "example": "user_placeholder"
+          },
+          "address": {
+            "type": "string",
+            "example": "0x0000000000000000000000000000000000000000"
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-06-19T20:00:00.000Z"
+          }
+        },
+        "required": [
+          "sessionId",
+          "userId",
+          "address",
+          "expiresAt"
+        ]
+      },
+      "ExchangeConnectAuthRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "example": "connect_auth_code_placeholder"
+          },
+          "intentId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "connect_intent_placeholder"
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "example": "state_123"
+          }
+        },
+        "required": [
+          "code",
+          "intentId",
+          "state"
+        ]
+      },
+      "ClaimConnectAuthResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "example": "connect_auth_code_placeholder"
+              },
+              "expiresAt": {
+                "type": "string",
+                "example": "2026-06-19T20:00:00.000Z"
+              },
+              "intentId": {
+                "type": "string",
+                "minLength": 1,
+                "example": "connect_intent_placeholder"
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "example": "state_123"
+              }
+            },
+            "required": [
+              "code",
+              "expiresAt",
+              "intentId",
+              "state"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClaimConnectAuthRequest": {
+        "type": "object",
+        "properties": {
+          "intentId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "connect_intent_placeholder"
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "example": "state_123"
+          }
+        },
+        "required": [
+          "intentId",
+          "state"
+        ]
+      },
+      "GetConnectSessionResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "authenticated": {
+                "type": "boolean",
+                "example": true
+              },
+              "session": {
+                "$ref": "#/components/schemas/ConnectSession"
+              }
+            },
+            "required": [
+              "authenticated"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "GetConnectCurrentUserResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "example": "0x0000000000000000000000000000000000000000"
+              },
+              "username": {
+                "type": "string",
+                "nullable": true,
+                "example": "superrare-user"
+              },
+              "fullName": {
+                "type": "string",
+                "nullable": true,
+                "example": "SuperRare User"
+              },
+              "avatarUri": {
+                "type": "string",
+                "nullable": true,
+                "example": "https://example.com/avatar.png"
+              }
+            },
+            "required": [
+              "address",
+              "username",
+              "fullName",
+              "avatarUri"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "GetConnectCheckoutStatusResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionId": {
+                "type": "string",
+                "example": "connect_session_placeholder"
+              },
+              "status": {
+                "$ref": "#/components/schemas/ConnectCheckoutStatus"
+              },
+              "initiatingOrigin": {
+                "type": "string",
+                "example": "https://artist.example"
+              },
+              "returnPath": {
+                "type": "string",
+                "example": "/checkout/complete"
+              },
+              "intentId": {
+                "type": "string",
+                "example": "connect_intent_placeholder"
+              },
+              "expiresAt": {
+                "type": "string",
+                "example": "2026-06-19T20:00:00.000Z"
+              },
+              "resolvedActionSnapshot": {
+                "$ref": "#/components/schemas/ConnectResolvedActionSnapshot"
+              },
+              "approvalTxHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "transactionHash": {
+                "type": "string",
+                "pattern": "^0x[a-fA-F0-9]{64}$",
+                "example": "0x0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "error": {
+                "$ref": "#/components/schemas/ConnectFlowError"
+              }
+            },
+            "required": [
+              "sessionId",
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ConnectCheckoutStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "completed",
+          "failed",
+          "cancelled",
+          "expired"
+        ],
+        "example": "pending"
+      },
+      "PrepareCoinflowCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "checkoutJwtToken": {
+                "type": "string"
+              },
+              "sessionKey": {
+                "type": "string"
+              },
+              "merchantId": {
+                "type": "string"
+              },
+              "env": {
+                "type": "string",
+                "enum": [
+                  "prod",
+                  "sandbox"
+                ]
+              }
+            },
+            "required": [
+              "checkoutJwtToken",
+              "sessionKey",
+              "merchantId",
+              "env"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PrepareCoinflowCardRequest": {
+        "type": "object",
+        "properties": {
+          "buyerAddress": {
+            "$ref": "#/components/schemas/EthereumAddress"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "example": "collector@example.com"
+          }
+        },
+        "required": [
+          "buyerAddress"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/liquid-editions": {
+      "get": {
+        "summary": "List liquid editions",
+        "description": "Search public liquid editions. Prices and holder membership reflect the indexed state.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ChainId"
+            },
+            "required": false,
+            "description": "Supported blockchain network id",
+            "name": "chainId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "contractAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "creatorAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/EthereumAddress"
+                },
+                {
+                  "description": "Address with a positive collector balance. Excludes system and self-holding addresses."
+                }
+              ]
+            },
+            "required": false,
+            "description": "Address with a positive collector balance. Excludes system and self-holding addresses.",
+            "name": "holderAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "isApprovedCreator",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "hasCurrentPrice",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/EthereumAddress"
+                },
+                {
+                  "description": "Currency of the indexed display price; does not convert prices or indicate payment options."
+                }
+              ]
+            },
+            "required": false,
+            "description": "Currency of the indexed display price; does not convert prices or indicate payment options.",
+            "name": "currentPriceCurrencyAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "minimum": 0,
+              "description": "Inclusive minimum USD price"
+            },
+            "required": false,
+            "description": "Inclusive minimum USD price",
+            "name": "priceMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "minimum": 0,
+              "description": "Inclusive maximum USD price"
+            },
+            "required": false,
+            "description": "Inclusive maximum USD price",
+            "name": "priceMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IMAGE",
+                "HTML",
+                "THREE_D",
+                "VIDEO"
+              ]
+            },
+            "required": false,
+            "name": "mediaType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "maxItems": 50
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                }
+              ]
+            },
+            "required": false,
+            "name": "tags",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "priceAsc",
+                "priceDesc",
+                "holderCountAsc",
+                "holderCountDesc"
+              ],
+              "default": "newest"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liquid editions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LiquidEdition"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Liquid edition discovery unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/liquid-editions/{id}": {
+      "get": {
+        "summary": "Get liquid edition",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9]\\d*-0x[0-9a-fA-F]{40}$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liquid edition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LiquidEdition"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Liquid edition not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Liquid edition discovery unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts": {
+      "get": {
+        "summary": "List NFTs",
+        "description": "Search, filter, and list NFTs with rich query parameters",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "genesis",
+              "description": "Full-text search"
+            },
+            "required": false,
+            "description": "Full-text search",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "creatorAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "ownerAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/EthereumAddress"
+                },
+                {
+                  "example": "0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "contractAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "col_123"
+            },
+            "required": false,
+            "name": "collectionId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ChainId"
+            },
+            "required": false,
+            "description": "Supported blockchain network id",
+            "name": "chainId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SALE_PRICE",
+                "BATCH_SALE_PRICE"
+              ],
+              "example": "SALE_PRICE"
+            },
+            "required": false,
+            "name": "listingType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "example": true
+            },
+            "required": false,
+            "name": "hasAuction",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "RUNNING",
+                "UNSETTLED"
+              ],
+              "example": "RUNNING"
+            },
+            "required": false,
+            "name": "auctionState",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RESERVE_AUCTION",
+                "BATCH_RESERVE_AUCTION",
+                "SCHEDULED_AUCTION"
+              ],
+              "example": "RESERVE_AUCTION"
+            },
+            "required": false,
+            "name": "auctionType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "auctionCreatorAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "auctionBidderAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "example": true
+            },
+            "required": false,
+            "name": "hasListing",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "example": true
+            },
+            "required": false,
+            "name": "hasOffer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "offerBuyerAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "example": true
+            },
+            "required": false,
+            "name": "isPrimarySale",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "example": false
+            },
+            "required": false,
+            "name": "isSecondarySale",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "example": 100
+            },
+            "required": false,
+            "name": "priceMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "example": 10000
+            },
+            "required": false,
+            "name": "priceMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/EthereumAddress"
+                },
+                {
+                  "example": "0x0000000000000000000000000000000000000000"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "currency",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AUDIO",
+                "HTML",
+                "IMAGE",
+                "THREE_D",
+                "VIDEO"
+              ],
+              "example": "IMAGE"
+            },
+            "required": false,
+            "name": "mediaType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "example": [
+                "art"
+              ]
+            },
+            "required": false,
+            "name": "tags",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "priceAsc",
+                "priceDesc",
+                "recentlySold",
+                "auctionEndingSoon",
+                "recentActivity",
+                "bidAsc",
+                "bidDesc"
+              ],
+              "example": "newest"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of NFTs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Nft"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/{universalTokenId}": {
+      "get": {
+        "summary": "Get NFT",
+        "description": "Get a single NFT by its universal token ID",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/UniversalTokenId"
+            },
+            "required": true,
+            "description": "Canonical NFT identifier in chainId-contractAddress-tokenId format.",
+            "name": "universalTokenId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NFT detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Nft"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NFT not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/{universalTokenId}/events": {
+      "get": {
+        "summary": "List NFT events",
+        "description": "Get events for a specific NFT",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/UniversalTokenId"
+            },
+            "required": true,
+            "description": "Canonical NFT identifier in chainId-contractAddress-tokenId format.",
+            "name": "universalTokenId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "CANCEL_AUCTION",
+                  "CANCEL_OFFER",
+                  "CLOSE_AUCTION",
+                  "CREATE_NFT",
+                  "CREATE_NFT_SUPPLY",
+                  "CREATE_RESERVE_AUCTION",
+                  "CREATE_SCHEDULED_AUCTION",
+                  "END_AUCTION",
+                  "MAKE_AUCTION_BID",
+                  "MAKE_LISTING",
+                  "MAKE_OFFER",
+                  "SETTLE_AUCTION",
+                  "START_AUCTION",
+                  "TAKE_LISTING",
+                  "TAKE_OFFER",
+                  "TRANSFER_NFT",
+                  "TRANSFER_NFT_SUPPLY"
+                ]
+              },
+              "example": [
+                "SETTLE_AUCTION"
+              ]
+            },
+            "required": false,
+            "name": "eventType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "default": "newest",
+              "example": "newest"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of NFT events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NftEvent"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/metadata": {
+      "post": {
+        "summary": "Pin NFT Metadata",
+        "description": "Assemble NFT metadata JSON from media assets and pin to IPFS via Filebase",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNftMetadataRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Metadata pinned to IPFS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNftMetadataResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/metadata/media/uploads": {
+      "post": {
+        "summary": "Create Media Upload",
+        "description": "Initiate a multipart upload to Filebase/IPFS, returning presigned URLs for each part",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMediaUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Multipart upload initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateMediaUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/metadata/media/uploads/complete": {
+      "post": {
+        "summary": "Complete Media Upload",
+        "description": "Complete a multipart upload, resolve IPFS CID, and return IPFS/gateway URLs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteMediaUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpfsUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nfts/metadata/media/generate": {
+      "post": {
+        "summary": "Generate Media Metadata",
+        "description": "Call pipelines to extract media metadata (dimensions, size, type) from a URI",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMediaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Media metadata generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateMediaResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/collections": {
+      "get": {
+        "summary": "List collections",
+        "description": "Search, filter, and list collections",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "genesis",
+              "description": "Full-text search"
+            },
+            "required": false,
+            "description": "Full-text search",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": false,
+            "description": "Checksummed Ethereum address",
+            "name": "ownerAddress",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ChainId"
+            },
+            "required": false,
+            "description": "Supported blockchain network id",
+            "name": "chainId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "example": "newest"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Collection"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/collections/{id}": {
+      "get": {
+        "summary": "Get collection",
+        "description": "Get a single collection by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "col_123"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Collection"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/collections/{id}/events": {
+      "get": {
+        "summary": "List collection events",
+        "description": "Get events across all NFTs in a collection",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "col_123"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "CANCEL_AUCTION",
+                  "CANCEL_OFFER",
+                  "CLOSE_AUCTION",
+                  "CREATE_NFT",
+                  "CREATE_NFT_SUPPLY",
+                  "CREATE_RESERVE_AUCTION",
+                  "CREATE_SCHEDULED_AUCTION",
+                  "END_AUCTION",
+                  "MAKE_AUCTION_BID",
+                  "MAKE_LISTING",
+                  "MAKE_OFFER",
+                  "SETTLE_AUCTION",
+                  "START_AUCTION",
+                  "TAKE_LISTING",
+                  "TAKE_OFFER",
+                  "TRANSFER_NFT",
+                  "TRANSFER_NFT_SUPPLY"
+                ]
+              },
+              "example": [
+                "SETTLE_AUCTION"
+              ]
+            },
+            "required": false,
+            "name": "eventType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "default": "newest",
+              "example": "newest"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of collection events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NftEvent"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/collections/import": {
+      "post": {
+        "summary": "Import ERC-721 Collection",
+        "description": "Validate an ERC-721 contract on-chain and register it for indexing via pipelines",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Collection imported or already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Collection already indexed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "collectionId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "collectionId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/{address}": {
+      "get": {
+        "summary": "Get user",
+        "description": "Get a user profile by Ethereum address",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EthereumAddress"
+            },
+            "required": true,
+            "description": "Checksummed Ethereum address",
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserProfile"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tokens/price/{symbol}": {
+      "get": {
+        "summary": "Get Token Price",
+        "description": "Fetch the current USD price for a token by symbol (e.g., rare, eth, usdc)",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/TokenSymbol"
+            },
+            "required": true,
+            "description": "Token symbol (case-insensitive)",
+            "name": "symbol",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token price",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPriceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Token not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merkle-roots/nfts": {
+      "post": {
+        "summary": "Generate NFT Merkle Root",
+        "description": "Generate and store an NFT merkle root via the pipelines service",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateNftMerkleRootRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "NFT merkle root generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateNftMerkleRootResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Pipelines request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merkle-roots/addresses": {
+      "post": {
+        "summary": "Generate Address Merkle Root",
+        "description": "Generate and store an address merkle root via the pipelines service",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateAddressMerkleRootJsonRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateAddressMerkleRootFormRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Address merkle root generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateAddressMerkleRootResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Pipelines request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merkle-roots/nfts/proof": {
+      "post": {
+        "summary": "Generate NFT Merkle Proof",
+        "description": "Resolve an NFT Merkle root and generate a token proof from the stored Merkle list",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateNftMerkleProofRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "NFT Merkle proof generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateNftMerkleProofResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Merkle root or NFT entry not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Multiple matching roots were found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merkle-roots/addresses/proof": {
+      "post": {
+        "summary": "Generate Address Merkle Proof",
+        "description": "Generate an address proof from a stored Merkle root list",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateAddressMerkleProofRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Address Merkle proof generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateAddressMerkleProofResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Merkle root or address entry not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Multiple matching roots were found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents": {
+      "post": {
+        "summary": "Create Connect Intent",
+        "description": "Create a hosted SuperRare Connect intent for auth, checkout, or supported actions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConnectIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Connect intent created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateConnectIntentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid connect intent request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Connect intent cannot be created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents/{intentId}": {
+      "get": {
+        "summary": "Get Connect Intent",
+        "description": "Get status for a SuperRare Connect intent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_intent_placeholder"
+            },
+            "required": true,
+            "name": "intentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connect intent status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetConnectIntentResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents/{intentId}/execution": {
+      "post": {
+        "summary": "Update Hosted Connect Execution",
+        "description": "Persist hosted execution status for a server-resolved SuperRare Connect action.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_intent_placeholder"
+            },
+            "required": true,
+            "name": "intentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intent-scoped execution token from the hosted Connect URL."
+            },
+            "required": false,
+            "description": "Intent-scoped execution token from the hosted Connect URL.",
+            "name": "x-connect-execution-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConnectIntentExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connect execution status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateConnectIntentExecutionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Connect execution token is missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Connect intent execution cannot be updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents/{intentId}/execution-session": {
+      "post": {
+        "summary": "Exchange Hosted Connect Execution Session",
+        "description": "Exchange a short-lived hosted execution session for an intent-scoped execution token.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_intent_placeholder"
+            },
+            "required": true,
+            "name": "intentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeConnectIntentExecutionSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hosted execution token exchanged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeConnectIntentExecutionSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Hosted execution session is missing, expired, or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/auth/hosted-login": {
+      "post": {
+        "summary": "Complete Hosted Connect Auth",
+        "description": "Issue a one-time Connect auth code after hosted SuperRare login succeeds.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteHostedConnectAuthRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hosted Connect auth completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteHostedConnectAuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid hosted Connect auth completion request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Hosted login session is not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Hosted login auth service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/auth/exchange": {
+      "post": {
+        "summary": "Exchange Connect Auth",
+        "description": "Exchange a one-time hosted auth code for a SuperRare Connect session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeConnectAuthRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connect auth exchanged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeConnectAuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid connect auth exchange request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Connect auth result is invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Connect auth exchange unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/auth/claim": {
+      "post": {
+        "summary": "Claim Connect Auth",
+        "description": "Issue a one-time Connect auth code for a hosted login that completed but whose callback never reached the initiating site.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimConnectAuthRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connect auth code issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimConnectAuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid connect auth claim request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Connect auth claim is not authorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Hosted login has not completed yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent or hosted login completion expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/session": {
+      "get": {
+        "summary": "Get Connect Session",
+        "description": "Get SDK-visible SuperRare Connect session state.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Bearer connect_session_placeholder",
+              "description": "Bearer Connect session ID returned by /v1/connect/auth/exchange."
+            },
+            "required": false,
+            "description": "Bearer Connect session ID returned by /v1/connect/auth/exchange.",
+            "name": "authorization",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connect session state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetConnectSessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/users/me": {
+      "get": {
+        "summary": "Get Connect Current User",
+        "description": "Get limited user profile data visible to SuperRare Connect SDK consumers.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Bearer connect_session_placeholder",
+              "description": "Bearer Connect session ID returned by /v1/connect/auth/exchange."
+            },
+            "required": false,
+            "description": "Bearer Connect session ID returned by /v1/connect/auth/exchange.",
+            "name": "authorization",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current Connect user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetConnectCurrentUserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid Connect session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/checkout/{sessionId}": {
+      "get": {
+        "summary": "Get Connect Checkout Status",
+        "description": "Get status for a SuperRare Connect checkout.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_session_placeholder"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connect checkout status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetConnectCheckoutStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect checkout session not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents/{intentId}/checkout/coinflow/buy": {
+      "post": {
+        "summary": "Prepare Coinflow Card Checkout (Buy)",
+        "description": "Create a Coinflow card-checkout session for a USDC Bazaar buy bound to the hosted-login wallet.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_intent_placeholder"
+            },
+            "required": true,
+            "name": "intentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intent-scoped execution token from the hosted Connect URL."
+            },
+            "required": false,
+            "description": "Intent-scoped execution token from the hosted Connect URL.",
+            "name": "x-connect-execution-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareCoinflowCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Coinflow card checkout prepared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrepareCoinflowCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Card checkout request is invalid or ineligible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Hosted login session is not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Card checkout was superseded by a preparation for another wallet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Card checkout is not configured for this network",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Coinflow checkout failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect/intents/{intentId}/checkout/coinflow/mint": {
+      "post": {
+        "summary": "Prepare Coinflow Card Checkout (Mint)",
+        "description": "Create a Coinflow card-checkout session for a USDC release mint bound to the hosted-login wallet.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "connect_intent_placeholder"
+            },
+            "required": true,
+            "name": "intentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intent-scoped execution token from the hosted Connect URL."
+            },
+            "required": false,
+            "description": "Intent-scoped execution token from the hosted Connect URL.",
+            "name": "x-connect-execution-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareCoinflowCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Coinflow card checkout prepared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrepareCoinflowCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Card checkout request is invalid or ineligible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Hosted login session is not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Connect intent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Card checkout was superseded by a preparation for another wallet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Connect intent expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Card checkout is not configured for this network",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Coinflow checkout failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

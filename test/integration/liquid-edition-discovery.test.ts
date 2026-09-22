@@ -135,6 +135,16 @@ describe.skipIf(process.env.RARE_API_INTEGRATION !== '1')('live liquid edition d
     expect(result.pagination.totalCount).toBe(0);
   }, testTimeout);
 
+  it.each(['oldest', 'newest'] as const)(
+    'orders live editions by creation time: %s', async (sortBy) => {
+      const result = await rare.search.liquidEditions({ sortBy, perPage: 20 });
+      expect(result.data.length).toBeGreaterThan(1);
+      const timestamps = result.data.map((edition) => Date.parse(edition.createdAt));
+      expect(timestamps.every(Number.isFinite)).toBe(true);
+      expect(timestamps).toEqual(timestamps.toSorted((a, b) => sortBy === 'oldest' ? a - b : b - a));
+    }, testTimeout,
+  );
+
   it.each(['holderCountAsc', 'holderCountDesc'] as const)(
     'orders live editions by %s', async (sortBy) => {
       const result = await rare.search.liquidEditions({ sortBy, perPage: 20 });

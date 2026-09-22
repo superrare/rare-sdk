@@ -18,8 +18,8 @@ describe('liquid discovery functional core', () => {
     });
     expect(buildLiquidEditionSearchQuery(params)).toEqual({
       q: 'art & light', chainId: 1, contractAddress: contract,
-      creatorAddress: contract, holderAddress: contract, isApprovedCreator: false,
-      hasCurrentPrice: true, currentPriceCurrencyAddress: contract,
+      creatorAddress: contract, holderAddress: contract, isApprovedCreator: 'false',
+      hasCurrentPrice: 'true', currentPriceCurrencyAddress: contract,
       priceMin: 0, priceMax: 100, mediaType: 'IMAGE', tags: ['light & color', 'art'],
       sortBy: 'priceAsc', page: 2, perPage: 100,
     });
@@ -28,9 +28,9 @@ describe('liquid discovery functional core', () => {
   });
 
   it('leaves defaults and validation to the API and retains false flags', () => {
-    expect(buildLiquidEditionSearchQuery()).toEqual({ q: undefined });
+    expect(buildLiquidEditionSearchQuery()).toEqual({ q: undefined, isApprovedCreator: undefined, hasCurrentPrice: undefined });
     expect(buildLiquidEditionSearchQuery({ hasCurrentPrice: false, priceMax: 0 }))
-      .toEqual({ q: undefined, hasCurrentPrice: false, priceMax: 0 });
+      .toEqual({ q: undefined, isApprovedCreator: undefined, hasCurrentPrice: 'false', priceMax: 0 });
   });
 
   it.each([
