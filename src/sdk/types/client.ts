@@ -1,5 +1,7 @@
 import type { Address, PublicClient, WalletClient } from 'viem';
 import type {
+  LiquidEdition,
+  LiquidEditionSearchParams,
   Collection,
   CollectionSearchParams,
   EventSearchParams,
@@ -65,6 +67,8 @@ export type RareClientConfig = {
   resolveUniswapApiKey?: () => Promise<string | undefined>;
 }
 
+export type RareClientLiquidEditionSearchParams = Omit<LiquidEditionSearchParams, 'chainId'>;
+
 export type RareClientNftSearchParams = Omit<NftSearchParams, 'chainId'>;
 export type RareClientCollectionSearchParams = Omit<CollectionSearchParams, 'chainId'>;
 export type RareClientEventSearchParams = Omit<EventSearchParams, 'chain' | 'chainId'>;
@@ -93,6 +97,7 @@ export type RareClientContracts = {
 }
 
 export type SearchNamespace = {
+  liquidEditions: (params?: RareClientLiquidEditionSearchParams) => Promise<SearchPageResponse<LiquidEdition>>;
   nfts: (params?: RareClientNftSearchParams) => Promise<SearchPageResponse<Nft>>;
   collections: (params?: RareClientCollectionSearchParams) => Promise<SearchPageResponse<Collection>>;
   events: (params: RareClientEventSearchParams) => Promise<SearchPageResponse<NftEvent>>;
