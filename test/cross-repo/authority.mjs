@@ -44,9 +44,9 @@ async function start() {
   const credentials = ['CROSS_PROVISION_SECRET', 'CROSS_INTROSPECTION_SECRET', 'CROSS_BRIDGE_SECRET'].map(required);
   if (credentials.some(value => value.length < 32) || new Set(credentials).size !== 3) throw new Error('Distinct test service secrets of at least 32 characters required');
   Object.assign(process.env, {
-    JWT_SECRET: random(), AUTH_V2_ENABLED: 'true', AUTH_V2_ISSUER: issuer,
-    AUTH_V2_AUDIENCE: api, AUTH_V2_CONNECT_URL: `${issuerUrl.origin}/device`,
-    AUTH_V2_PROVISION_SECRET: credentials[0], AUTH_V2_INTROSPECTION_SECRET: credentials[1], AUTH_V2_BRIDGE_SECRET: credentials[2],
+    JWT_SECRET: random(), AUTH_PUBLIC_URL: issuerUrl.origin,
+    RARE_API_URL: api, CONNECT_URL: issuerUrl.origin,
+    ACCOUNT_PROVISIONING_SECRET: credentials[0], AUTH_INTROSPECTION_SECRET: credentials[1], AUTH_DEVICE_BRIDGE_SECRET: credentials[2],
     SIWE_ALLOWED_ORIGINS: issuerUrl.origin, SIWE_ALLOWED_CHAIN_IDS: '1', ETH_MAINNET_NODE_URL: 'http://127.0.0.1:1',
   });
   const requireAuth = createRequire(resolve(root, 'package.json'));

@@ -3,7 +3,7 @@
 Status: shared implementation contract, 2026-09-24. Wire changes must be coordinated across the authority, API, SDK and CLI.
 
 ## Authority and migration
-An encapsulated Fastify v2 module in the existing auth service, sharing its listener, dependencies, Redis connection, TypeScript build and Jest suite. Redis namespaces and credential contracts remain separate from legacy auth. The shared runtime is Node 24; legacy routes/cookies and current Connect/SuperRare flows retain their behavior. V2 is disabled by default. No second service, OIDC provider or deployment is introduced.
+An encapsulated Fastify v2 module in the existing auth service, sharing its listener, dependencies, Redis connection, TypeScript build and Jest suite. Redis namespaces and credential contracts remain separate from legacy auth. The existing auth Node runtime is unchanged; legacy routes/cookies and current Connect/SuperRare flows retain their behavior. V2 configuration is required at auth startup. No second service, OIDC provider or deployment is introduced.
 
 `authBaseUrl` is full issuer base including `/auth/v2`, explicitly configured by SDK/CLI. `apiBaseUrl` is Rare API origin/base. Production host/routing/key provisioning is deployment work. HTTPS required except loopback local development; no credential-bearing redirects. Static public clients `rare-cli` and `rare-sdk`; no dynamic registration. Requested scope `rare:account offline_access`. Fixed configured resource is Rare API audience. Sessions/SDK persisted envelopes are bound to authority, client and API base.
 
@@ -44,3 +44,5 @@ Device state includes expiry/interval/nextPollAt, session revision and issuer/cl
 
 ## Verification / rollout
 Real Redis protocol/race tests; real Postgres account/profile integration; SDK local HTTP tests plus cross-repo real integration; CLI process tests; hosted browser state/CSRF tests. Social-provider same-wallet continuity requires an authenticated external test and must be reported if unverified. No credentials are checked in. V2 needs no signing-key file; legacy JWT configuration remains unchanged. Deliver configuration templates with empty defaults and docs, not production activation. Preserve existing test suites. SDK release dependency for CLI coordinated before PR completion.
+
+Auth deployment derives `/auth/v2`, `/device` and the account provisioning path from service base URLs. Its audience is fixed to `rare-api`; service secrets have matching names across repositories. SDK auth/API URLs remain explicit client configuration.

@@ -136,6 +136,6 @@ logout and signed-out status all passed using isolated file storage. The test
 confirmed the CLI's profile write directly in Postgres and reran every core assertion.
 
 Syntax checks and ESLint passed for the harness. Missing opt-in was separately
-verified to return exit 2 (`UNAVAILABLE`). The shared auth service now uses Node 24 without a separate provider runtime.
+verified to return exit 2 (`UNAVAILABLE`). The auth service retains production Node 14.18.1 and CI Node 16. The integration launcher runs in the SDK runtime; the auth repository independently verifies its original runtime.
 
 After consolidation, the full gate passed again with the actual shared legacy/v2 Fastify server and opaque tokens, including all CLI subprocess checks. Public SDK/CLI methods and Connect approval requests required no behavioral change.

@@ -27,9 +27,8 @@ async function main() {
   const authFile = join(temp, 'authority.env');
   await writeFile(authFile, [
     `ACCOUNT_PROVISIONING_SECRET=${env.CROSS_PROVISION_SECRET}`,
-    `AUTH_V2_ISSUER=${required('CROSS_AUTH_URL')}`,
-    `AUTH_V2_AUDIENCE=${required('CROSS_API_URL')}`,
-    `AUTH_V2_INTROSPECTION_CLIENT_SECRET=${env.CROSS_INTROSPECTION_SECRET}`,
+    `AUTH_PUBLIC_URL=${new URL(required('CROSS_AUTH_URL')).origin}`,
+    `AUTH_INTROSPECTION_SECRET=${env.CROSS_INTROSPECTION_SECRET}`,
     `PORT=${apiUrl.port}`, '',
   ].join('\n'), { mode: 0o600 });
   const launch = (command, args, cwd, visible = false) => {
