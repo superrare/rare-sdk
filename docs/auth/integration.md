@@ -1,16 +1,16 @@
 # Cross-repository acceptance
 
-Run from the SDK checkout with Node 24, a built SDK, a built auth authority, `psql`,
+Run from the SDK checkout with Node 24, a built SDK, a built auth service, `psql`,
 and `redis-server`. These commands are explicitly opt-in and are not part of the
 ordinary unit suite. No production endpoints or database may be used.
 
 ## Real dependencies
 
 The gate calls the built SDK, real authority HTTP routes and device bridge, real
-Rare API HTTP routes, and gql-api backed by migrated Postgres. The authority
-launcher uses the authority checkout's compiled implementation and its real Redis
-adapter against a newly launched disposable Redis process. It generates ephemeral
-RSA signing keys; stopping it destroys all test sessions. EOA signing uses a new
+Rare API HTTP routes, and gql-api backed by migrated Postgres. The auth launcher uses the actual shared Fastify server (legacy plus v2 routes) and
+real Redis against a newly launched disposable Redis process. It generates only
+temporary service credentials and the legacy JWT secret; v2 needs no signing keys.
+Stopping it destroys all test sessions. EOA signing uses a new
 random in-memory wallet on each run. No real wallet or social-provider credentials
 are needed.
 
@@ -43,8 +43,8 @@ node test/cross-repo/authority.mjs
 ```
 
 Run the last command in its own terminal. It prints `READY` only after the actual
-authority listens. It requires the auth checkout's `authority/dist/*.mjs` build
-and installed authority dependencies. Stop it with Ctrl-C when finished.
+authority listens. It requires the auth checkout's root `build/` output from `npm run build`
+and installed root dependencies. Stop it with Ctrl-C when finished.
 
 The backend must use `CROSS_DATABASE_URL` and these matching settings:
 
@@ -136,5 +136,6 @@ logout and signed-out status all passed using isolated file storage. The test
 confirmed the CLI's profile write directly in Postgres and reran every core assertion.
 
 Syntax checks and ESLint passed for the harness. Missing opt-in was separately
-verified to return exit 2 (`UNAVAILABLE`). Runtime Node 24.8.0 emitted the provider's
-non-LTS warning; use a supported LTS patch release for final runtime validation.
+verified to return exit 2 (`UNAVAILABLE`). The shared auth service now uses Node 24 without a separate provider runtime.
+
+After consolidation, the full gate passed again with the actual shared legacy/v2 Fastify server and opaque tokens, including all CLI subprocess checks. Public SDK/CLI methods and Connect approval requests required no behavioral change.

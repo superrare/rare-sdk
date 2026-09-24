@@ -29,7 +29,6 @@ async function main() {
     `ACCOUNT_PROVISIONING_SECRET=${env.CROSS_PROVISION_SECRET}`,
     `AUTH_V2_ISSUER=${required('CROSS_AUTH_URL')}`,
     `AUTH_V2_AUDIENCE=${required('CROSS_API_URL')}`,
-    'AUTH_V2_INTROSPECTION_CLIENT_ID=rare-api',
     `AUTH_V2_INTROSPECTION_CLIENT_SECRET=${env.CROSS_INTROSPECTION_SECRET}`,
     `PORT=${apiUrl.port}`, '',
   ].join('\n'), { mode: 0o600 });
@@ -48,9 +47,9 @@ async function main() {
   for (let attempt = 0; attempt < 40; attempt++) {
     if (children.some(child => child.exitCode !== null || child.signalCode !== null)) throw new Error('A local service exited before readiness');
     try {
-      const discovery = await fetch(`${env.CROSS_AUTH_URL}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(1000) });
+      const auth = await fetch(`${env.CROSS_AUTH_URL}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(1000) });
       const api = await fetch(`${env.CROSS_API_URL}/v1/me`, { signal: AbortSignal.timeout(1000) });
-      if (discovery.status === 200 && api.status === 401) { ready = true; break; }
+      if (auth.status === 401 && api.status === 401) { ready = true; break; }
     } catch { /* Services may still be compiling/starting. */ }
     await sleep(500);
   }

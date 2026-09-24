@@ -127,7 +127,7 @@ is treated as an integration failure, not simulated by the suite.
 ## Account authentication (new authority)
 
 `createRareAccountClient` exposes account operations without an RPC connection or
-transaction wallet. The new authority must be deployed and configured separately;
+transaction wallet. Enable and configure the `/auth/v2` module in the existing auth service;
 legacy SuperRare/Connect cookies and tokens are not accepted by this client.
 
 ```ts

@@ -53,11 +53,8 @@ async function run() {
     stage = 'Postgres preflight';
     await sql(`SELECT 1 FROM "${schema}"."user" LIMIT 1`);
     stage = 'authority preflight';
-    const discovery = await fetch(`${authBaseUrl}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(5000) });
-    check(discovery.ok, 'Authority discovery unavailable');
-    const meta = await discovery.json();
-    check(meta.issuer === authBaseUrl, 'Authority issuer differs from configured issuer');
-    stage = 'Rare API preflight';
+    const auth = await fetch(`${authBaseUrl}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(5000) });
+    check(auth.status === 401, 'Shared auth v2 route is unavailable or accepts missing credentials');
     const unauthenticated = await fetch(`${apiBaseUrl}/v1/me`, { signal: AbortSignal.timeout(5000) });
     check(unauthenticated.status === 401, 'Rare API account route is not ready');
   } catch { throw new PrerequisiteError(`${stage} failed; check isolated stack configuration`); }

@@ -1,12 +1,11 @@
-// Launch the real built authority with a private disposable Redis process.
-// Only for local acceptance; ephemeral RSA keys and cookies intentionally vanish.
+// Launch the actual shared auth service with private disposable Redis.
+// Legacy and v2 routes use the same Fastify listener; no separate authority package.
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
-import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 const required = name => {
   if (!process.env[name]) throw new Error(`Missing ${name}`);
@@ -22,15 +21,12 @@ const loopback = name => {
 const random = () => randomBytes(32).toString('hex');
 let redisProcess;
 let redis;
-let server;
+let app;
 let stopping = false;
 async function cleanup() {
   if (stopping) return;
   stopping = true;
-  if (server?.listening) {
-    server.closeAllConnections();
-    await new Promise(resolve => server.close(resolve));
-  }
+  if (app) await app.close();
   if (redis?.isOpen) await redis.quit();
   if (redisProcess && redisProcess.exitCode === null) {
     const exited = once(redisProcess, 'exit');
@@ -40,29 +36,26 @@ async function cleanup() {
 }
 async function start() {
   if (required('RARE_CROSS_REPO') !== '1') throw new Error('Set RARE_CROSS_REPO=1 explicitly');
-  const root = resolve(required('CROSS_AUTH_WORKTREE'), 'authority');
+  const root = resolve(required('CROSS_AUTH_WORKTREE'));
   const issuer = loopback('CROSS_AUTH_URL');
   const api = loopback('CROSS_API_URL');
   const issuerUrl = new URL(issuer);
   if (issuerUrl.pathname !== '/auth/v2' || !issuerUrl.port) throw new Error('CROSS_AUTH_URL must include an explicit port and /auth/v2');
-  const config = {
-    issuer, audience: api, provisionUrl: `${api}/internal/v1/accounts/resolve`,
-    provisionSecret: required('CROSS_PROVISION_SECRET'),
-    introspectionClient: 'rare-api', introspectionSecret: required('CROSS_INTROSPECTION_SECRET'),
-    bridgeSecret: required('CROSS_BRIDGE_SECRET'), cookieKeys: [random()],
-    redisPrefix: `auth-v2:cross_${random()}:`,
-    rpcUrls: { 1: 'http://127.0.0.1:1' }, // EOA signature verification must not require RPC.
-    origins: [issuerUrl.origin], connectUrl: `${issuerUrl.origin}/device`,
-    internalBaseUrl: issuerUrl.origin, port: Number(issuerUrl.port),
-  };
-  const credentials = [config.provisionSecret, config.introspectionSecret, config.bridgeSecret];
+  const credentials = ['CROSS_PROVISION_SECRET', 'CROSS_INTROSPECTION_SECRET', 'CROSS_BRIDGE_SECRET'].map(required);
   if (credentials.some(value => value.length < 32) || new Set(credentials).size !== 3) throw new Error('Distinct test service secrets of at least 32 characters required');
+  Object.assign(process.env, {
+    JWT_SECRET: random(), AUTH_V2_ENABLED: 'true', AUTH_V2_ISSUER: issuer,
+    AUTH_V2_AUDIENCE: api, AUTH_V2_CONNECT_URL: `${issuerUrl.origin}/device`,
+    AUTH_V2_PROVISION_SECRET: credentials[0], AUTH_V2_INTROSPECTION_SECRET: credentials[1], AUTH_V2_BRIDGE_SECRET: credentials[2],
+    SIWE_ALLOWED_ORIGINS: issuerUrl.origin, SIWE_ALLOWED_CHAIN_IDS: '1', ETH_MAINNET_NODE_URL: 'http://127.0.0.1:1',
+  });
   const requireAuth = createRequire(resolve(root, 'package.json'));
   const { createClient } = requireAuth('redis');
-  const { createAuthority } = await import(pathToFileURL(resolve(root, 'dist/authority.mjs')));
-  const { createDeviceBridge, deviceBridgeHooks } = await import(pathToFileURL(resolve(root, 'dist/device-bridge.mjs')));
-  const key = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ format: 'jwk' });
-  config.jwks = { keys: [{ ...key, kid: random(), alg: 'RS256', use: 'sig' }] };
+  const { Server } = requireAuth('./build/server/impl/Server.js');
+  const { SessionDAO } = requireAuth('./build/dao/impl/SessionDAO.js');
+  const { RedisDatabase } = requireAuth('./build/db/impl/RedisDatabase.js');
+  const { AuthChallengeDAO } = requireAuth('./build/dao/impl/AuthChallengeDAO.js');
+  const { SiweChallengeService } = requireAuth('./build/siwe/SiweChallengeService.js');
   const reserve = createServer();
   reserve.listen(0, '127.0.0.1');
   await once(reserve, 'listening');
@@ -80,14 +73,19 @@ async function start() {
       if (output.includes('Ready to accept connections')) { clearTimeout(timer); resolve(); }
     });
   });
-  config.redisUrl = `redis://127.0.0.1:${port}`;
-  redis = createClient({ url: config.redisUrl, socket: { reconnectStrategy: false } });
+  redis = createClient({ url: `redis://127.0.0.1:${port}`, socket: { reconnectStrategy: false } });
   redis.on('error', () => { console.error('FAIL: local Redis connection lost'); process.exitCode = 1; void cleanup(); });
   await redis.connect();
-  ({ server } = await createAuthority({ config, redis, deviceHooks: deviceBridgeHooks(config), setupBridge: createDeviceBridge }));
-  server.listen(config.port, '127.0.0.1');
-  await once(server, 'listening');
-  console.log('READY: real authority with disposable Redis; signing keys and sessions are ephemeral');
+  const connection = {
+    setupDB: async () => {},
+    get: key => redis.get(key),
+    set: (key, value, options) => redis.set(key, value, options),
+    eval: (script, keys, args) => redis.eval(script, { keys, arguments: args }),
+  };
+  const hosted = new Server(new SessionDAO(new RedisDatabase(connection)), new SiweChallengeService(new AuthChallengeDAO(connection)), connection);
+  app = hosted.server;
+  await hosted.start(Number(issuerUrl.port), '127.0.0.1');
+  console.log('READY: shared legacy/v2 auth service with disposable Redis');
 }
 process.once('SIGTERM', () => { void cleanup(); });
 process.once('SIGINT', () => { void cleanup(); });
