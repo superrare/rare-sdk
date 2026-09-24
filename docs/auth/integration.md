@@ -24,8 +24,8 @@ gate.
 ## Environment and commands
 
 Supply paths and test-only secrets through the environment. The harness contains
-no developer-specific checkout paths. Generate three different random secrets
-locally and share them between backend and authority configuration; do not commit
+no developer-specific checkout paths. Generate one random internal API key
+locally and share it between backend and authority configuration; do not commit
 them or paste credential values into test reports.
 
 ```sh
@@ -34,8 +34,7 @@ export CROSS_AUTH_WORKTREE=/absolute/path/to/auth-worktree
 export CROSS_AUTH_URL=http://127.0.0.1:3031/auth/v2
 export CROSS_API_URL=http://127.0.0.1:3032
 export CROSS_DATABASE_URL=postgresql://test_user:test_password@127.0.0.1:5433/sdk_acceptance
-# Also set CROSS_PROVISION_SECRET, CROSS_INTROSPECTION_SECRET,
-# and CROSS_BRIDGE_SECRET to distinct random values (at least 32 characters).
+# Also set CROSS_AUTH_INTERNAL_API_KEY to a random value (at least 32 characters).
 # Optional executable overrides: PSQL_BIN and REDIS_SERVER_BIN.
 
 npm run build
@@ -48,10 +47,9 @@ and installed root dependencies. Stop it with Ctrl-C when finished.
 
 The backend must use `CROSS_DATABASE_URL` and these matching settings:
 
-- Provisioning credential: `CROSS_PROVISION_SECRET`.
-- Introspection issuer: `CROSS_AUTH_URL`; audience: `CROSS_API_URL`.
-- Confidential introspection client: `rare-api`; secret:
-  `CROSS_INTROSPECTION_SECRET`.
+- Provisioning credential: `CROSS_AUTH_INTERNAL_API_KEY`.
+- Introspection issuer: `CROSS_AUTH_URL`; audience: `rare-api`.
+- Introspection accepts the access token alone; no service key is sent.
 - Account provisioning at `/internal/v1/accounts/resolve` and GET/PATCH `/v1/me`.
 - Actual authenticated GraphQL transport to the account resolver.
 
@@ -79,7 +77,7 @@ node test/cross-repo/local-stack.mjs
 
 The earlier `RARE_CROSS_REPO`, `CROSS_AUTH_WORKTREE`, `CROSS_AUTH_URL`,
 `CROSS_API_URL`, and `CROSS_DATABASE_URL` variables are also required. This launcher
-generates the three service secrets itself; they need not be exported. It uses
+generates the shared internal API key itself; they need not be exported. It uses
 `pnpm` (`PNPM_BIN` can override its executable) and the backend test environment
 template. An already running GraphQL service is required; it does not create or
 migrate the database. The provided API port overrides the backend harness default.

@@ -23,12 +23,11 @@ async function main() {
   if (!['127.0.0.1', 'localhost'].includes(apiUrl.hostname) || !apiUrl.port) throw new Error('API must be loopback with explicit port');
   temp = await mkdtemp(join(tmpdir(), 'rare-cross-'));
   const secret = () => randomBytes(32).toString('hex');
-  const env = { ...process.env, CROSS_PROVISION_SECRET: secret(), CROSS_INTROSPECTION_SECRET: secret(), CROSS_BRIDGE_SECRET: secret() };
+  const env = { ...process.env, CROSS_AUTH_INTERNAL_API_KEY: secret() };
   const authFile = join(temp, 'authority.env');
   await writeFile(authFile, [
-    `ACCOUNT_PROVISIONING_SECRET=${env.CROSS_PROVISION_SECRET}`,
+    `AUTH_INTERNAL_API_KEY=${env.CROSS_AUTH_INTERNAL_API_KEY}`,
     `AUTH_PUBLIC_URL=${new URL(required('CROSS_AUTH_URL')).origin}`,
-    `AUTH_INTROSPECTION_SECRET=${env.CROSS_INTROSPECTION_SECRET}`,
     `PORT=${apiUrl.port}`, '',
   ].join('\n'), { mode: 0o600 });
   const launch = (command, args, cwd, visible = false) => {
@@ -48,7 +47,7 @@ async function main() {
     try {
       const auth = await fetch(`${env.CROSS_AUTH_URL}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(1000) });
       const api = await fetch(`${env.CROSS_API_URL}/v1/me`, { signal: AbortSignal.timeout(1000) });
-      if (auth.status === 401 && api.status === 401) { ready = true; break; }
+      if (auth.status === 200 && api.status === 401) { ready = true; break; }
     } catch { /* Services may still be compiling/starting. */ }
     await sleep(500);
   }

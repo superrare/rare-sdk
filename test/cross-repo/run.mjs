@@ -38,7 +38,7 @@ async function run() {
     PGSSLMODE: database.searchParams.get('sslmode') || 'disable',
     PGCONNECT_TIMEOUT: '5',
   };
-  const bridgeSecret = required('CROSS_BRIDGE_SECRET');
+  const bridgeSecret = required('CROSS_AUTH_INTERNAL_API_KEY');
   const sql = async query => {
     // Connection secrets stay in the environment, never in process argv/output.
     const { stdout } = await exec(process.env.PSQL_BIN || 'psql', ['-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-c', query], {
@@ -54,7 +54,7 @@ async function run() {
     await sql(`SELECT 1 FROM "${schema}"."user" LIMIT 1`);
     stage = 'authority preflight';
     const auth = await fetch(`${authBaseUrl}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(5000) });
-    check(auth.status === 401, 'Shared auth v2 route is unavailable or accepts missing credentials');
+    check(auth.status === 200 && (await auth.json()).active === false, 'Shared auth v2 introspection must reject an unknown token without service credentials');
     const unauthenticated = await fetch(`${apiBaseUrl}/v1/me`, { signal: AbortSignal.timeout(5000) });
     check(unauthenticated.status === 401, 'Rare API account route is not ready');
   } catch { throw new PrerequisiteError(`${stage} failed; check isolated stack configuration`); }

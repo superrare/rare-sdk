@@ -41,12 +41,12 @@ async function start() {
   const api = loopback('CROSS_API_URL');
   const issuerUrl = new URL(issuer);
   if (issuerUrl.pathname !== '/auth/v2' || !issuerUrl.port) throw new Error('CROSS_AUTH_URL must include an explicit port and /auth/v2');
-  const credentials = ['CROSS_PROVISION_SECRET', 'CROSS_INTROSPECTION_SECRET', 'CROSS_BRIDGE_SECRET'].map(required);
-  if (credentials.some(value => value.length < 32) || new Set(credentials).size !== 3) throw new Error('Distinct test service secrets of at least 32 characters required');
+  const internalApiKey = required('CROSS_AUTH_INTERNAL_API_KEY');
+  if (internalApiKey.length < 32) throw new Error('Test internal API key must be at least 32 characters');
   Object.assign(process.env, {
     JWT_SECRET: random(), AUTH_PUBLIC_URL: issuerUrl.origin,
     RARE_API_URL: api, CONNECT_URL: issuerUrl.origin,
-    ACCOUNT_PROVISIONING_SECRET: credentials[0], AUTH_INTROSPECTION_SECRET: credentials[1], AUTH_DEVICE_BRIDGE_SECRET: credentials[2],
+    AUTH_INTERNAL_API_KEY: internalApiKey,
     SIWE_ALLOWED_ORIGINS: issuerUrl.origin, SIWE_ALLOWED_CHAIN_IDS: '1', ETH_MAINNET_NODE_URL: 'http://127.0.0.1:1',
   });
   const requireAuth = createRequire(resolve(root, 'package.json'));
@@ -90,7 +90,7 @@ async function start() {
 process.once('SIGTERM', () => { void cleanup(); });
 process.once('SIGINT', () => { void cleanup(); });
 start().catch(async () => {
-  console.error('UNAVAILABLE: authority startup failed; check built auth artifacts, loopback URLs, distinct test secrets and redis-server');
+  console.error('UNAVAILABLE: authority startup failed; check built auth artifacts, loopback URLs, test internal API key and redis-server');
   process.exitCode = 2;
   await cleanup();
 });
