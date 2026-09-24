@@ -123,3 +123,78 @@ Liquid discovery tests follow functional core / imperative shell boundaries:
 identity construction without mocks. `test/integration/liquid-edition-discovery.test.ts`
 tests the HTTP shell against the live rare-api; no responses are mocked. A `503`
 is treated as an integration failure, not simulated by the suite.
+
+## Account authentication (new authority)
+
+`createRareAccountClient` exposes account operations without an RPC connection or
+transaction wallet. The new authority must be deployed and configured separately;
+legacy SuperRare/Connect cookies and tokens are not accepted by this client.
+
+```ts
+import { createRareAccountClient } from '@rareprotocol/rare-sdk';
+
+const account = createRareAccountClient({
+  authBaseUrl: 'https://YOUR_AUTH_HOST/auth/v2',
+  apiBaseUrl: 'https://YOUR_RARE_API_HOST',
+});
+const authorization = await account.auth.startDeviceAuthorization();
+// Display authorization.verificationUri and authorization.userCode, or open
+// authorization.verificationUriComplete in a browser using your application's UI.
+await account.auth.waitForDeviceAuthorization(authorization);
+const profile = await account.profile.get();
+await account.profile.update({ profile: { bio: 'Artist and collector' } });
+await account.auth.logout();
+```
+
+For direct wallet login, supply a signer; no transaction is submitted:
+
+```ts
+await account.auth.loginWithWallet({
+  address: walletAccount.address,
+  chainId: 1,
+  signMessage: (message) => walletAccount.signMessage({ message }),
+});
+```
+
+Browser-approved login supports the hosted application's wallet, social, and email
+options. Social providers and cross-origin account continuity require deployment
+configuration and verification; the SDK itself does not hold social credentials.
+
+Sessions default to instance-local memory. Persist them by supplying a
+`RareAccountSessionStore`. `withLock` must serialize **all** operations across
+clients/processes sharing a store; reads happen after lock acquisition and writes
+must finish durably before resolving. Scope the store by normalized auth base,
+API base, and client ID. Store values can be credentials or a nonsecret logout
+tombstone (`RareStoredAccountSession`); retain the latter to prevent an old login
+from resurrecting a session after another process logs out. Use `auth.getSession()`
+for local status; it returns `null` for a logged-out store. It is not a server
+validation call and its non-null result contains secrets—never print it wholesale.
+
+The SDK proactively refreshes near-expired credentials under that lock. It durably
+marks `refreshBlocked: true` before sending the refresh and clears the marker only
+after saving the replacement credentials. An ambiguous refresh failure raises
+`RareAuthError` with `code: 'reauthentication_required'`; it never automatically
+replays a potentially consumed refresh token. The remaining credential can be used
+for explicit logout. A completely unavailable store may require local recovery
+before reuse. Logout revokes remotely before replacing credentials with a tombstone;
+on network failure credentials remain for retry. `auth.clearSession()` removes
+local credentials without claiming server revocation. Explicit successful login
+replaces the local session; an older server session is not automatically revoked.
+
+For resumable device flows, persist `RareDeviceAuthorization` securely and call
+`auth.pollDeviceAuthorization(state)`. Pending, slow-down and transport-retry results return updated
+`authorization` state, including `nextPollAt` and `interval`; save it before the next
+invocation. Serialize access to a pending request separately from session storage.
+An `authorized` result has already been saved to the session store. The built-in
+wait method handles polling but does not persist intermediate device state.
+Device codes and token responses must not appear in logs, URLs, or command arguments.
+
+Network methods accept `{ signal }` for cancellation and use a 30-second request
+timeout. Device waits also stop at grant expiry. Only HTTPS endpoints (or loopback
+HTTP for development) are accepted, and credential requests do not follow redirects.
+Profile writes are never automatically replayed. Omitted patch fields preserve data;
+`null` clears nullable profile fields. Email and account/wallet ownership are not
+editable through this first profile surface.
+
+Existing `createRareClient` wallet transactions and public reads are unchanged.
+An account session does not delegate transaction-signing authority.
