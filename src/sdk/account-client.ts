@@ -17,9 +17,10 @@ const deviceGrant = 'urn:ietf:params:oauth:grant-type:device_code';
 const walletGrant = 'urn:superrare:params:oauth:grant-type:siwe';
 
 /** Account operations do not require a chain client or a transaction signer. */
-export function createRareAccountClient(options: RareAccountClientOptions): RareAccountClient {
-  const authBaseUrl = normalizeAuthBaseUrl(options.authBaseUrl);
+export function createRareAccountClient(options: RareAccountClientOptions = {}): RareAccountClient {
+  if ('authBaseUrl' in options) throw new RareAuthError('auth_url_not_supported');
   const apiBaseUrl = normalizeAuthBaseUrl(options.apiBaseUrl ?? DEFAULT_RARE_API_BASE_URL);
+  const authBaseUrl = joinAuthPath(apiBaseUrl, 'auth/v2');
   const clientId = options.clientId ?? 'rare-sdk';
   if (!['rare-sdk', 'rare-cli'].includes(clientId)) throw new RareAuthError('invalid_client');
   const storage = options.sessionStore ?? createMemoryAccountSessionStore();

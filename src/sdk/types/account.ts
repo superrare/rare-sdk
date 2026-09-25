@@ -55,8 +55,7 @@ export type RareWalletLoginOptions = {
 };
 
 export type RareAccountClientOptions = {
-  /** Base of the new authentication authority, including its version prefix. */
-  authBaseUrl: string;
+  /** Public API base; auth uses its /auth/v2 routes. Defaults to https://api.superrare.com. */
   apiBaseUrl?: string;
   clientId?: string;
   sessionStore?: RareAccountSessionStore;

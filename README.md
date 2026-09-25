@@ -127,16 +127,15 @@ is treated as an integration failure, not simulated by the suite.
 ## Account authentication (new authority)
 
 `createRareAccountClient` exposes account operations without an RPC connection or
-transaction wallet. Enable and configure the `/auth/v2` module in the existing auth service;
-legacy SuperRare/Connect cookies and tokens are not accepted by this client.
+transaction wallet. All requests use one public API base URL. Rare API forwards
+`/auth/v2` login, device, refresh and revocation requests to the existing auth
+service; profile requests use `/v1/me`. Legacy SuperRare/Connect cookies and tokens
+are not accepted by this client.
 
 ```ts
 import { createRareAccountClient } from '@rareprotocol/rare-sdk';
 
-const account = createRareAccountClient({
-  authBaseUrl: 'https://YOUR_AUTH_HOST/auth/v2',
-  apiBaseUrl: 'https://YOUR_RARE_API_HOST',
-});
+const account = createRareAccountClient(); // https://api.superrare.com
 const authorization = await account.auth.startDeviceAuthorization();
 // Display authorization.verificationUri and authorization.userCode, or open
 // authorization.verificationUriComplete in a browser using your application's UI.
@@ -145,6 +144,19 @@ const profile = await account.profile.get();
 await account.profile.update({ profile: { bio: 'Artist and collector' } });
 await account.auth.logout();
 ```
+
+For the development environment, set only the API base:
+
+```ts
+const account = createRareAccountClient({
+  apiBaseUrl: 'https://rare-api-devmainnet-784573620320.us-east1.run.app',
+});
+```
+
+Auth is always derived as `<apiBaseUrl>/auth/v2`; there is no separate auth URL
+option. A feature deployment can supply its own API base with the same routes.
+Sessions from the earlier direct-auth URL are bound to that old issuer and require
+fresh login; they are not silently reused under the API issuer.
 
 For direct wallet login, supply a signer; no transaction is submitted:
 

@@ -39,7 +39,7 @@ const device = (extra: Partial<RareDeviceAuthorization> = {}): RareDeviceAuthori
   expiresAt: Date.now() + 600000, interval: 5, nextPollAt: Date.now() - 1, ...extra,
 });
 const client = (storage = createMemoryAccountSessionStore()) => createRareAccountClient({
-  authBaseUrl: `${origin}/auth/v2`, apiBaseUrl: origin, clientId: 'rare-cli', sessionStore: storage,
+  apiBaseUrl: origin, clientId: 'rare-cli', sessionStore: storage,
 });
 
 beforeEach(async () => {
@@ -56,6 +56,20 @@ afterEach(async () => {
 });
 
 describe('account authentication over HTTP', () => {
+  it('defaults to the production API and rejects the removed separate auth URL', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await createRareAccountClient({ sessionStore: storage }).auth.clearSession();
+    expect(await storage.get()).toMatchObject({ apiBaseUrl: 'https://api.superrare.com', authBaseUrl: 'https://api.superrare.com/auth/v2' });
+    expect(() => createRareAccountClient({ apiBaseUrl: origin, ...{ authBaseUrl: 'https://auth.example/auth/v2' } })).toThrow('auth_url_not_supported');
+    expect(await createRareAccountClient().auth.getSession()).toBeNull();
+  });
+
+  it('does not reuse a session issued by the old direct auth endpoint', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set({ ...session(), authBaseUrl: 'https://auth.example/auth/v2' });
+    await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'session_authority_mismatch' });
+  });
+
   it('signs a bound wallet challenge and persists the token response', async () => {
     const sdk = client();
     const message = createSiweMessage({ address: account.address, chainId: 1, domain: new URL(origin).host,
