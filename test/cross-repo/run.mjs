@@ -26,7 +26,7 @@ const check = (condition, description) => assert.ok(condition, description);
 
 async function run() {
   if (required('RARE_CROSS_REPO') !== '1') throw new PrerequisiteError('Set RARE_CROSS_REPO=1 explicitly');
-  const authBaseUrl = localUrl('CROSS_AUTH_URL');
+  const internalAuthBaseUrl = localUrl('CROSS_AUTH_URL');
   const apiBaseUrl = localUrl('CROSS_API_URL');
   const database = new URL(localUrl('CROSS_DATABASE_URL'));
   const schema = process.env.CROSS_DATABASE_SCHEMA || database.searchParams.get('schema') || 'public';
@@ -53,24 +53,34 @@ async function run() {
     stage = 'Postgres preflight';
     await sql(`SELECT 1 FROM "${schema}"."user" LIMIT 1`);
     stage = 'authority preflight';
-    const auth = await fetch(`${authBaseUrl}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(5000) });
+    const auth = await fetch(`${internalAuthBaseUrl}/introspect`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=untrusted', signal: AbortSignal.timeout(5000) });
     check(auth.status === 200 && (await auth.json()).active === false, 'Shared auth v2 introspection must reject an unknown token without service credentials');
     const unauthenticated = await fetch(`${apiBaseUrl}/v1/me`, { signal: AbortSignal.timeout(5000) });
     check(unauthenticated.status === 401, 'Rare API account route is not ready');
   } catch { throw new PrerequisiteError(`${stage} failed; check isolated stack configuration`); }
+
+  stage = 'public auth route isolation';
+  for (const path of ['/introspect', '/internal/device/reviews', '/internal/device/reviews/test/challenge', '/internal/device/reviews/test/decision']) {
+    const response = await fetch(`${apiBaseUrl}/auth/v2${path}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${bridgeSecret}` }, body: '{}', redirect: 'error', signal: AbortSignal.timeout(5000) });
+    check([401, 403, 404, 405].includes(response.status), `Internal auth route exposed through public API: ${path}`);
+  }
+  console.log('PASS API passthrough excludes introspection and internal device bridge');
 
   const wallet = privateKeyToAccount(generatePrivateKey());
   const address = wallet.address.toLowerCase();
   // Generated addresses are hex-only. Never interpolate caller input into SQL.
   check(/^0x[0-9a-f]{40}$/.test(address), 'Invalid generated wallet');
   const row = async () => JSON.parse(await sql(`SELECT COALESCE(json_agg(json_build_object('accountId',u.id::text,'username',u.username,'metadata',u.metadata)), '[]'::json) FROM "${schema}"."user" u JOIN "${schema}".user_address a ON a.user_id=u.id WHERE lower(a.address)='${address}'`));
-  const options = { authBaseUrl, apiBaseUrl, clientId: 'rare-cli' };
+  const options = { apiBaseUrl, clientId: 'rare-cli', fetch: async (input, init) => {
+    check(new URL(input instanceof Request ? input.url : input).origin === new URL(apiBaseUrl).origin, 'SDK attempted to bypass public API origin');
+    return fetch(input, init);
+  } };
   const clients = [];
   const client = () => { const c = sdk.createRareAccountClient(options); clients.push(c); return c; };
   const login = c => c.auth.loginWithWallet({ address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }), signal: AbortSignal.timeout(15000) });
   const rawMe = token => fetch(`${apiBaseUrl}/v1/me`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
   const bridge = async (path, body) => {
-    const response = await fetch(`${authBaseUrl}/internal/device/reviews${path}`, {
+    const response = await fetch(`${internalAuthBaseUrl}/internal/device/reviews${path}`, {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${bridgeSecret}` },
       body: JSON.stringify(body), signal: AbortSignal.timeout(15000),
     });
@@ -83,6 +93,7 @@ async function run() {
     check((await row()).length === 0, 'Fresh wallet already exists');
     const first = client();
     await login(first);
+    check((await first.auth.getSession()).authBaseUrl === `${apiBaseUrl}/auth/v2`, 'Session issuer must use public API auth URL');
     const profile = await first.profile.get();
     const persisted = await row();
     check(persisted.length === 1 && persisted[0].accountId === profile.accountId, 'Login did not persist exactly one real account');
@@ -136,7 +147,7 @@ async function run() {
     if (process.env.CROSS_CLI_WORKTREE) {
       stage = 'actual CLI process acceptance';
       const { verifyCli } = await import('./cli.mjs');
-      await verifyCli({ authBaseUrl, apiBaseUrl, bridge, wallet, accountId: profile.accountId });
+      await verifyCli({ apiBaseUrl, bridge, wallet, accountId: profile.accountId });
       check((await row())[0].metadata.bio === 'Actual CLI cross-repo acceptance', 'CLI profile mutation was not persisted');
     }
   } finally {

@@ -48,7 +48,9 @@ and installed root dependencies. Stop it with Ctrl-C when finished.
 The backend must use `CROSS_DATABASE_URL` and these matching settings:
 
 - Provisioning credential: `CROSS_AUTH_INTERNAL_API_KEY`.
-- Introspection issuer: `CROSS_AUTH_URL`; audience: `rare-api`.
+- `AUTH_SERVICE`: the origin of `CROSS_AUTH_URL`, for internal transport.
+- `RARE_API_PUBLIC_URL`: `CROSS_API_URL`, making the public issuer
+  `${CROSS_API_URL}/auth/v2`. Auth uses the same public API setting.
 - Introspection accepts the access token alone; no service key is sent.
 - Account provisioning at `/internal/v1/accounts/resolve` and GET/PATCH `/v1/me`.
 - Actual authenticated GraphQL transport to the account resolver.
@@ -90,9 +92,19 @@ explicit file storage; it never changes HOME or accesses the native keychain.
 
 ## Assertions and result semantics
 
+The SDK and CLI receive only `CROSS_API_URL`. Their public login, refresh and
+revocation requests pass through Rare API at `/auth/v2`. `CROSS_AUTH_URL` remains
+the direct internal listener address used solely for bridge and introspection
+checks; it is not an SDK configuration option. The SDK transport asserts that
+every request stays on the public API origin.
+
 The runner verifies:
 
-1. Wallet login creates exactly one real Postgres account/address binding.
+0. Introspection and internal device approval routes are rejected through the public API
+   (401/403/404/405; backend proxy tests separately verify upstream noninvocation).
+
+1. Wallet login creates exactly one real Postgres account/address binding and its
+   stored session binds to the public API auth URL.
 2. SDK profile reads and writes match persisted data.
 3. A separate login reuses that account and preserves its profile.
 4. Null profile patches clear fields.
@@ -137,3 +149,14 @@ Syntax checks and ESLint passed for the harness. Missing opt-in was separately
 verified to return exit 2 (`UNAVAILABLE`). The auth service retains production Node 14.18.1 and CI Node 16. The integration launcher runs in the SDK runtime; the auth repository independently verifies its original runtime.
 
 After consolidation, the full gate passed again with the actual shared legacy/v2 Fastify server and opaque tokens, including all CLI subprocess checks. Public SDK/CLI methods and Connect approval requests required no behavioral change.
+
+The single-origin routing revision passed the full gate against the actual four
+repositories, with process exit 0. Public SDK traffic stayed on the Rare API origin,
+stored sessions bound to its `/auth/v2` URL, and public introspection/device bridge
+requests were rejected. Wallet provisioning and profile persistence, refresh and
+family revocation, device approval/polling, and the actual CLI login/status/profile/
+logout subprocess checks all passed. The stack used the backend-owned GraphQL
+harness, migrated local Postgres and Pub/Sub emulator, plus disposable Redis; it
+stopped its own authority/API processes and removed the generated account rows.
+This verifies local passthrough behavior, not deployed routing or browser/social
+provider behavior.

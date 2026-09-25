@@ -27,7 +27,8 @@ async function main() {
   const authFile = join(temp, 'authority.env');
   await writeFile(authFile, [
     `AUTH_INTERNAL_API_KEY=${env.CROSS_AUTH_INTERNAL_API_KEY}`,
-    `AUTH_PUBLIC_URL=${new URL(required('CROSS_AUTH_URL')).origin}`,
+    `AUTH_SERVICE=${new URL(required('CROSS_AUTH_URL')).origin}`,
+    `RARE_API_PUBLIC_URL=${apiUrl.origin}`,
     `PORT=${apiUrl.port}`, '',
   ].join('\n'), { mode: 0o600 });
   const launch = (command, args, cwd, visible = false) => {

@@ -4,11 +4,11 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-export async function verifyCli({ authBaseUrl, apiBaseUrl, bridge, wallet, accountId }) {
+export async function verifyCli({ apiBaseUrl, bridge, wallet, accountId }) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'rare-cli-acceptance-')));
   const executable = resolve(process.env.CROSS_CLI_WORKTREE, 'dist/index.js');
   const command = (args, stdin = '') => new Promise((resolve, reject) => {
-    const child = execFile(process.execPath, [executable, ...args, '--json', '--storage', 'file', '--auth-directory', directory, '--auth-url', authBaseUrl, '--api-url', apiBaseUrl], {
+    const child = execFile(process.execPath, [executable, ...args, '--json', '--storage', 'file', '--auth-directory', directory, '--api-url', apiBaseUrl], {
       env: { PATH: process.env.PATH, RARE_AUTH_DIRECTORY: directory }, timeout: 30000, maxBuffer: 1024 * 1024,
     }, (error, stdout) => {
       if (error) { reject(new Error('Actual CLI command failed')); return; }

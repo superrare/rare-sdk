@@ -44,7 +44,7 @@ async function start() {
   const internalApiKey = required('CROSS_AUTH_INTERNAL_API_KEY');
   if (internalApiKey.length < 32) throw new Error('Test internal API key must be at least 32 characters');
   Object.assign(process.env, {
-    JWT_SECRET: random(), AUTH_PUBLIC_URL: issuerUrl.origin,
+    JWT_SECRET: random(), RARE_API_PUBLIC_URL: api,
     RARE_API_URL: api, CONNECT_URL: issuerUrl.origin,
     AUTH_INTERNAL_API_KEY: internalApiKey,
     SIWE_ALLOWED_ORIGINS: issuerUrl.origin, SIWE_ALLOWED_CHAIN_IDS: '1', ETH_MAINNET_NODE_URL: 'http://127.0.0.1:1',
