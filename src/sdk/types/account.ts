@@ -68,18 +68,18 @@ export type RareAccountProfile = {
   username: string;
   email: string | null;
   profile: {
-    displayName: string | null;
+    fullName: string | null;
     bio: string | null;
-    avatarUrl: string | null;
+    avatar: string | null;
   };
 };
 
 export type RareAccountProfilePatch = {
   username?: string;
   profile?: {
-    displayName?: string;
+    fullName?: string;
     bio?: string;
-    avatarUrl?: string;
+    avatar?: string;
   };
 };
 

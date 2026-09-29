@@ -25,9 +25,9 @@ export function parseAccountProfile(value: unknown): RareAccountProfile {
     username: requireString(data.username, 'username'),
     email: nullableText(data.email, 'email'),
     profile: {
-      displayName: nullableText(profile.displayName, 'display_name'),
+      fullName: nullableText(profile.fullName, 'full_name'),
       bio: nullableText(profile.bio, 'bio'),
-      avatarUrl: nullableText(profile.avatarUrl, 'avatar_url'),
+      avatar: nullableText(profile.avatar, 'avatar'),
     },
   };
 }
@@ -44,7 +44,7 @@ export function validateAccountProfilePatch(value: unknown): asserts value is Ra
   if ('profile' in value) {
     if (!isRecord(value.profile) || Object.keys(value.profile).length === 0 ||
         Object.entries(value.profile).some(([key, field]) =>
-          !['displayName', 'bio', 'avatarUrl'].includes(key) || typeof field !== 'string')) {
+          !['fullName', 'bio', 'avatar'].includes(key) || typeof field !== 'string')) {
       throw new RareAuthError('invalid_profile_patch');
     }
   }

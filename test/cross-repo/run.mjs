@@ -101,12 +101,12 @@ async function run() {
     console.log('PASS wallet login automatically persists account in Postgres');
 
     stage = 'profile persistence and account reuse';
-    await first.profile.update({ profile: { displayName: 'SDK acceptance', bio: 'Persistent cross-repo proof' } });
+    await first.profile.update({ profile: { fullName: 'SDK acceptance', bio: 'Persistent cross-repo proof' } });
     check((await row())[0].metadata.bio === 'Persistent cross-repo proof', 'Profile mutation was not persisted');
     const second = client();
     await login(second);
     const reused = await second.profile.get();
-    check(reused.accountId === profile.accountId && reused.profile.displayName === 'SDK acceptance' && (await row()).length === 1, 'Second login failed account reuse');
+    check(reused.accountId === profile.accountId && reused.profile.fullName === 'SDK acceptance' && (await row()).length === 1, 'Second login failed account reuse');
     await second.profile.update({ profile: { bio: null } });
     check((await first.profile.get()).profile.bio === null, 'Null patch did not clear bio');
     console.log('PASS profile GET/PATCH persists; second login reuses account and preserves profile');

@@ -10,7 +10,7 @@ import type { RareAccountSession, RareDeviceAuthorization } from '../../src/sdk/
 // Real local HTTP transport fixture. Actual authority integration is a separate cross-repository gate.
 const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
 const profile = { accountId: '42', address: account.address.toLowerCase(), username: 'artist', email: null,
-  profile: { displayName: null, bio: 'Hello', avatarUrl: null } };
+  profile: { fullName: null, bio: 'Hello', avatar: null } };
 type Handler = (request: IncomingMessage, response: ServerResponse, body: string) => Promise<void>;
 // eslint-disable-next-line functional/no-let
 let origin = '';
