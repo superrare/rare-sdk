@@ -7,7 +7,7 @@ import { createRareAccountClient } from '../../src/sdk/account-client.js';
 import { createMemoryAccountSessionStore } from '../../src/sdk/account-session-store.js';
 import type { RareAccountSession, RareDeviceAuthorization } from '../../src/sdk/types/account.js';
 
-// Real local HTTP transport fixture. Actual authority integration is a separate cross-repository gate.
+// Controlled HTTP responses cover client edge cases; deployed-service coverage is separate.
 const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
 const profile = { accountId: '42', address: account.address.toLowerCase(), username: 'artist', email: null,
   profile: { fullName: null, bio: 'Hello', avatar: null } };

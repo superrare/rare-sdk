@@ -172,6 +172,22 @@ Browser-approved login supports the hosted application's wallet, social, and ema
 options. Social providers and cross-origin account continuity require deployment
 configuration and verification; the SDK itself does not hold social credentials.
 
+The account integration suite calls a deployed non-production Rare API and Auth
+with a dedicated test wallet. It verifies wallet login, account reuse, profile
+updates, token refresh and revocation through real HTTP services. It writes a
+stable profile marker on that test account. This suite is manual and separate
+from `npm test`:
+
+```bash
+export RARE_ACCOUNT_TEST_API_URL=https://your-feature-rare-api.example
+export RARE_ACCOUNT_TEST_PRIVATE_KEY=... # dedicated, unfunded test wallet
+npm run test:integration:account
+```
+
+The controlled HTTP account tests in `test/contract/` exercise protocol edge
+cases without claiming service integration. The local disposable-stack driver
+in `test/cross-repo/` remains available for backend diagnosis.
+
 Sessions default to instance-local memory. Persist them by supplying a
 `RareAccountSessionStore`. `withLock` must serialize **all** operations across
 clients/processes sharing a store; reads happen after lock acquisition and writes

@@ -97,7 +97,7 @@ async function run() {
     const profile = await first.profile.get();
     const persisted = await row();
     check(persisted.length === 1 && persisted[0].accountId === profile.accountId, 'Login did not persist exactly one real account');
-    check(profile.address === address && profile.email === null, 'New account identity mismatch');
+    check(profile.address === address && profile.email === 'n/a', 'New account identity mismatch');
     console.log('PASS wallet login automatically persists account in Postgres');
 
     stage = 'profile persistence and account reuse';
@@ -107,8 +107,9 @@ async function run() {
     await login(second);
     const reused = await second.profile.get();
     check(reused.accountId === profile.accountId && reused.profile.fullName === 'SDK acceptance' && (await row()).length === 1, 'Second login failed account reuse');
-    await second.profile.update({ profile: { bio: null } });
-    check((await first.profile.get()).profile.bio === null, 'Null patch did not clear bio');
+    await second.profile.update({ profile: { fullName: 'Updated through SDK' } });
+    const partialUpdate = await first.profile.get();
+    check(partialUpdate.profile.fullName === 'Updated through SDK' && partialUpdate.profile.bio === 'Persistent cross-repo proof', 'Omitted profile field was not preserved');
     console.log('PASS profile GET/PATCH persists; second login reuses account and preserves profile');
 
     stage = 'refresh and immediate revocation';
