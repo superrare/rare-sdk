@@ -107,13 +107,12 @@ The runner verifies:
    stored session binds to the public API auth URL.
 2. SDK profile reads and writes match persisted data.
 3. A separate login reuses that account and preserves its profile.
-4. Null profile patches clear fields.
-5. Explicit SDK refresh rotates credentials and the actual API accepts the result.
-6. Logout makes both previous and refreshed access tokens immediately unauthorized,
+4. Explicit SDK refresh rotates credentials and the actual API accepts the result.
+5. Logout makes both previous and refreshed access tokens immediately unauthorized,
    while a separate installation remains authorized.
-7. Device review and a fresh review-bound wallet signature, followed by SDK polling
+6. Device review and a fresh review-bound wallet signature, followed by SDK polling
    at its actual cadence, resolve to the same persisted account.
-8. Revoking the device session makes its access token unauthorized.
+7. Revoking the device session makes its access token unauthorized.
 
 Tokens, private keys, service secrets, and device codes are never printed. Database
 credentials are passed to `psql` via its environment rather than command arguments.
@@ -130,33 +129,3 @@ This gate deliberately exercises the private bridge directly. It does not establ
 browser CSRF/UI behavior, social-provider account continuity, deployed configuration,
 smart-wallet RPC verification, or CLI OS-keychain behavior; those require their
 separate gates. Do not describe this result as proof of those behaviors.
-
-## Recorded local evidence
-
-The core gate passed against actual implementations on 2026-09-24: wallet account
-creation, profile persistence and account reuse, refresh rotation, immediate family
-revocation with another installation preserved, and fresh-signature device approval
-all passed; process exit was 0. The backend used its actual AccountModule, GraphQL
-service guard, Postgres schema with all existing migrations, and a real Pub/Sub
-emulator. The authority used the real Redis adapter against disposable Redis.
-
-A subsequent full run with `CROSS_CLI_WORKTREE` also exited 0: actual CLI subprocess
-device login/resume, remotely verified status, profile read/update through stdin,
-logout and signed-out status all passed using isolated file storage. The test
-confirmed the CLI's profile write directly in Postgres and reran every core assertion.
-
-Syntax checks and ESLint passed for the harness. Missing opt-in was separately
-verified to return exit 2 (`UNAVAILABLE`). The auth service retains production Node 14.18.1 and CI Node 16. The integration launcher runs in the SDK runtime; the auth repository independently verifies its original runtime.
-
-After consolidation, the full gate passed again with the actual shared legacy/v2 Fastify server and opaque tokens, including all CLI subprocess checks. Public SDK/CLI methods and Connect approval requests required no behavioral change.
-
-The single-origin routing revision passed the full gate against the actual four
-repositories, with process exit 0. Public SDK traffic stayed on the Rare API origin,
-stored sessions bound to its `/auth/v2` URL, and public introspection/device bridge
-requests were rejected. Wallet provisioning and profile persistence, refresh and
-family revocation, device approval/polling, and the actual CLI login/status/profile/
-logout subprocess checks all passed. The stack used the backend-owned GraphQL
-harness, migrated local Postgres and Pub/Sub emulator, plus disposable Redis; it
-stopped its own authority/API processes and removed the generated account rows.
-This verifies local passthrough behavior, not deployed routing or browser/social
-provider behavior.
