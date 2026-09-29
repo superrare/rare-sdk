@@ -176,7 +176,11 @@ The account integration suite calls a deployed non-production Rare API and Auth
 with a dedicated test wallet. It verifies wallet login, account reuse, profile
 updates, token refresh and revocation through real HTTP services. It writes a
 stable profile marker on that test account. This suite is manual and separate
-from `npm test`:
+from `npm test`. It also checks forged signatures and bearer tokens, wallet and
+refresh replay, cross-account selectors, privileged writes, and public email
+privacy. Adversarial accounts use fresh unfunded wallets; sessions are revoked
+afterward. The public privacy fixture is an existing indexed dev profile and
+must return 200, so a missing profile cannot silently pass the privacy check:
 
 ```bash
 export RARE_ACCOUNT_TEST_API_URL=https://your-feature-rare-api.example
