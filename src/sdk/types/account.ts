@@ -77,9 +77,9 @@ export type RareAccountProfile = {
 export type RareAccountProfilePatch = {
   username?: string;
   profile?: {
-    displayName?: string | null;
-    bio?: string | null;
-    avatarUrl?: string | null;
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
   };
 };
 

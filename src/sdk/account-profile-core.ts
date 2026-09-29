@@ -44,7 +44,7 @@ export function validateAccountProfilePatch(value: unknown): asserts value is Ra
   if ('profile' in value) {
     if (!isRecord(value.profile) || Object.keys(value.profile).length === 0 ||
         Object.entries(value.profile).some(([key, field]) =>
-          !['displayName', 'bio', 'avatarUrl'].includes(key) || (field !== null && typeof field !== 'string'))) {
+          !['displayName', 'bio', 'avatarUrl'].includes(key) || typeof field !== 'string')) {
       throw new RareAuthError('invalid_profile_patch');
     }
   }

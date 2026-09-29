@@ -209,7 +209,7 @@ describe('account authentication over HTTP', () => {
       requests.push(request.url ?? '');
       response.writeHead(307, { Location: `${origin}/leak` }); response.end();
     };
-    await expect(client(storage).profile.update({ profile: { bio: null } })).rejects.toMatchObject({ code: 'transport_error' });
+    await expect(client(storage).profile.update({ profile: { bio: 'Updated bio' } })).rejects.toMatchObject({ code: 'transport_error' });
     expect(requests).toEqual(['/v1/me']);
   });
 
@@ -218,6 +218,7 @@ describe('account authentication over HTTP', () => {
     await storage.set({ ...session(), apiBaseUrl: 'https://other.example' });
     await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'session_authority_mismatch' });
     expect(() => client().profile.update(JSON.parse('{"accountId":"other"}'))).toThrow('invalid_profile_patch');
+    expect(() => client().profile.update(JSON.parse('{"profile":{"bio":null}}'))).toThrow('invalid_profile_patch');
   });
   it('saves an approved device session before making authenticated profile calls', async () => {
     const sdk = client();

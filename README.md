@@ -205,7 +205,7 @@ Network methods accept `{ signal }` for cancellation and use a 30-second request
 timeout. Device waits also stop at grant expiry. Only HTTPS endpoints (or loopback
 HTTP for development) are accepted, and credential requests do not follow redirects.
 Profile writes are never automatically replayed. Omitted patch fields preserve data;
-`null` clears nullable profile fields. Email and account/wallet ownership are not
+profile patch values must be strings. Email and account/wallet ownership are not
 editable through this first profile surface.
 
 Existing `createRareClient` wallet transactions and public reads are unchanged.
