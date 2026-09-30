@@ -132,6 +132,8 @@ transaction wallet. All requests use one public API base URL. Rare API forwards
 service; profile requests use `/v1/me`. Legacy SuperRare/Connect cookies and tokens
 are not accepted by this client.
 
+Login verifies wallet ownership and stores credentials. It does not create a SuperRare account. Profile operations require an existing account and return `account_required` when signup is needed. Wallet signing operations remain independent of account login.
+
 ```ts
 import { createRareAccountClient } from '@rareprotocol/rare-sdk';
 
@@ -225,8 +227,30 @@ Network methods accept `{ signal }` for cancellation and use a 30-second request
 timeout. Device waits also stop at grant expiry. Only HTTPS endpoints (or loopback
 HTTP for development) are accepted, and credential requests do not follow redirects.
 Profile writes are never automatically replayed. Omitted patch fields preserve data;
-profile patch values must be strings. Email and account/wallet ownership are not
-editable through this first profile surface.
+profile patch values must be strings. You can update your private email and the
+profile's website, Twitter/X, Discord, Instagram, YouTube and pinned artwork fields.
+The existing website metadata names are preserved. Email is never returned by
+public `user.get` or `user.resolve` methods. Empty email is rejected. Empty avatar
+or `masthead_universal_token_id` strings remove those fields. Bios allow 180 characters.
+Account and wallet ownership are not editable through profile updates.
+
+```ts
+await account.profile.update({
+  email: 'artist@example.com',
+  profile: { bio: 'Artist and collector', website: 'https://example.com' },
+});
+await account.profile.uploadAvatar(imageBytes, 'avatar.png');
+await account.profile.update({ profile: { avatar: '', masthead_universal_token_id: '' } });
+await rare.user.resolve({ username: 'artist' });
+```
+
+Avatar uploads accept PNG, JPEG or GIF, up to 5 MiB. The upload method saves the
+returned URL to your profile. If the upload succeeds but saving fails,
+`AvatarProfileUpdateError.avatar` contains the URL to retry with `profile.update`
+without repeating the upload. The CLI supports `profile update --bio "hackin"`
+and other field flags, plus `--stdin` or `--file` for structured patches.
 
 Existing `createRareClient` wallet transactions and public reads are unchanged.
 An account session does not delegate transaction-signing authority.
+
+Deployed account integration tests require two existing, distinct test accounts, supplied through `RARE_ACCOUNT_TEST_PRIVATE_KEY` and `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY`. The fresh-wallet test generates its own wallet and expects login to leave it without an account.

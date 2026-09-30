@@ -1,3 +1,4 @@
+import { normalizeProfileUsername } from './account-profile-core.js';
 import type { LiquidEdition } from '../data-access/liquid-editions.js';
 import { buildLiquidEditionSearchQuery, type LiquidEditionSearchParams } from './liquid-discovery-core.js';
 import { createApiClient, type ApiClient } from '../data-access/index.js';
@@ -48,6 +49,7 @@ export type RareApi = {
   getCollection: (id: string) => Promise<Collection>;
   getCollectionEvents: (id: string, opts?: CollectionEventOptions) => Promise<SearchPageResponse<NftEvent>>;
   getUser: (address: string) => Promise<UserProfile>;
+  resolveUser: (input: { username: string }) => Promise<UserProfile>;
   getTokenPrice: (symbol: string) => Promise<{ symbol: string; priceUsd: number; decimals: number; chainId: number; address: string }>;
 };
 
@@ -134,6 +136,12 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     getCollection: async (id) => getCollectionWithClient(client, id),
     getCollectionEvents: async (id, opts) => getCollectionEventsWithClient(client, id, opts),
     getUser: async (address) => getUserWithClient(client, address),
+    resolveUser: async (input) => {
+      const username = normalizeProfileUsername(input.username);
+      const { data } = await client.GET('/v1/users', { params: { query: { username } } });
+      if (!data) throw new Error('User not found.');
+      return data.data;
+    },
     getTokenPrice: async (symbol) => getTokenPriceWithClient(client, symbol),
   };
 }

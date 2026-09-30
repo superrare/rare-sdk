@@ -9,6 +9,12 @@ const required = (name: string): string => {
   return value;
 };
 
+const testWallet = (name: string) => {
+  const key = required(name);
+  if (!/^0x[0-9a-fA-F]{64}$/u.test(key)) throw new Error('Invalid dedicated test wallet key');
+  return privateKeyToAccount(key as `0x${string}`);
+};
+
 describe('account integration with deployed services', () => {
   it('does not expose email in public profile responses, including field-selection attempts', async () => {
     const api = required('RARE_ACCOUNT_TEST_API_URL');
@@ -31,12 +37,30 @@ describe('account integration with deployed services', () => {
       assertPublic(body);
     }
   }, 60_000);
+  it('authenticates a fresh wallet without creating an account, including after refresh', async () => {
+    const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
+    const url = new URL(apiBaseUrl);
+    if (url.protocol !== 'https:' || url.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
+    const wallet = privateKeyToAccount(generatePrivateKey());
+    const client = createRareAccountClient({ apiBaseUrl });
+    try {
+      await client.auth.loginWithWallet({ address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
+      expect(await client.auth.getSession()).not.toBeNull();
+      await expect(client.profile.get()).rejects.toMatchObject({ code: 'account_required', status: 403 });
+      await expect(client.profile.update({ profile: { bio: 'No automatic signup' } })).rejects.toMatchObject({ code: 'account_required', status: 403 });
+      await client.auth.refresh();
+      await expect(client.profile.get()).rejects.toMatchObject({ code: 'account_required', status: 403 });
+    } finally {
+      await client.auth.logout();
+    }
+  }, 60_000);
   it('rejects forged identities, privileged writes, cross-account selectors and refresh replay', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const origin = new URL(apiBaseUrl);
     if (origin.protocol !== 'https:' || origin.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
-    const owner = privateKeyToAccount(generatePrivateKey());
-    const attacker = privateKeyToAccount(generatePrivateKey());
+    const owner = testWallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
+    const attacker = testWallet('RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY');
+    expect(attacker.address.toLowerCase()).not.toBe(owner.address.toLowerCase());
     const victim = createRareAccountClient({ apiBaseUrl });
     const client = createRareAccountClient({ apiBaseUrl });
     const request = (path: string, init: RequestInit = {}) => fetch(`${apiBaseUrl}${path}`, { ...init, signal: AbortSignal.timeout(20_000) });
@@ -85,7 +109,6 @@ describe('account integration with deployed services', () => {
       for (const body of [
         { accountId: original.accountId, profile: { bio: 'unauthorized' } },
         { address: owner.address, profile: { bio: 'unauthorized' } },
-        { email: 'attacker@example.test' },
         { profile: { email: 'attacker@example.test', isCreator: true } },
       ]) {
         expect((await request('/v1/me', { method: 'PATCH', headers, body: JSON.stringify(body) })).status).toBe(400);
@@ -99,7 +122,7 @@ describe('account integration with deployed services', () => {
       expect(await victim.profile.get()).toEqual(original);
       expect((await request('/internal/v1/accounts/resolve', { method: 'POST', headers,
         body: JSON.stringify({ address: owner.address, chainId: 1 }),
-      })).status).toBe(401);
+      })).status).toBe(404);
       await client.auth.refresh();
       const replay = await form({ grant_type: 'refresh_token', client_id: 'rare-sdk', refresh_token: session.refreshToken });
       expect(replay.status).toBe(400);
@@ -109,7 +132,7 @@ describe('account integration with deployed services', () => {
       for (const account of [victim, client]) await account.auth.logout().catch(() => undefined);
     }
   }, 120_000);
-  it('logs in with a wallet, reuses the account, updates its profile, refreshes and revokes', async () => {
+  it('logs in with an existing account, updates its profile, refreshes and revokes', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const url = new URL(apiBaseUrl);
     if (url.protocol !== 'https:' || url.pathname !== '/' || url.search || url.hash ||
@@ -138,6 +161,29 @@ describe('account integration with deployed services', () => {
       const reused = await second.profile.get();
       expect(reused.accountId).toBe(initial.accountId);
       expect(reused.profile).toMatchObject({ fullName: 'Rare SDK integration', bio: 'Deployed account test' });
+
+      const settings = {
+        email: 'rare-sdk-profile@example.test',
+        profile: {
+          website: 'https://example.test/artist',
+          twitterlink: 'https://x.com/rareartist',
+          discordlink: 'https://discord.gg/rareartist',
+          instagramlink: 'https://instagram.com/rareartist',
+          youtubelink: 'https://youtube.com/rareartist',
+          masthead_universal_token_id: '',
+        },
+      };
+      expect(await first.profile.update(settings)).toMatchObject(settings);
+      const publicApi = createRareApi({ baseUrl: apiBaseUrl });
+      const publicProfile = await publicApi.resolveUser({ username: initial.username });
+      expect(publicProfile).toMatchObject({ address: initial.address, website: settings.profile.website });
+      expect(publicProfile).not.toHaveProperty('email');
+      expect(await publicApi.getUser(initial.address)).not.toHaveProperty('email');
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+      const uploaded = await first.profile.uploadAvatar(png, 'sdk-profile.png');
+      expect(uploaded.profile.avatar).toMatch(/^https:\/\//);
+      expect(await first.profile.update({ profile: { avatar: '' } })).toMatchObject({ profile: { avatar: '' } });
+      await expect(first.profile.update({ profile: { bio: 'x'.repeat(181) } })).rejects.toThrow();
 
       await second.profile.update({ profile: { fullName: 'Rare SDK integration updated' } });
       expect((await first.profile.get()).profile).toMatchObject({

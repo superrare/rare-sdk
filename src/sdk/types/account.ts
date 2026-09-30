@@ -71,15 +71,28 @@ export type RareAccountProfile = {
     fullName: string | null;
     bio: string | null;
     avatar: string | null;
+    website?: string | null;
+    twitterlink?: string | null;
+    discordlink?: string | null;
+    instagramlink?: string | null;
+    youtubelink?: string | null;
+    masthead_universal_token_id?: string | null;
   };
 };
 
 export type RareAccountProfilePatch = {
   username?: string;
+  email?: string;
   profile?: {
     fullName?: string;
     bio?: string;
     avatar?: string;
+    website?: string;
+    twitterlink?: string;
+    discordlink?: string;
+    instagramlink?: string;
+    youtubelink?: string;
+    masthead_universal_token_id?: string;
   };
 };
 
@@ -98,6 +111,7 @@ export type RareAccountClient = {
   };
   profile: {
     get: (options?: RareAuthRequestOptions) => Promise<RareAccountProfile>;
+    uploadAvatar: (buffer: Uint8Array, filename: string, options?: RareAuthRequestOptions) => Promise<RareAccountProfile>;
     update: (patch: RareAccountProfilePatch, options?: RareAuthRequestOptions) => Promise<RareAccountProfile>;
   };
 };

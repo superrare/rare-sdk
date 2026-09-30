@@ -47,3 +47,5 @@ export { createRareAccountClient } from './account-client.js';
 export { RareAuthError } from './account-auth-core.js';
 export { createMemoryAccountSessionStore } from './account-session-store.js';
 export type * from './types/account.js';
+
+export { AvatarProfileUpdateError } from './account-profile-core.js';

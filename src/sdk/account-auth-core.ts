@@ -21,7 +21,9 @@ export class RareAuthError extends Error {
 
   constructor(code: string, status = 0) {
     // Do not interpolate server descriptions: they can echo submitted secrets.
-    super(`SuperRare authentication failed (${code}).`);
+    super(code === 'account_required'
+      ? 'This wallet is authenticated but has no SuperRare account. Complete signup before using account features.'
+      : `SuperRare authentication failed (${code}).`);
     this.name = 'RareAuthError';
     this.code = code;
     this.status = status;
@@ -50,7 +52,7 @@ export function parseAuthErrorCode(value: unknown): string {
     'invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client',
     'unsupported_grant_type', 'invalid_scope', 'access_denied', 'expired_token',
     'authorization_pending', 'slow_down', 'temporarily_unavailable', 'server_error',
-    'invalid_token', 'insufficient_scope',
+    'invalid_token', 'insufficient_scope', 'account_required',
   ];
   return isRecord(value) && typeof value.error === 'string' && known.includes(value.error)
     ? value.error

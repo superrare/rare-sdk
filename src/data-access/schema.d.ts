@@ -761,6 +761,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user
+         * @description Resolve a public user profile by username
+         */
+        get: {
+            parameters: {
+                query: { username: string };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description User profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["UserProfile"];
+                        };
+                    };
+                };
+                /** @description User not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/users/{address}": {
         parameters: {
             query?: never;
@@ -2576,6 +2628,14 @@ export interface components {
             ownerAddress: components["schemas"]["EthereumAddress"];
         };
         UserProfile: {
+            bio?: string | null;
+            avatar?: string | null;
+            website?: string | null;
+            twitterlink?: string | null;
+            discordlink?: string | null;
+            instagramlink?: string | null;
+            youtubelink?: string | null;
+            masthead_universal_token_id?: string | null;
             /** @example 0xba5BDe662c17e2aDFF1075610382B9B691296350 */
             address: string;
             /** @example satoshi */

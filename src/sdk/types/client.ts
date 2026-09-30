@@ -109,6 +109,7 @@ export type NftNamespace = {
 
 export type UserNamespace = {
   get: (address: string) => Promise<UserProfile>;
+  resolve: (input: { username: string }) => Promise<UserProfile>;
 }
 
 export type IpfsNamespace = {

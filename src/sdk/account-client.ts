@@ -5,7 +5,7 @@ import {
   isRecord, joinAuthPath, normalizeAuthBaseUrl, parseAuthErrorCode,
   RareAuthError, requirePositiveNumber, requireString,
 } from './account-auth-core.js';
-import { parseAccountProfile, validateAccountProfilePatch } from './account-profile-core.js';
+import { AvatarProfileUpdateError, parseAccountProfile, planAvatarUpload, validateAccountProfilePatch } from './account-profile-core.js';
 import { createMemoryAccountSessionStore, parseAccountSession } from './account-session-store.js';
 import type {
   RareAccountClient, RareAccountClientOptions, RareAccountSession,
@@ -240,6 +240,26 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
       },
     },
     profile: {
+      async uploadAvatar(buffer, filename, requestOptions = {}) {
+        const plan = planAvatarUpload(buffer, filename);
+        const token = await accessToken(requestOptions);
+        const form = new FormData();
+        form.set('name', plan.filename);
+        form.set('file', new Blob([new Uint8Array(buffer)], { type: plan.contentType }), plan.filename);
+        const response = await request(joinAuthPath(apiBaseUrl, 'v1/me/avatar'), {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, body: form,
+        }, requestOptions);
+        const value = await json(response);
+        if (!isRecord(value) || !isRecord(value.data)) throw new RareAuthError('invalid_avatar_response');
+        const avatar = requireString(value.data.avatar, 'avatar');
+        const url = new URL(avatar);
+        if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new RareAuthError('invalid_avatar_response');
+        try {
+          return await profileRequest('PATCH', JSON.stringify({ profile: { avatar } }), requestOptions);
+        } catch (cause) {
+          throw new AvatarProfileUpdateError(avatar, cause);
+        }
+      },
       get: (requestOptions = {}) => profileRequest('GET', undefined, requestOptions),
       update: (patch, requestOptions = {}) => {
         validateAccountProfilePatch(patch);
