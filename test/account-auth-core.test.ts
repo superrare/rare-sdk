@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAuthBaseUrl, parseAuthErrorCode, RareAuthError } from '../src/sdk/account-auth-core.js';
+import { normalizeAuthBaseUrl, parseAuthErrorCode, RareAuthError, resolveSigningOrigin } from '../src/sdk/account-auth-core.js';
 
 describe('authentication transport boundary', () => {
+  it('uses the browser origin or a configured non-browser relying party', () => {
+    expect(resolveSigningOrigin('https://api.example')).toBe('https://api.example');
+    expect(resolveSigningOrigin('https://api.example', undefined, 'https://app.example')).toBe('https://app.example');
+    expect(resolveSigningOrigin('https://api.example', 'https://app.example')).toBe('https://app.example');
+    expect(() => resolveSigningOrigin('https://api.example', 'https://other.example', 'https://app.example')).toThrow();
+    expect(() => resolveSigningOrigin('https://api.example', 'https://app.example/path')).toThrow();
+  });
   it('allows HTTPS and loopback development origins', () => {
     expect(normalizeAuthBaseUrl('https://auth.example/v2/')).toBe('https://auth.example/v2');
     expect(normalizeAuthBaseUrl('http://127.0.0.1:8000')).toBe('http://127.0.0.1:8000');

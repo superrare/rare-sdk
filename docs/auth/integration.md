@@ -47,12 +47,12 @@ and installed root dependencies. Stop it with Ctrl-C when finished.
 
 The backend must use `CROSS_DATABASE_URL` and these matching settings:
 
-- Provisioning credential: `CROSS_AUTH_INTERNAL_API_KEY`.
+- Device approval credential: `CROSS_AUTH_INTERNAL_API_KEY`.
 - `AUTH_SERVICE`: the origin of `CROSS_AUTH_URL`, for internal transport.
-- `RARE_API_PUBLIC_URL`: `CROSS_API_URL`, making the public issuer
-  `${CROSS_API_URL}/auth/v2`. Auth uses the same public API setting.
+- `RARE_API_PUBLIC_URL`: `CROSS_API_URL`, selecting the local API listener.
+  Auth needs no API URL setting. Its origin allowlist includes both local origins.
 - Introspection accepts the access token alone; no service key is sent.
-- Account provisioning at `/internal/v1/accounts/resolve` and GET/PATCH `/v1/me`.
+- Existing accounts are managed through GET/PATCH `/v1/me`; login does not provision an account.
 - Actual authenticated GraphQL transport to the account resolver.
 
 With the backend listening and the same environment in another terminal:
@@ -103,8 +103,8 @@ The runner verifies:
 0. Introspection and internal device approval routes are rejected through the public API
    (401/403/404/405; backend proxy tests separately verify upstream noninvocation).
 
-1. Wallet login creates exactly one real Postgres account/address binding and its
-   stored session binds to the public API auth URL.
+1. Wallet login leaves the database unchanged and binds its stored session to the
+   public API auth URL. The runner then seeds an account in the disposable database.
 2. SDK profile reads and writes match persisted data.
 3. A separate login reuses that account and preserves its profile.
 4. Explicit SDK refresh rotates credentials and the actual API accepts the result.

@@ -2,7 +2,7 @@ import { isAddress } from 'viem';
 import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
 import { DEFAULT_RARE_API_BASE_URL } from '../data-access/base-url.js';
 import {
-  isRecord, joinAuthPath, normalizeAuthBaseUrl, parseAuthErrorCode,
+  isRecord, joinAuthPath, normalizeAuthBaseUrl, parseAuthErrorCode, resolveSigningOrigin,
   RareAuthError, requirePositiveNumber, requireString,
 } from './account-auth-core.js';
 import { AvatarProfileUpdateError, parseAccountProfile, planAvatarUpload, validateAccountProfilePatch } from './account-profile-core.js';
@@ -193,19 +193,21 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
       },
       async loginWithWallet(input) {
         if (!isAddress(input.address, { strict: false }) || !Number.isSafeInteger(input.chainId) || input.chainId <= 0) throw new RareAuthError('invalid_wallet');
+        const signingOrigin = resolveSigningOrigin(apiBaseUrl, input.signingOrigin, typeof window === 'undefined' ? undefined : window.location.origin);
         generation += 1;
         const expectedGeneration = generation;
         const sessionRevision = await storage.withLock(readRevision);
         const value = await json(await request(joinAuthPath(authBaseUrl, 'wallet/challenge'), {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ client_id: clientId, address: input.address, chain_id: input.chainId }),
+          body: JSON.stringify({ client_id: clientId, address: input.address, chain_id: input.chainId, origin: signingOrigin }),
         }, input));
         if (!isRecord(value)) throw new RareAuthError('invalid_challenge');
         const message = requireString(value.message, 'message');
         const challengeId = requireString(value.challenge_id, 'challenge_id');
         const parsed = parseSiweMessage(message);
-        if (!validateSiweMessage({ message: parsed, address: input.address, domain: new URL(authBaseUrl).host }) ||
-            parsed.chainId !== input.chainId || parsed.uri !== authBaseUrl || parsed.expirationTime === undefined ||
+        if (!validateSiweMessage({ message: parsed, address: input.address, domain: new URL(signingOrigin).host }) ||
+            (parsed.scheme !== undefined && parsed.scheme !== new URL(signingOrigin).protocol.slice(0, -1)) ||
+            parsed.chainId !== input.chainId || parsed.uri !== signingOrigin || parsed.expirationTime === undefined ||
             parsed.issuedAt === undefined || !Number.isFinite(parsed.issuedAt.getTime()) ||
             !Number.isFinite(parsed.expirationTime.getTime()) || parsed.expirationTime.getTime() <= Date.now() ||
             parsed.expirationTime.getTime() - parsed.issuedAt.getTime() > 300_000 ||

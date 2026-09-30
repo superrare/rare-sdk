@@ -73,10 +73,10 @@ describe('account authentication over HTTP', () => {
   it('signs a bound wallet challenge and persists the token response', async () => {
     const sdk = client();
     const message = createSiweMessage({ address: account.address, chainId: 1, domain: new URL(origin).host,
-      uri: `${origin}/auth/v2`, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) });
+      uri: origin, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) });
     handler = async (request, response, body) => {
       if (request.url?.endsWith('/wallet/challenge')) {
-        expect(JSON.parse(body)).toEqual({ client_id: 'rare-cli', address: account.address, chain_id: 1 });
+        expect(JSON.parse(body)).toEqual({ client_id: 'rare-cli', address: account.address, chain_id: 1, origin });
         reply(response, { challenge_id: 'challenge', message, expires_in: 300 });
       } else {
         const form = new URLSearchParams(body);
@@ -92,7 +92,7 @@ describe('account authentication over HTTP', () => {
 
   it('rejects malformed challenge dates before asking the wallet to sign', async () => {
     const message = createSiweMessage({ address: account.address, chainId: 1, domain: new URL(origin).host,
-      uri: `${origin}/auth/v2`, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) })
+      uri: origin, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) })
       .replace(/Issued At: .*/, 'Issued At: invalid').replace(/Expiration Time: .*/, 'Expiration Time: invalid');
     handler = async (_request, response) => { reply(response, { challenge_id: 'challenge', message }); };
     await expect(client().auth.loginWithWallet({ address: account.address, chainId: 1,

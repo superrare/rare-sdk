@@ -15,6 +15,16 @@ export function joinAuthPath(baseUrl: string, path: string): string {
   return `${baseUrl}/${path.replace(/^\/+/, '')}`;
 }
 
+export function resolveSigningOrigin(apiBaseUrl: string, requested?: string, browserOrigin?: string): string {
+  const origin = requested ?? browserOrigin ?? new URL(apiBaseUrl).origin;
+  normalizeAuthBaseUrl(origin);
+  if (origin !== new URL(origin).origin ||
+      (browserOrigin !== undefined && origin !== browserOrigin)) {
+    throw new RareAuthError('invalid_signing_origin');
+  }
+  return origin;
+}
+
 export class RareAuthError extends Error {
   readonly code: string;
   readonly status: number;

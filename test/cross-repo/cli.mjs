@@ -25,7 +25,7 @@ export async function verifyCli({ apiBaseUrl, bridge, wallet, accountId }) {
     assert.equal(pending.status, 'pending');
     assert.equal(typeof pending.requestId, 'string');
     const review = await bridge('', { user_code: pending.userCode });
-    const challenge = await bridge(`/${review.review_id}/challenge`, { address: wallet.address, chain_id: 1 });
+    const challenge = await bridge(`/${review.review_id}/challenge`, { address: wallet.address, chain_id: 1, origin: new URL(apiBaseUrl).origin });
     await bridge(`/${review.review_id}/decision`, {
       decision: 'approve', challenge_id: challenge.challenge_id, message: challenge.message,
       signature: await wallet.signMessage({ message: challenge.message }),

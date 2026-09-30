@@ -93,12 +93,16 @@ async function run() {
     check((await row()).length === 0, 'Fresh wallet already exists');
     const first = client();
     await login(first);
-    check((await first.auth.getSession()).authBaseUrl === `${apiBaseUrl}/auth/v2`, 'Session issuer must use public API auth URL');
+    check((await first.auth.getSession()).authBaseUrl === `${apiBaseUrl}/auth/v2`, 'Session must use public API auth URL');
+    await assert.rejects(first.profile.get(), error => error.code === 'account_required');
+    check((await row()).length === 0, 'Login unexpectedly created an account');
+    // Seed an existing account in the disposable database; signup is outside Auth.
+    await sql(`WITH created AS (INSERT INTO "${schema}"."user" (username,email,metadata,updated_at) VALUES ('test_${address.slice(2)}','n/a','{}',now()) RETURNING id) INSERT INTO "${schema}".user_address (user_id,address,chain_id,updated_at) SELECT id,'${address}','1',now() FROM created`);
     const profile = await first.profile.get();
     const persisted = await row();
-    check(persisted.length === 1 && persisted[0].accountId === profile.accountId, 'Login did not persist exactly one real account');
+    check(persisted.length === 1 && persisted[0].accountId === profile.accountId, 'Seeded account did not resolve through the API');
     check(profile.address === address && profile.email === 'n/a', 'New account identity mismatch');
-    console.log('PASS wallet login automatically persists account in Postgres');
+    console.log('PASS wallet login does not create an account; an independently seeded account resolves through the API');
 
     stage = 'profile persistence and account reuse';
     await first.profile.update({ profile: { fullName: 'SDK acceptance', bio: 'Persistent cross-repo proof' } });
@@ -127,7 +131,7 @@ async function run() {
     const deviceClient = client();
     let pending = await deviceClient.auth.startDeviceAuthorization();
     const review = await bridge('', { user_code: pending.userCode });
-    const challenge = await bridge(`/${review.review_id}/challenge`, { address: wallet.address, chain_id: 1 });
+    const challenge = await bridge(`/${review.review_id}/challenge`, { address: wallet.address, chain_id: 1, origin: new URL(apiBaseUrl).origin });
     await bridge(`/${review.review_id}/decision`, {
       decision: 'approve', challenge_id: challenge.challenge_id, message: challenge.message,
       signature: await wallet.signMessage({ message: challenge.message }),

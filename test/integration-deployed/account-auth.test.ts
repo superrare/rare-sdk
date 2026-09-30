@@ -70,7 +70,7 @@ describe('account integration with deployed services', () => {
     try {
       const challengeResponse = await request('/auth/v2/wallet/challenge', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ client_id: 'rare-sdk', address: owner.address, chain_id: 1 }),
+        body: JSON.stringify({ client_id: 'rare-sdk', address: owner.address, chain_id: 1, origin: apiBaseUrl }),
       });
       expect(challengeResponse.status).toBe(200);
       const challenge = await challengeResponse.json() as { challenge_id: string; message: string };

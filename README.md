@@ -157,8 +157,8 @@ const account = createRareAccountClient({
 
 Auth is always derived as `<apiBaseUrl>/auth/v2`; there is no separate auth URL
 option. A feature deployment can supply its own API base with the same routes.
-Sessions from the earlier direct-auth URL are bound to that old issuer and require
-fresh login; they are not silently reused under the API issuer.
+Stored sessions are bound to the selected API base and require fresh login when
+that base changes.
 
 For direct wallet login, supply a signer; no transaction is submitted:
 
@@ -169,6 +169,12 @@ await account.auth.loginWithWallet({
   signMessage: (message) => walletAccount.signMessage({ message }),
 });
 ```
+
+SIWE uses the browser page's origin when signing in a browser, or the selected
+API origin for non-browser callers such as the CLI. An optional `signingOrigin`
+can select a different origin outside a browser. Auth must allow that origin in
+its existing `SIWE_ALLOWED_ORIGINS` configuration; browser callers cannot override
+their page's origin. Hosted device approval signs for Connect's browser origin.
 
 Browser-approved login supports the hosted application's wallet, social, and email
 options. Social providers and cross-origin account continuity require deployment

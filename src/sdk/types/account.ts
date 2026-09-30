@@ -51,6 +51,8 @@ export type RareDevicePollResult =
 export type RareWalletLoginOptions = {
   address: string;
   chainId: number;
+  /** Defaults to the browser origin, or the API origin for non-browser signing. */
+  signingOrigin?: string;
   signMessage: (message: string) => Promise<string>;
 };
 
