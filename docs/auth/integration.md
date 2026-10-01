@@ -129,3 +129,15 @@ This gate deliberately exercises the private bridge directly. It does not establ
 browser CSRF/UI behavior, social-provider account continuity, deployed configuration,
 smart-wallet RPC verification, or CLI OS-keychain behavior; those require their
 separate gates. Do not describe this result as proof of those behaviors.
+
+## Public auth limits and Redis retention
+
+This manual check needs built Auth and Rare API checkouts, `redis-server`, and Node. It starts private loopback services and disposable Redis. It does not require an account, GraphQL, or a deployed environment because these authentication paths do not call account services.
+
+```sh
+CROSS_AUTH_WORKTREE=/absolute/path/to/auth \
+CROSS_MONOREPO_WORKTREE=/absolute/path/to/superrare-monorepo \
+node test/cross-repo/public-boundaries.mjs
+```
+
+The check exercises the actual Rare API auth route handlers and actual Auth service. A stalled HTTP listener deliberately injects an RPC transport failure; it never returns a fabricated signature-verification result. The check verifies that a supported large hex-signature envelope reaches Auth, RPC timeout fails closed within the public deadline, oversized bodies are rejected, private introspection remains unexposed, trusted introspection survives anonymous quota exhaustion, wrong credentials cannot bypass that quota, and logout invalidates access after 100 refresh rotations. It reports retained-record memory and TTL without printing credentials. This does not prove successful large ERC-1271 contract verification or deployed Redis configuration. No CI job is added.
