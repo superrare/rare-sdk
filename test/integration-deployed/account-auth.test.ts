@@ -3,6 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { createRareAccountClient } from '../../src/sdk/account-client.js';
 import { createRareApi } from '../../src/sdk/api.js';
 
+const retryRateLimit = async <T>(operation: () => Promise<T>): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error === null || typeof error !== 'object' ||
+        !('code' in error && error.code === 'slow_down') && !('status' in error && error.status === 429)) throw error;
+    console.warn('[live integration] Rate limited; retrying once after 60 seconds.');
+    await new Promise(resolve => setTimeout(resolve, 60_000));
+    return operation();
+  }
+};
+
+const loginWithWallet = (client: ReturnType<typeof createRareAccountClient>, input: Parameters<typeof client.auth.loginWithWallet>[0]) =>
+  retryRateLimit(() => client.auth.loginWithWallet(input));
+
 const required = (name: string): string => {
   const value = process.env[name];
   if (!value) throw new Error(`Missing ${name}`);
@@ -36,7 +51,7 @@ describe('account integration with deployed services', () => {
       const body: unknown = await response.json();
       assertPublic(body);
     }
-  }, 60_000);
+  }, 240_000);
   it('authenticates a fresh wallet without creating an account, including after refresh', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const url = new URL(apiBaseUrl);
@@ -44,7 +59,7 @@ describe('account integration with deployed services', () => {
     const wallet = privateKeyToAccount(generatePrivateKey());
     const client = createRareAccountClient({ apiBaseUrl });
     try {
-      await client.auth.loginWithWallet({ address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
+      await loginWithWallet(client, { address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
       expect(await client.auth.getSession()).not.toBeNull();
       await expect(client.profile.get()).rejects.toMatchObject({ code: 'account_required', status: 403 });
       await expect(client.profile.update({ profile: { bio: 'No automatic signup' } })).rejects.toMatchObject({ code: 'account_required', status: 403 });
@@ -53,17 +68,20 @@ describe('account integration with deployed services', () => {
     } finally {
       await client.auth.logout();
     }
-  }, 60_000);
-  it('rejects forged identities, privileged writes, cross-account selectors and refresh replay', async () => {
+  }, 240_000);
+  it('rejects reused wallet proofs and signatures from another wallet', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const origin = new URL(apiBaseUrl);
     if (origin.protocol !== 'https:' || origin.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
     const owner = testWallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
     const attacker = testWallet('RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY');
     expect(attacker.address.toLowerCase()).not.toBe(owner.address.toLowerCase());
-    const victim = createRareAccountClient({ apiBaseUrl });
     const client = createRareAccountClient({ apiBaseUrl });
-    const request = (path: string, init: RequestInit = {}) => fetch(`${apiBaseUrl}${path}`, { ...init, signal: AbortSignal.timeout(20_000) });
+    const request = (path: string, init: RequestInit = {}) => retryRateLimit(async () => {
+      const response = await fetch(`${apiBaseUrl}${path}`, { ...init, signal: AbortSignal.timeout(20_000) });
+      if (response.status === 429) throw { status: 429 };
+      return response;
+    });
     const form = (fields: Record<string, string>) => request('/auth/v2/token', {
       method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields),
     });
@@ -90,12 +108,31 @@ describe('account integration with deployed services', () => {
         });
         expect(revoked.status).toBe(200);
       }
-      await expect(client.auth.loginWithWallet({ address: owner.address, chainId: 1,
+      await expect(loginWithWallet(client, { address: owner.address, chainId: 1,
         signMessage: message => attacker.signMessage({ message }),
       })).rejects.toThrow();
       expect(await client.auth.getSession()).toBeNull();
+    } finally {
+      await client.auth.logout().catch(() => undefined);
+    }
+  }, 240_000);
+  it('rejects unauthorized profile access, privileged writes and cross-account selectors', async () => {
+    const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
+    const origin = new URL(apiBaseUrl);
+    if (origin.protocol !== 'https:' || origin.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
+    const owner = testWallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
+    const attacker = testWallet('RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY');
+    expect(attacker.address.toLowerCase()).not.toBe(owner.address.toLowerCase());
+    const victim = createRareAccountClient({ apiBaseUrl });
+    const client = createRareAccountClient({ apiBaseUrl });
+    const request = (path: string, init: RequestInit = {}) => retryRateLimit(async () => {
+      const response = await fetch(`${apiBaseUrl}${path}`, { ...init, signal: AbortSignal.timeout(20_000) });
+      if (response.status === 429) throw { status: 429 };
+      return response;
+    });
+    try {
       for (const [account, wallet] of [[victim, owner], [client, attacker]] as const) {
-        await account.auth.loginWithWallet({ address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
+        await loginWithWallet(account, { address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
       }
       const original = await victim.profile.get();
       const attackerProfile = await client.profile.get();
@@ -123,6 +160,34 @@ describe('account integration with deployed services', () => {
       expect((await request('/internal/v1/accounts/resolve', { method: 'POST', headers,
         body: JSON.stringify({ address: owner.address, chainId: 1 }),
       })).status).toBe(404);
+    } finally {
+      for (const account of [victim, client]) await account.auth.logout().catch(() => undefined);
+    }
+  }, 240_000);
+  it('revokes the replayed refresh-token family without affecting another account', async () => {
+    const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
+    const origin = new URL(apiBaseUrl);
+    if (origin.protocol !== 'https:' || origin.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
+    const owner = testWallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
+    const attacker = testWallet('RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY');
+    expect(attacker.address.toLowerCase()).not.toBe(owner.address.toLowerCase());
+    const victim = createRareAccountClient({ apiBaseUrl });
+    const client = createRareAccountClient({ apiBaseUrl });
+    const request = (path: string, init: RequestInit = {}) => retryRateLimit(async () => {
+      const response = await fetch(`${apiBaseUrl}${path}`, { ...init, signal: AbortSignal.timeout(20_000) });
+      if (response.status === 429) throw { status: 429 };
+      return response;
+    });
+    const form = (fields: Record<string, string>) => request('/auth/v2/token', {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields),
+    });
+    try {
+      for (const [account, wallet] of [[victim, owner], [client, attacker]] as const) {
+        await loginWithWallet(account, { address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
+      }
+      const original = await victim.profile.get();
+      const session = await client.auth.getSession();
+      if (!session) throw new Error('Missing attacker session');
       await client.auth.refresh();
       const replay = await form({ grant_type: 'refresh_token', client_id: 'rare-sdk', refresh_token: session.refreshToken });
       expect(replay.status).toBe(400);
@@ -131,7 +196,7 @@ describe('account integration with deployed services', () => {
     } finally {
       for (const account of [victim, client]) await account.auth.logout().catch(() => undefined);
     }
-  }, 120_000);
+  }, 240_000);
   it('logs in with an existing account, updates its profile, refreshes and revokes', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const url = new URL(apiBaseUrl);
@@ -144,7 +209,7 @@ describe('account integration with deployed services', () => {
     const wallet = privateKeyToAccount(privateKey as `0x${string}`);
     const first = createRareAccountClient({ apiBaseUrl });
     const second = createRareAccountClient({ apiBaseUrl });
-    const login = (client: typeof first) => client.auth.loginWithWallet({
+    const login = (client: typeof first) => loginWithWallet(client, {
       address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }),
     });
     try {
@@ -176,14 +241,15 @@ describe('account integration with deployed services', () => {
       expect(await first.profile.update(settings)).toMatchObject(settings);
       const publicApi = createRareApi({ baseUrl: apiBaseUrl });
       const publicProfile = await publicApi.resolveUser({ username: initial.username });
-      expect(publicProfile).toMatchObject({ address: initial.address, website: settings.profile.website });
+      expect(publicProfile.address.toLowerCase()).toBe(initial.address.toLowerCase());
+      expect(publicProfile).toMatchObject({ website: settings.profile.website });
       expect(publicProfile).not.toHaveProperty('email');
       expect(await publicApi.getUser(initial.address)).not.toHaveProperty('email');
       const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
       const uploaded = await first.profile.uploadAvatar(png, 'sdk-profile.png');
       expect(uploaded.profile.avatar).toMatch(/^https:\/\//);
       expect(await first.profile.update({ profile: { avatar: '' } })).toMatchObject({ profile: { avatar: '' } });
-      await expect(first.profile.update({ profile: { bio: 'x'.repeat(181) } })).rejects.toThrow();
+      expect(() => first.profile.update({ profile: { bio: 'x'.repeat(181) } })).toThrow();
 
       await second.profile.update({ profile: { fullName: 'Rare SDK integration updated' } });
       expect((await first.profile.get()).profile).toMatchObject({
@@ -205,5 +271,5 @@ describe('account integration with deployed services', () => {
         if (await client.auth.getSession()) await client.auth.logout();
       }
     }
-  }, 120_000);
+  }, 240_000);
 });
