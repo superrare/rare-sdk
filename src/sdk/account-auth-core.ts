@@ -63,7 +63,10 @@ export function parseAuthErrorCode(value: unknown): string {
     'unsupported_grant_type', 'invalid_scope', 'access_denied', 'expired_token',
     'authorization_pending', 'slow_down', 'temporarily_unavailable', 'server_error',
     'invalid_token', 'insufficient_scope', 'account_required',
+    'authentication_required', 'forbidden', 'not_found', 'conflict',
+    'payload_too_large', 'service_unavailable', 'internal_error',
   ];
+  if (isRecord(value) && typeof value.code === 'string' && known.includes(value.code)) return value.code;
   return isRecord(value) && typeof value.error === 'string' && known.includes(value.error)
     ? value.error
     : 'request_failed';
