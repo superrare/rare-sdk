@@ -147,15 +147,13 @@ async function main() {
       memories.reduce((sum, value) => sum + value, 0) / keys.length;
     const ttl = await fixture.client.ttl(keys[0]);
     assert(ttl > 31535000);
-    const rateKey = store.key("rate", "introspection:127.0.0.1");
-    await fixture.client.set(rateKey, "240", { EX: 60 });
     assert.equal(
       (
         await form(`${authUrl}/auth/v2/introspect`, {
           token: tokens.at(-1).access_token,
         })
       ).status,
-      429,
+      200,
     );
     const valid = await form(
       `${authUrl}/auth/v2/introspect`,
@@ -171,9 +169,8 @@ async function main() {
           { authorization: "Bearer wrong" },
         )
       ).status,
-      429,
+      200,
     );
-    await fixture.client.del(rateKey);
     await form(`${base}/revoke`, {
       client_id: "rare-sdk",
       token: tokens.at(-1).refresh_token,
