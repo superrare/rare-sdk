@@ -1,3 +1,4 @@
+import { planUpload, parseUpload } from './upload-core.js';
 import { isAddress } from 'viem';
 import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
 import { DEFAULT_RARE_API_BASE_URL } from '../data-access/base-url.js';
@@ -155,7 +156,17 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     return parseAccountProfile(await json(response));
   };
 
+  const upload = async (file: Uint8Array | Blob, filename: string, requestOptions: RareAuthRequestOptions & { contentType?: string } = {}) => {
+    const plan = planUpload(file, filename, requestOptions.contentType);
+    const token = await accessToken(requestOptions);
+    const form = new FormData();
+    form.set('file', plan.file, plan.filename);
+    return parseUpload(await json(await request(joinAuthPath(apiBaseUrl, 'v1/uploads'), {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, body: form,
+    }, requestOptions)));
+  };
   return {
+    uploads: { upload },
     auth: {
       async startDeviceAuthorization(requestOptions = {}) {
         generation += 1;
@@ -244,18 +255,7 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     profile: {
       async uploadAvatar(buffer, filename, requestOptions = {}) {
         const plan = planAvatarUpload(buffer, filename);
-        const token = await accessToken(requestOptions);
-        const form = new FormData();
-        form.set('name', plan.filename);
-        form.set('file', new Blob([new Uint8Array(buffer)], { type: plan.contentType }), plan.filename);
-        const response = await request(joinAuthPath(apiBaseUrl, 'v1/me/avatar'), {
-          method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, body: form,
-        }, requestOptions);
-        const value = await json(response);
-        if (!isRecord(value) || !isRecord(value.data)) throw new RareAuthError('invalid_avatar_response');
-        const avatar = requireString(value.data.avatar, 'avatar');
-        const url = new URL(avatar);
-        if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new RareAuthError('invalid_avatar_response');
+        const { url: avatar } = await upload(buffer, plan.filename, { ...requestOptions, contentType: plan.contentType });
         try {
           return await profileRequest('PATCH', JSON.stringify({ profile: { avatar } }), requestOptions);
         } catch (cause) {

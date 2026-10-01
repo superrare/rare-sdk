@@ -100,7 +100,12 @@ export type RareAccountProfilePatch = {
 
 export type RareAuthRequestOptions = { signal?: AbortSignal };
 
+export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
+
 export type RareAccountClient = {
+  uploads: {
+    upload: (file: Uint8Array | Blob, filename: string, options?: RareAuthRequestOptions & { contentType?: string }) => Promise<RareUpload>;
+  };
   auth: {
     startDeviceAuthorization: (options?: RareAuthRequestOptions) => Promise<RareDeviceAuthorization>;
     pollDeviceAuthorization: (authorization: RareDeviceAuthorization, options?: RareAuthRequestOptions) => Promise<RareDevicePollResult>;

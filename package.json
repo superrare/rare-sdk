@@ -122,6 +122,7 @@
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "lint": "eslint src test",
     "test": "npm run build && vitest run --exclude 'test/integration-deployed/**'",
+    "test:integration:uploads": "vitest run test/integration-deployed/uploads.test.ts",
     "test:integration:account": "vitest run test/integration-deployed/account-auth.test.ts",
     "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration",
     "prepare": "npm run build"

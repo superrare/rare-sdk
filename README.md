@@ -250,6 +250,27 @@ await account.profile.update({ profile: { avatar: '', masthead_universal_token_i
 await rare.user.resolve({ username: 'artist' });
 ```
 
+Shared application uploads accept any file type up to 20 MiB:
+
+```ts
+const asset = await account.uploads.upload(bytes, 'cover.png', { contentType: 'image/png' });
+// asset: { key, url, previewUrl, contentType, size }
+await account.profile.update({ profile: { avatar: asset.url } });
+```
+
+The uploader uses `POST /v1/uploads`, stores files by SHA-256, and does not edit
+profiles or other features. Identical bytes return the same stored object.
+`previewUrl` is null when no Imgix source is configured or the file is not an image.
+Browser callers may pass a `Blob` or `File`; its content type is used by default.
+Byte arrays default to `application/octet-stream` unless `contentType` is supplied.
+The original URL serves files as attachments. An Imgix preview requires a source
+connected to the upload bucket.
+
+Run `npm run test:integration:uploads` manually against a deployed dev API with
+`RARE_ACCOUNT_TEST_API_URL` and `RARE_ACCOUNT_TEST_PRIVATE_KEY` configured. This
+check uses real storage and requires authenticated `gcloud` access to delete its
+random test object from `rare-api-upload-dev`. It is not a CI job.
+
 Avatar uploads accept PNG, JPEG or GIF, up to 5 MiB. The upload method saves the
 returned URL to your profile. If the upload succeeds but saving fails,
 `AvatarProfileUpdateError.avatar` contains the URL to retry with `profile.update`
