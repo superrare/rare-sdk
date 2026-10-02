@@ -1,3 +1,4 @@
+import type { RareApi } from '../api.js';
 import type { Address, PublicClient, WalletClient } from 'viem';
 import type {
   LiquidEdition,
@@ -164,6 +165,7 @@ export type RareClient = {
   nft: NftNamespace;
   collection: CollectionNamespace;
   ipfs: IpfsNamespace;
+  posts: { list: RareApi['getPosts']; get: RareApi['getPost']; comments: RareApi['getPostComments'] };
   user: UserNamespace;
   media: MediaNamespace;
   import: ImportNamespace;

@@ -127,7 +127,8 @@
     "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration",
     "prepare": "npm run build",
     "test:integration:follows": "vitest run test/integration-deployed/follows.test.ts",
-    "test:integration:favorites": "vitest run test/integration-deployed/favorites.test.ts"
+    "test:integration:favorites": "vitest run test/integration-deployed/favorites.test.ts",
+    "test:integration:posts": "vitest run test/integration-deployed/posts.test.ts"
   },
   "dependencies": {
     "merkletreejs": "0.6.0",

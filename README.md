@@ -349,3 +349,35 @@ Run `npm run test:integration:favorites` against a deployed non-production API. 
 `RARE_ACCOUNT_TEST_PRIVATE_KEY`, `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY`, and `RARE_ACCOUNT_TEST_ARTWORK_ID`.
 Use two existing disposable accounts and a dedicated artwork that neither account already favorites.
 The suite tests privacy, account isolation, concurrent additions, pagination, public counts, and cleanup. It runs outside CI and fails on missing fixtures.
+
+### Creator posts
+
+Public reads need no sign-in. Resolve a user's posts by username, address, or user ID:
+
+```ts
+const posts = await rare.posts.list({ username: 'creator' }, { page: 1, perPage: 20 });
+const post = await rare.posts.get('123'); // Includes public likeCount.
+const comments = await rare.posts.comments('123', { page: 1, perPage: 20 });
+```
+
+After authenticating with `createRareAccountClient`, use the account's identity for writes:
+
+```ts
+const post = await account.posts.create({ title: 'Studio update', body: '**New work**', imageUrls: [] });
+const comment = await account.posts.comment(post.id, 'Looking forward to this.');
+await account.postFavorites.add(post.id);
+const favorites = await account.postFavorites.list({ page: 1, perPage: 20 });
+const favorited = await account.postFavorites.has(post.id);
+await account.postFavorites.remove(post.id);
+await account.posts.deleteComment(post.id, comment.id);
+await account.posts.delete(post.id);
+```
+
+Image URLs can come from `account.uploads.upload`; posts do not add another uploader.
+Only your favorite list is accessible. Deletion through this API is limited to your own content.
+
+Run deployed-service integration coverage manually with `npm run test:integration:posts`.
+Set `RARE_ACCOUNT_TEST_API_URL` to a non-production HTTPS API origin and
+`RARE_ACCOUNT_TEST_PRIVATE_KEY` / `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` to two distinct,
+unfunded test wallets with existing SuperRare accounts. The suite creates and deletes its own
+posts and comments, and revokes its sessions. It does not run in CI.

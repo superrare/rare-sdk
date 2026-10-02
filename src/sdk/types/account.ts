@@ -1,3 +1,4 @@
+import type { CreatorPost, CreatorPostComment, CreatePostInput } from '../posts-core.js';
 import type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from '../favorites-core.js';
 import type { SearchPageResponse } from '../api.js';
 import type { UserSelector } from '../user-core.js';
@@ -106,6 +107,18 @@ export type RareAuthRequestOptions = { signal?: AbortSignal };
 export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
 
 export type RareAccountClient = {
+  posts: {
+    create: (input: CreatePostInput, options?: RareAuthRequestOptions) => Promise<CreatorPost>;
+    comment: (postId: string, body: string, options?: RareAuthRequestOptions) => Promise<CreatorPostComment>;
+    delete: (postId: string, options?: RareAuthRequestOptions) => Promise<void>;
+    deleteComment: (postId: string, commentId: string, options?: RareAuthRequestOptions) => Promise<void>;
+  };
+  postFavorites: {
+    list: (options?: FavoritesListOptions & RareAuthRequestOptions) => Promise<SearchPageResponse<CreatorPost>>;
+    has: (postId: string, options?: RareAuthRequestOptions) => Promise<boolean>;
+    add: (postId: string, options?: RareAuthRequestOptions) => Promise<void>;
+    remove: (postId: string, options?: RareAuthRequestOptions) => Promise<void>;
+  };
   favorites: {
     list: (options?: FavoritesListOptions & RareAuthRequestOptions) => Promise<SearchPageResponse<ArtworkFavorite>>;
     has: (input: FavoriteArtworkInput, options?: RareAuthRequestOptions) => Promise<boolean>;

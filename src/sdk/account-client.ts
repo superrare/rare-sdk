@@ -1,3 +1,4 @@
+import { normalizePostId, planCreatePost, postText, parsePost, parsePostComment, parsePostData, parsePostPage, parsePostDeleted } from './posts-core.js';
 import { normalizeFavoriteId, favoritePageQuery, parseFavoritesPage, parseFavoriteStatus, type FavoriteArtworkInput } from './favorites-core.js';
 import { userQuery, type UserSelector } from './user-core.js';
 import { planUpload, parseUpload } from './upload-core.js';
@@ -184,7 +185,32 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     if (method !== 'GET' && result !== (method === 'PUT')) throw new RareAuthError('invalid_favorite_response');
     return result;
   };
+  const postRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body: unknown, options: RareAuthRequestOptions = {}): Promise<unknown> => {
+    const token = await accessToken(options);
+    return json(await request(joinAuthPath(apiBaseUrl, path), {
+      method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }, options));
+  };
+  const postFavorite = async (method: 'GET' | 'PUT' | 'DELETE', postId: string, options?: RareAuthRequestOptions): Promise<boolean> => {
+    const id = normalizePostId(postId);
+    const result = parseFavoriteStatus(await postRequest(method, `v1/me/post-favorites/${id}`, undefined, options));
+    if (method !== 'GET' && result !== (method === 'PUT')) throw new RareAuthError('invalid_favorite_response');
+    return result;
+  };
   return {
+    posts: {
+      async create(input, options) { const plan = planCreatePost(input); return parsePostData(await postRequest('POST', 'v1/posts', plan, options), parsePost); },
+      async comment(postId, body, options) { const id = normalizePostId(postId); const input = { body: postText(body, 1000) }; return parsePostData(await postRequest('POST', `v1/posts/${id}/comments`, input, options), parsePostComment); },
+      async delete(postId, options) { const id = normalizePostId(postId); parsePostDeleted(await postRequest('DELETE', `v1/posts/${id}`, undefined, options)); },
+      async deleteComment(postId, commentId, options) { const id = normalizePostId(postId); const comment = normalizePostId(commentId); parsePostDeleted(await postRequest('DELETE', `v1/posts/${id}/comments/${comment}`, undefined, options)); },
+    },
+    postFavorites: {
+      async list(options = {}) { const query = favoritePageQuery(options); return parsePostPage(await postRequest('GET', `v1/me/post-favorites?page=${query.page}&perPage=${query.perPage}`, undefined, options), parsePost); },
+      has: (id, options) => postFavorite('GET', id, options),
+      async add(id, options) { await postFavorite('PUT', id, options); },
+      async remove(id, options) { await postFavorite('DELETE', id, options); },
+    },
     favorites: {
       async list(options = {}) {
         const query = favoritePageQuery(options);

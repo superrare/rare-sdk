@@ -53,3 +53,5 @@ export { AvatarProfileUpdateError } from './account-profile-core.js';
 export type { UserSelector, UserListOptions } from './user-core.js';
 
 export type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from './favorites-core.js';
+
+export type { CreatorPost, CreatorPostComment, CreatePostInput } from './posts-core.js';

@@ -1,3 +1,5 @@
+import { favoritePageQuery } from './favorites-core.js';
+import { normalizePostId, parsePostData, parsePost, parsePostComment, parsePostPage, type CreatorPost, type CreatorPostComment } from './posts-core.js';
 import { normalizeFavoriteId } from './favorites-core.js';
 import { userQuery, type UserSelector, type UserListOptions } from './user-core.js';
 export type { UserSelector, UserListOptions } from './user-core.js';
@@ -36,6 +38,9 @@ export type RareApiOptions = {
 };
 
 export type RareApi = {
+  getPosts: (user: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<CreatorPost>>;
+  getPost: (postId: string) => Promise<CreatorPost>;
+  getPostComments: (postId: string, options?: UserListOptions) => Promise<SearchPageResponse<CreatorPostComment>>;
   searchLiquidEditions: (params?: LiquidEditionSearchParams) => Promise<SearchPageResponse<LiquidEdition>>;
   getLiquidEdition: (id: string) => Promise<LiquidEdition>;
   pinFile: (buffer: Uint8Array, filename: string) => Promise<IpfsUploadResult>;
@@ -131,6 +136,9 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     return data.data;
   };
   return {
+    async getPosts(input, options) { const { data } = await client.GET('/v1/posts', { params: { query: userQuery(input, favoritePageQuery(options)) } }); return parsePostPage(data, parsePost); },
+    async getPost(postId) { const id = normalizePostId(postId); const { data } = await client.GET('/v1/posts/{postId}', { params: { path: { postId: id } } }); return parsePostData(data, parsePost); },
+    async getPostComments(postId, options) { const id = normalizePostId(postId); const { data } = await client.GET('/v1/posts/{postId}/comments', { params: { path: { postId: id }, query: favoritePageQuery(options) } }); return parsePostPage(data, parsePostComment); },
     pinFile: async (buffer, filename) => pinFileWithClient(client, fetchImpl, buffer, filename),
     pinJson: async (value, filename) => pinJsonWithClient(client, fetchImpl, value, filename),
     uploadMedia: async (buffer, filename) => uploadMediaWithClient(client, fetchImpl, buffer, filename),
