@@ -1,3 +1,4 @@
+import type { DropAnnouncement, CreateDropInput, UpdateDropInput } from '../drops-core.js';
 import type { CreatorPost, CreatorPostComment, CreatePostInput } from '../posts-core.js';
 import type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from '../favorites-core.js';
 import type { SearchPageResponse } from '../api.js';
@@ -107,6 +108,11 @@ export type RareAuthRequestOptions = { signal?: AbortSignal };
 export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
 
 export type RareAccountClient = {
+  drops: {
+    create: (input: CreateDropInput, options?: RareAuthRequestOptions) => Promise<DropAnnouncement>;
+    update: (dropId: string, input: UpdateDropInput, options?: RareAuthRequestOptions) => Promise<DropAnnouncement>;
+    delete: (dropId: string, options?: RareAuthRequestOptions) => Promise<void>;
+  };
   posts: {
     create: (input: CreatePostInput, options?: RareAuthRequestOptions) => Promise<CreatorPost>;
     comment: (postId: string, body: string, options?: RareAuthRequestOptions) => Promise<CreatorPostComment>;

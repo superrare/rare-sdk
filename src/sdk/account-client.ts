@@ -1,3 +1,4 @@
+import { normalizeDropId, planCreateDrop, planDropUpdate, parseDrop } from './drops-core.js';
 import { normalizePostId, planCreatePost, postText, parsePost, parsePostComment, parsePostData, parsePostPage, parsePostDeleted } from './posts-core.js';
 import { normalizeFavoriteId, favoritePageQuery, parseFavoritesPage, parseFavoriteStatus, type FavoriteArtworkInput } from './favorites-core.js';
 import { userQuery, type UserSelector } from './user-core.js';
@@ -185,7 +186,7 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     if (method !== 'GET' && result !== (method === 'PUT')) throw new RareAuthError('invalid_favorite_response');
     return result;
   };
-  const postRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body: unknown, options: RareAuthRequestOptions = {}): Promise<unknown> => {
+  const postRequest = async (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body: unknown, options: RareAuthRequestOptions = {}): Promise<unknown> => {
     const token = await accessToken(options);
     return json(await request(joinAuthPath(apiBaseUrl, path), {
       method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
@@ -199,6 +200,11 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     return result;
   };
   return {
+    drops: {
+      async create(input, options) { const plan = planCreateDrop(input); return parsePostData(await postRequest('POST', 'v1/drops', plan, options), parseDrop); },
+      async update(dropId, input, options) { const id = normalizeDropId(dropId); const plan = planDropUpdate(input); return parsePostData(await postRequest('PATCH', `v1/drops/${id}`, plan, options), parseDrop); },
+      async delete(dropId, options) { const id = normalizeDropId(dropId); parsePostDeleted(await postRequest('DELETE', `v1/drops/${id}`, undefined, options)); },
+    },
     posts: {
       async create(input, options) { const plan = planCreatePost(input); return parsePostData(await postRequest('POST', 'v1/posts', plan, options), parsePost); },
       async comment(postId, body, options) { const id = normalizePostId(postId); const input = { body: postText(body, 1000) }; return parsePostData(await postRequest('POST', `v1/posts/${id}/comments`, input, options), parsePostComment); },

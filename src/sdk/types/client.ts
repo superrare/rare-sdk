@@ -165,6 +165,7 @@ export type RareClient = {
   nft: NftNamespace;
   collection: CollectionNamespace;
   ipfs: IpfsNamespace;
+  drops: { list: RareApi['getDrops']; get: RareApi['getDrop'] };
   posts: { list: RareApi['getPosts']; get: RareApi['getPost']; comments: RareApi['getPostComments'] };
   user: UserNamespace;
   media: MediaNamespace;

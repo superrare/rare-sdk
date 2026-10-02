@@ -381,3 +381,23 @@ Set `RARE_ACCOUNT_TEST_API_URL` to a non-production HTTPS API origin and
 `RARE_ACCOUNT_TEST_PRIVATE_KEY` / `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` to two distinct,
 unfunded test wallets with existing SuperRare accounts. The suite creates and deletes its own
 posts and comments, and revokes its sessions. It does not run in CI.
+
+### Drop announcements and calendar
+
+```ts
+const calendar = await rare.drops.list({ from, to, user: { username: 'artist' } });
+const announcement = await rare.drops.get('42');
+const image = await account.uploads.upload(bytes, 'cover.png', { contentType: 'image/png' });
+const drop = await account.drops.create({
+  type: 'NONE', startsAt,
+  metadata: { headline: 'New work', description: 'A new release', destinationUrl: '', imageUrl: image.url },
+});
+await account.drops.update(drop.id, { metadata: { headline: 'Updated title' } });
+await account.drops.delete(drop.id);
+```
+
+Calendar and detail reads are public. Calendar windows are at most 30 days; user selectors accept username, address or numeric user ID. New launch times must fall within the next 30 days. Updates preserve omitted fields. Announcement images use the shared uploader and must be PNG, JPEG, GIF or WebP.
+
+Creation and updates require an existing account and preserve the website's artist rule: mainnet requires SuperRare artist approval, while Sepolia and Base Sepolia retain its testnet exception. Deletion only requires ownership.
+
+Run `npm run test:integration:drops` manually after deploying the new routes. Set `RARE_ACCOUNT_TEST_API_URL`, `RARE_ACCOUNT_TEST_PRIVATE_KEY` and `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` to a non-production HTTPS API origin and two distinct dedicated wallets with existing accounts. The first wallet must not be an approved mainnet artist. Successful mutations authenticate on Sepolia; a separate mainnet login tests artist rejection. The suite performs real uploads and deletes its announcements afterward. Missing prerequisites fail the suite. It does not run in CI.

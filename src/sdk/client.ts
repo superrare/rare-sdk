@@ -237,6 +237,7 @@ export function createRareClient(config: RareClientConfig): RareClient {
         return api.pinJson(value, filename);
       },
     },
+    drops: { list: api.getDrops, get: api.getDrop },
     posts: { list: api.getPosts, get: api.getPost, comments: api.getPostComments },
     user: {
       followers: (input, options) => api.getUserFollowers(input, options),
