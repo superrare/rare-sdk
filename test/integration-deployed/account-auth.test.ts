@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
 import { createRareAccountClient } from '../../src/sdk/account-client.js';
@@ -197,6 +198,65 @@ describe('account integration with deployed services', () => {
       for (const account of [victim, client]) await account.auth.logout().catch(() => undefined);
     }
   }, 240_000);
+  it('changes usernames, rejects conflicts, preserves omitted fields and clears editable profile fields', async () => {
+    const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
+    const origin = new URL(apiBaseUrl);
+    if (origin.protocol !== 'https:' || origin.hostname === 'api.superrare.com') throw new Error('Use a non-production HTTPS API');
+    const owner = testWallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
+    const otherWallet = testWallet('RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY');
+    const client = createRareAccountClient({ apiBaseUrl });
+    const other = createRareAccountClient({ apiBaseUrl });
+    try {
+      for (const [account, wallet] of [[client, owner], [other, otherWallet]] as const) {
+        await loginWithWallet(account, { address: wallet.address, chainId: 1, signMessage: message => wallet.signMessage({ message }) });
+      }
+      const initial = await client.profile.get();
+      const otherInitial = await other.profile.get();
+      expect(initial.accountId).not.toBe(otherInitial.accountId);
+      const username = `sdk_${randomBytes(8).toString('hex')}`;
+      try {
+        const renamed = await client.profile.update({ username });
+        expect(renamed).toEqual({ ...initial, username });
+        expect(await client.profile.get()).toEqual(renamed);
+        await expect(client.profile.update({ username: otherInitial.username })).rejects.toMatchObject({ status: 409 });
+        expect(await client.profile.get()).toEqual(renamed);
+        expect(await other.profile.get()).toEqual(otherInitial);
+
+        // Use a real indexed artwork, rather than inventing an identifier.
+        const artwork = (await createRareApi({ baseUrl: apiBaseUrl }).searchNfts({ perPage: 1 })).data[0];
+        if (!artwork?.universalTokenId) throw new Error('Live masthead test requires an indexed artwork');
+        const fields = {
+          fullName: 'SDK profile fields', bio: 'Preserve omitted fields', website: 'https://example.test/artist',
+          twitterlink: 'https://x.com/rareartist', discordlink: 'https://discord.gg/rareartist',
+          instagramlink: 'https://instagram.com/rareartist', youtubelink: 'https://youtube.com/rareartist',
+          masthead_universal_token_id: artwork.universalTokenId,
+        };
+        const saved = await client.profile.update({ email: 'sdk-fields@example.test', profile: fields });
+        expect(saved).toEqual({ ...renamed, email: 'sdk-fields@example.test', profile: { ...renamed.profile, ...fields } });
+        const patched = await client.profile.update({ profile: { bio: 'Only this field changed' } });
+        expect(patched).toEqual({ ...saved, profile: { ...saved.profile, bio: 'Only this field changed' } });
+        expect(await client.profile.get()).toEqual(patched);
+
+        const session = await client.auth.getSession();
+        if (!session) throw new Error('Missing live session');
+        for (const profile of [{ bio: 'x'.repeat(181) }, { website: 'javascript:alert(1)' }]) {
+          const response = await fetch(`${apiBaseUrl}/v1/me`, {
+            method: 'PATCH', headers: { authorization: `Bearer ${session.accessToken}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ profile }), signal: AbortSignal.timeout(30_000),
+          });
+          expect(response.status).toBe(400);
+          expect(await client.profile.get()).toEqual(patched);
+        }
+        const cleared = { fullName: '', bio: '', website: '', twitterlink: '', discordlink: '', instagramlink: '', youtubelink: '', masthead_universal_token_id: '' };
+        expect(await client.profile.update({ profile: cleared })).toEqual({ ...patched, profile: { ...patched.profile, ...cleared } });
+        expect((await client.profile.get()).profile).toMatchObject(cleared);
+      } finally {
+        await client.profile.update({ username: initial.username });
+      }
+    } finally {
+      for (const account of [client, other]) await account.auth.logout();
+    }
+  }, 240_000);
   it('logs in with an existing account, updates its profile, refreshes and revokes', async () => {
     const apiBaseUrl = required('RARE_ACCOUNT_TEST_API_URL').replace(/\/$/u, '');
     const url = new URL(apiBaseUrl);
@@ -245,10 +305,6 @@ describe('account integration with deployed services', () => {
       expect(publicProfile).toMatchObject({ website: settings.profile.website });
       expect(publicProfile).not.toHaveProperty('email');
       expect(await publicApi.getUser(initial.address)).not.toHaveProperty('email');
-      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
-      const uploaded = await first.profile.uploadAvatar(png, 'sdk-profile.png');
-      expect(uploaded.profile.avatar).toMatch(/^https:\/\//);
-      expect(await first.profile.update({ profile: { avatar: '' } })).toMatchObject({ profile: { avatar: '' } });
       expect(() => first.profile.update({ profile: { bio: 'x'.repeat(181) } })).toThrow();
 
       await second.profile.update({ profile: { fullName: 'Rare SDK integration updated' } });

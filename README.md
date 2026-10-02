@@ -268,8 +268,14 @@ connected to the upload bucket.
 
 Run `npm run test:integration:uploads` manually against a deployed dev API with
 `RARE_ACCOUNT_TEST_API_URL` and `RARE_ACCOUNT_TEST_PRIVATE_KEY` configured. This
-check uses real storage and requires authenticated `gcloud` access to delete its
-random test object from `rare-api-upload-dev`. It is not a CI job.
+suite uses real storage and requires authenticated `gcloud` access on
+`superrare-dev` to delete its unique test objects from `rare-api-upload-dev`.
+It verifies concurrent deduplication, first-writer metadata, public byte-for-byte
+downloads, avatar attachment and clearing, unchanged unrelated profile fields,
+and HTTP rejection of anonymous, forged, empty, oversized and unexpected-field
+requests. Object hashes are registered before requests so cleanup also runs after
+an ambiguous upload failure. The dev API must use `rare-api-upload-dev` with no
+Imgix source; configured Imgix previews need separate verification. It is not a CI job.
 
 Avatar uploads accept PNG, JPEG or GIF, up to 5 MiB. The upload method saves the
 returned URL to your profile. If the upload succeeds but saving fails,
@@ -281,3 +287,12 @@ Existing `createRareClient` wallet transactions and public reads are unchanged.
 An account session does not delegate transaction-signing authority.
 
 Deployed account integration tests require two existing, distinct test accounts, supplied through `RARE_ACCOUNT_TEST_PRIVATE_KEY` and `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY`. The fresh-wallet test generates its own wallet and expects login to leave it without an account.
+
+The account suite additionally verifies username changes and conflicts, all profile
+form fields, partial-update preservation, masthead pinning to a real indexed
+artwork, clearing optional profile fields, and server-side invalid-field rejection.
+Use disposable profiles: the suite changes their email and profile metadata and
+restores the username, but does not restore every original field. Avatar uploads
+are verified separately by `test:integration:uploads`, which restores the original
+avatar and deletes its objects. Browser email/social login still requires a manual
+Reown check; CLI device E2E covers the real Connect approval HTTP protocol.
