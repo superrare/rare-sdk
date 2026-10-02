@@ -1,3 +1,9 @@
+import { dropListQuery, normalizeDropId, parseDrop, type DropAnnouncement, type DropListOptions } from './drops-core.js';
+import { favoritePageQuery } from './favorites-core.js';
+import { normalizePostId, parsePostData, parsePost, parsePostComment, parsePostPage, type CreatorPost, type CreatorPostComment } from './posts-core.js';
+import { normalizeFavoriteId } from './favorites-core.js';
+import { userQuery, type UserSelector, type UserListOptions } from './user-core.js';
+export type { UserSelector, UserListOptions } from './user-core.js';
 import type { LiquidEdition } from '../data-access/liquid-editions.js';
 import { buildLiquidEditionSearchQuery, type LiquidEditionSearchParams } from './liquid-discovery-core.js';
 import { createApiClient, type ApiClient } from '../data-access/index.js';
@@ -33,6 +39,11 @@ export type RareApiOptions = {
 };
 
 export type RareApi = {
+  getDrops: (options: DropListOptions) => Promise<SearchPageResponse<DropAnnouncement>>;
+  getDrop: (dropId: string) => Promise<DropAnnouncement>;
+  getPosts: (user: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<CreatorPost>>;
+  getPost: (postId: string) => Promise<CreatorPost>;
+  getPostComments: (postId: string, options?: UserListOptions) => Promise<SearchPageResponse<CreatorPostComment>>;
   searchLiquidEditions: (params?: LiquidEditionSearchParams) => Promise<SearchPageResponse<LiquidEdition>>;
   getLiquidEdition: (id: string) => Promise<LiquidEdition>;
   pinFile: (buffer: Uint8Array, filename: string) => Promise<IpfsUploadResult>;
@@ -44,10 +55,14 @@ export type RareApi = {
   searchCollections: (params?: CollectionSearchParams) => Promise<SearchPageResponse<Collection>>;
   searchEvents: (params: EventSearchParams) => Promise<SearchPageResponse<NftEvent>>;
   getNft: (universalTokenId: string) => Promise<Nft>;
+  getNftFavoriteCount: (universalTokenId: string) => Promise<number>;
   getNftEvents: (universalTokenId: string, opts?: NftEventOptions) => Promise<SearchPageResponse<NftEvent>>;
   getCollection: (id: string) => Promise<Collection>;
   getCollectionEvents: (id: string, opts?: CollectionEventOptions) => Promise<SearchPageResponse<NftEvent>>;
-  getUser: (address: string) => Promise<UserProfile>;
+  getUser: (address: string | UserSelector) => Promise<UserProfile>;
+  resolveUser: (input: UserSelector) => Promise<UserProfile>;
+  getUserFollowers: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
+  getUserFollowing: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
   getTokenPrice: (symbol: string) => Promise<{ symbol: string; priceUsd: number; decimals: number; chainId: number; address: string }>;
 };
 
@@ -118,7 +133,17 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
   const client = createApiClient(options.baseUrl, options.fetch);
   const fetchImpl = options.fetch ?? globalThis.fetch;
 
+  const resolveUser = async (input: UserSelector): Promise<UserProfile> => {
+    const { data } = await client.GET('/v1/users', { params: { query: userQuery(input) } });
+    if (!data) throw new Error('User not found.');
+    return data.data;
+  };
   return {
+    async getDrops(options) { const { data } = await client.GET('/v1/drops', { params: { query: dropListQuery(options) } }); return parsePostPage(data, parseDrop); },
+    async getDrop(dropId) { const id = normalizeDropId(dropId); const { data } = await client.GET('/v1/drops/{dropId}', { params: { path: { dropId: id } } }); return parsePostData(data, parseDrop); },
+    async getPosts(input, options) { const { data } = await client.GET('/v1/posts', { params: { query: userQuery(input, favoritePageQuery(options)) } }); return parsePostPage(data, parsePost); },
+    async getPost(postId) { const id = normalizePostId(postId); const { data } = await client.GET('/v1/posts/{postId}', { params: { path: { postId: id } } }); return parsePostData(data, parsePost); },
+    async getPostComments(postId, options) { const id = normalizePostId(postId); const { data } = await client.GET('/v1/posts/{postId}/comments', { params: { path: { postId: id }, query: favoritePageQuery(options) } }); return parsePostPage(data, parsePostComment); },
     pinFile: async (buffer, filename) => pinFileWithClient(client, fetchImpl, buffer, filename),
     pinJson: async (value, filename) => pinJsonWithClient(client, fetchImpl, value, filename),
     uploadMedia: async (buffer, filename) => uploadMediaWithClient(client, fetchImpl, buffer, filename),
@@ -129,11 +154,28 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     searchNfts: async (params = {}) => searchNftsWithClient(client, params),
     searchCollections: async (params = {}) => searchCollectionsWithClient(client, params),
     searchEvents: async (params) => searchEventsWithClient(client, params),
+    getNftFavoriteCount: async (universalTokenId) => {
+      const id = normalizeFavoriteId(universalTokenId);
+      const { data } = await client.GET('/v1/nfts/{universalTokenId}/favorites/count', { params: { path: { universalTokenId: id } } });
+      if (!data) throw new Error('Invalid favorite count response.');
+      return data.data.count;
+    },
     getNft: async (universalTokenId) => getNftWithClient(client, universalTokenId),
     getNftEvents: async (universalTokenId, opts) => getNftEventsWithClient(client, universalTokenId, opts),
     getCollection: async (id) => getCollectionWithClient(client, id),
     getCollectionEvents: async (id, opts) => getCollectionEventsWithClient(client, id, opts),
-    getUser: async (address) => getUserWithClient(client, address),
+    getUser: async (input) => typeof input === 'string' ? getUserWithClient(client, userQuery(input).address ?? input) : resolveUser(input),
+    resolveUser,
+    getUserFollowers: async (input, options) => {
+      const { data } = await client.GET('/v1/users/followers', { params: { query: userQuery(input, options) } });
+      if (!data) throw new Error('Invalid followers response.');
+      return data;
+    },
+    getUserFollowing: async (input, options) => {
+      const { data } = await client.GET('/v1/users/following', { params: { query: userQuery(input, options) } });
+      if (!data) throw new Error('Invalid following response.');
+      return data;
+    },
     getTokenPrice: async (symbol) => getTokenPriceWithClient(client, symbol),
   };
 }
@@ -396,7 +438,7 @@ function normalizeCollectionEventType(
   return Array.isArray(eventType) ? eventType : [eventType];
 }
 
-export async function getUser(address: string): Promise<UserProfile> {
+export async function getUser(address: string | UserSelector): Promise<UserProfile> {
   return createDefaultRareApi().getUser(address);
 }
 

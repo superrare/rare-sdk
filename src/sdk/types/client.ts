@@ -1,3 +1,4 @@
+import type { RareApi } from '../api.js';
 import type { Address, PublicClient, WalletClient } from 'viem';
 import type {
   LiquidEdition,
@@ -14,6 +15,8 @@ import type {
   PinMetadataParams,
   SearchPageResponse,
   UserProfile,
+  UserSelector,
+  UserListOptions,
 } from '../api.js';
 import type { NftIdentityParams } from '../nft-core.js';
 import type { SupportedChain } from '../../contracts/addresses.js';
@@ -104,11 +107,15 @@ export type SearchNamespace = {
 }
 
 export type NftNamespace = {
+  favoriteCount: (params: RareClientNftGetParams) => Promise<number>;
   get: (params: RareClientNftGetParams) => Promise<Nft>;
 }
 
 export type UserNamespace = {
-  get: (address: string) => Promise<UserProfile>;
+  get: (address: string | UserSelector) => Promise<UserProfile>;
+  resolve: (input: UserSelector) => Promise<UserProfile>;
+  followers: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
+  following: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
 }
 
 export type IpfsNamespace = {
@@ -158,6 +165,8 @@ export type RareClient = {
   nft: NftNamespace;
   collection: CollectionNamespace;
   ipfs: IpfsNamespace;
+  drops: { list: RareApi['getDrops']; get: RareApi['getDrop'] };
+  posts: { list: RareApi['getPosts']; get: RareApi['getPost']; comments: RareApi['getPostComments'] };
   user: UserNamespace;
   media: MediaNamespace;
   import: ImportNamespace;
