@@ -1,3 +1,4 @@
+import { normalizeFavoriteId, favoritePageQuery, parseFavoritesPage, parseFavoriteStatus, type FavoriteArtworkInput } from './favorites-core.js';
 import { userQuery, type UserSelector } from './user-core.js';
 import { planUpload, parseUpload } from './upload-core.js';
 import { isAddress } from 'viem';
@@ -174,7 +175,29 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     const body = await json(await request(url.href, { method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }, options));
     if (!isRecord(body) || !isRecord(body.data) || body.data.following !== (method === 'POST')) throw new RareAuthError('invalid_follow_response');
   };
+  const favoriteRequest = async (method: 'GET' | 'PUT' | 'DELETE', input: FavoriteArtworkInput, options: RareAuthRequestOptions = {}): Promise<boolean> => {
+    const id = normalizeFavoriteId(input);
+    const token = await accessToken(options);
+    const result = parseFavoriteStatus(await json(await request(joinAuthPath(apiBaseUrl, `v1/me/favorites/${encodeURIComponent(id)}`), {
+      method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    }, options)));
+    if (method !== 'GET' && result !== (method === 'PUT')) throw new RareAuthError('invalid_favorite_response');
+    return result;
+  };
   return {
+    favorites: {
+      async list(options = {}) {
+        const query = favoritePageQuery(options);
+        const url = new URL(joinAuthPath(apiBaseUrl, 'v1/me/favorites'));
+        url.searchParams.set('page', String(query.page));
+        url.searchParams.set('perPage', String(query.perPage));
+        const token = await accessToken(options);
+        return parseFavoritesPage(await json(await request(url.href, { method: 'GET', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }, options)));
+      },
+      has: (input, options) => favoriteRequest('GET', input, options),
+      async add(input, options) { await favoriteRequest('PUT', input, options); },
+      async remove(input, options) { await favoriteRequest('DELETE', input, options); },
+    },
     uploads: { upload },
     following: { follow: (input, options) => changeFollow('POST', input, options), unfollow: (input, options) => changeFollow('DELETE', input, options) },
     auth: {

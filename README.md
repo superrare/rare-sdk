@@ -326,3 +326,26 @@ checks selector equivalence, public pagination/email privacy, concurrent and
 repeated follow/unfollow,
 unauthorized writes and self-follow rejection, then removes its relationship and
 revokes its sessions. It runs outside CI.
+
+### Artwork favorites
+
+Favorites require an existing account and a saved account session. Counts are public.
+
+```ts
+const id = '1-0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0-12345';
+await account.favorites.add(id);
+await account.favorites.has(id); // boolean
+await account.favorites.list({ page: 1, perPage: 20 });
+await account.favorites.remove(id);
+await rare.nft.favoriteCount({ contract: '0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0', tokenId: 12345 });
+```
+
+`account.favorites.add`, `remove`, and `has` also accept `{ chainId, contract, tokenId }`.
+Lists contain artwork identifiers, the favorite creation time, and `metadata.name`, with standard page metadata.
+The API derives the acting account from its session. It provides no public favorite list or list of people who favorited an artwork.
+Repeated adds and removals preserve the requested state. These methods do not authorize blockchain transactions.
+
+Run `npm run test:integration:favorites` against a deployed non-production API. Set `RARE_ACCOUNT_TEST_API_URL`,
+`RARE_ACCOUNT_TEST_PRIVATE_KEY`, `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY`, and `RARE_ACCOUNT_TEST_ARTWORK_ID`.
+Use two existing disposable accounts and a dedicated artwork that neither account already favorites.
+The suite tests privacy, account isolation, concurrent additions, pagination, public counts, and cleanup. It runs outside CI and fails on missing fixtures.

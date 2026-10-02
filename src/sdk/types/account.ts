@@ -1,3 +1,5 @@
+import type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from '../favorites-core.js';
+import type { SearchPageResponse } from '../api.js';
 import type { UserSelector } from '../user-core.js';
 /** Sensitive credentials. Never print this object in logs or status output. */
 export type RareAccountSession = {
@@ -104,6 +106,12 @@ export type RareAuthRequestOptions = { signal?: AbortSignal };
 export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
 
 export type RareAccountClient = {
+  favorites: {
+    list: (options?: FavoritesListOptions & RareAuthRequestOptions) => Promise<SearchPageResponse<ArtworkFavorite>>;
+    has: (input: FavoriteArtworkInput, options?: RareAuthRequestOptions) => Promise<boolean>;
+    add: (input: FavoriteArtworkInput, options?: RareAuthRequestOptions) => Promise<void>;
+    remove: (input: FavoriteArtworkInput, options?: RareAuthRequestOptions) => Promise<void>;
+  };
   following: {
     follow: (input: UserSelector | string, options?: RareAuthRequestOptions) => Promise<void>;
     unfollow: (input: UserSelector | string, options?: RareAuthRequestOptions) => Promise<void>;

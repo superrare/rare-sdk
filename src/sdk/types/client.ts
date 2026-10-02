@@ -106,6 +106,7 @@ export type SearchNamespace = {
 }
 
 export type NftNamespace = {
+  favoriteCount: (params: RareClientNftGetParams) => Promise<number>;
   get: (params: RareClientNftGetParams) => Promise<Nft>;
 }
 

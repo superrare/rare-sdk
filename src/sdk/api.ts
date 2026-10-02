@@ -1,3 +1,4 @@
+import { normalizeFavoriteId } from './favorites-core.js';
 import { userQuery, type UserSelector, type UserListOptions } from './user-core.js';
 export type { UserSelector, UserListOptions } from './user-core.js';
 import type { LiquidEdition } from '../data-access/liquid-editions.js';
@@ -46,6 +47,7 @@ export type RareApi = {
   searchCollections: (params?: CollectionSearchParams) => Promise<SearchPageResponse<Collection>>;
   searchEvents: (params: EventSearchParams) => Promise<SearchPageResponse<NftEvent>>;
   getNft: (universalTokenId: string) => Promise<Nft>;
+  getNftFavoriteCount: (universalTokenId: string) => Promise<number>;
   getNftEvents: (universalTokenId: string, opts?: NftEventOptions) => Promise<SearchPageResponse<NftEvent>>;
   getCollection: (id: string) => Promise<Collection>;
   getCollectionEvents: (id: string, opts?: CollectionEventOptions) => Promise<SearchPageResponse<NftEvent>>;
@@ -139,6 +141,12 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     searchNfts: async (params = {}) => searchNftsWithClient(client, params),
     searchCollections: async (params = {}) => searchCollectionsWithClient(client, params),
     searchEvents: async (params) => searchEventsWithClient(client, params),
+    getNftFavoriteCount: async (universalTokenId) => {
+      const id = normalizeFavoriteId(universalTokenId);
+      const { data } = await client.GET('/v1/nfts/{universalTokenId}/favorites/count', { params: { path: { universalTokenId: id } } });
+      if (!data) throw new Error('Invalid favorite count response.');
+      return data.data.count;
+    },
     getNft: async (universalTokenId) => getNftWithClient(client, universalTokenId),
     getNftEvents: async (universalTokenId, opts) => getNftEventsWithClient(client, universalTokenId, opts),
     getCollection: async (id) => getCollectionWithClient(client, id),

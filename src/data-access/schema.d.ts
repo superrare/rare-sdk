@@ -4,6 +4,12 @@
  */
 
 export interface paths {
+    "/v1/nfts/{universalTokenId}/favorites/count": {
+        get: {
+            parameters: { path: { universalTokenId: string } };
+            responses: { 200: { content: { "application/json": { data: { count: number } } } } };
+        };
+    };
     "/v1/users/followers": {
         get: {
             parameters: { query: { username?: string; address?: string; userId?: number; page?: number; perPage?: number } };

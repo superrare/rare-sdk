@@ -51,3 +51,5 @@ export type * from './types/account.js';
 export { AvatarProfileUpdateError } from './account-profile-core.js';
 
 export type { UserSelector, UserListOptions } from './user-core.js';
+
+export type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from './favorites-core.js';
