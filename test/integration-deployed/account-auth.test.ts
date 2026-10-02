@@ -19,6 +19,22 @@ const retryRateLimit = async <T>(operation: () => Promise<T>): Promise<T> => {
 const loginWithWallet = (client: ReturnType<typeof createRareAccountClient>, input: Parameters<typeof client.auth.loginWithWallet>[0]) =>
   retryRateLimit(() => client.auth.loginWithWallet(input));
 
+type PublicProfile = Awaited<ReturnType<ReturnType<typeof createRareApi>['getUser']>>;
+
+// Only wait for a successful read whose indexed data has not caught up yet.
+// Network, authentication, and service errors fail immediately.
+const waitForIndexedProfile = async (
+  read: () => Promise<PublicProfile>,
+  matches: (profile: PublicProfile) => boolean,
+  deadline = Date.now() + 60_000,
+): Promise<PublicProfile> => {
+  const profile = await read();
+  if (matches(profile)) return profile;
+  if (Date.now() >= deadline) throw new Error('Public profile index did not reflect the saved profile within 60 seconds');
+  await new Promise(resolve => setTimeout(resolve, 1_000));
+  return waitForIndexedProfile(read, matches, deadline);
+};
+
 const required = (name: string): string => {
   const value = process.env[name];
   if (!value) throw new Error(`Missing ${name}`);
@@ -237,6 +253,20 @@ describe('account integration with deployed services', () => {
         expect(patched).toEqual({ ...saved, profile: { ...saved.profile, bio: 'Only this field changed' } });
         expect(await client.profile.get()).toEqual(patched);
 
+        const publicApi = createRareApi({ baseUrl: apiBaseUrl });
+        const expectedPublicFields = { ...fields, bio: patched.profile.bio };
+        const indexed = await waitForIndexedProfile(
+          () => publicApi.getUser(initial.address),
+          profile => profile.username === username && Object.entries(expectedPublicFields).every(
+            ([key, value]) => Object.entries(profile).some(([publicKey, publicValue]) => publicKey === key && publicValue === value),
+          ),
+        );
+        expect(indexed).not.toHaveProperty('email');
+        expect(indexed).not.toHaveProperty('isCompromised');
+        for (const selector of [{ username }, { address: initial.address }, { userId: Number(initial.accountId) }]) {
+          expect(await publicApi.resolveUser(selector)).toEqual(indexed);
+        }
+
         const session = await client.auth.getSession();
         if (!session) throw new Error('Missing live session');
         for (const profile of [{ bio: 'x'.repeat(181) }, { website: 'javascript:alert(1)' }]) {
@@ -300,7 +330,10 @@ describe('account integration with deployed services', () => {
       };
       expect(await first.profile.update(settings)).toMatchObject(settings);
       const publicApi = createRareApi({ baseUrl: apiBaseUrl });
-      const publicProfile = await publicApi.resolveUser({ username: initial.username });
+      const publicProfile = await waitForIndexedProfile(
+        () => publicApi.resolveUser({ username: initial.username }),
+        profile => profile.website === settings.profile.website,
+      );
       expect(publicProfile.address.toLowerCase()).toBe(initial.address.toLowerCase());
       expect(publicProfile).toMatchObject({ website: settings.profile.website });
       expect(publicProfile).not.toHaveProperty('email');
