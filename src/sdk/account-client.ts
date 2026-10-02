@@ -1,3 +1,4 @@
+import { userQuery, type UserSelector } from './user-core.js';
 import { planUpload, parseUpload } from './upload-core.js';
 import { isAddress } from 'viem';
 import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
@@ -165,8 +166,17 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
       method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, body: form,
     }, requestOptions)));
   };
+  const changeFollow = async (method: 'POST' | 'DELETE', input: UserSelector | string, options: RareAuthRequestOptions = {}): Promise<void> => {
+    const query = userQuery(input);
+    const url = new URL(joinAuthPath(apiBaseUrl, 'v1/me/following'));
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, String(value));
+    const token = await accessToken(options);
+    const body = await json(await request(url.href, { method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }, options));
+    if (!isRecord(body) || !isRecord(body.data) || body.data.following !== (method === 'POST')) throw new RareAuthError('invalid_follow_response');
+  };
   return {
     uploads: { upload },
+    following: { follow: (input, options) => changeFollow('POST', input, options), unfollow: (input, options) => changeFollow('DELETE', input, options) },
     auth: {
       async startDeviceAuthorization(requestOptions = {}) {
         generation += 1;

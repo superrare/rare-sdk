@@ -234,6 +234,8 @@ export function createRareClient(config: RareClientConfig): RareClient {
       },
     },
     user: {
+      followers: (input, options) => api.getUserFollowers(input, options),
+      following: (input, options) => api.getUserFollowing(input, options),
       async resolve(input): ReturnType<RareClient['user']['resolve']> {
         return api.resolveUser(input);
       },

@@ -4,6 +4,29 @@
  */
 
 export interface paths {
+    "/v1/users/followers": {
+        get: {
+            parameters: { query: { username?: string; address?: string; userId?: number; page?: number; perPage?: number } };
+            responses: {
+                200: { content: { "application/json": { data: components["schemas"]["UserProfile"][]; pagination: components["schemas"]["Pagination"] } } };
+                400: { content: { "application/json": { error: string; code: string } } };
+                404: { content: { "application/json": { error: string; code: string } } };
+                503: { content: { "application/json": { error: string; code: string } } };
+            };
+        };
+    };
+    "/v1/users/following": {
+        get: {
+            parameters: { query: { username?: string; address?: string; userId?: number; page?: number; perPage?: number } };
+            responses: {
+                200: { content: { "application/json": { data: components["schemas"]["UserProfile"][]; pagination: components["schemas"]["Pagination"] } } };
+                400: { content: { "application/json": { error: string; code: string } } };
+                404: { content: { "application/json": { error: string; code: string } } };
+                503: { content: { "application/json": { error: string; code: string } } };
+            };
+        };
+    };
+
     "/v1/liquid-editions": {
         parameters: {
             query?: never;
@@ -774,7 +797,7 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: { username: string };
+                query: { username?: string; address?: string; userId?: number };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -2628,6 +2651,7 @@ export interface components {
             ownerAddress: components["schemas"]["EthereumAddress"];
         };
         UserProfile: {
+            userId?: number;
             bio?: string | null;
             avatar?: string | null;
             website?: string | null;

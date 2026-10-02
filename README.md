@@ -296,3 +296,33 @@ restores the username, but does not restore every original field. Avatar uploads
 are verified separately by `test:integration:uploads`, which restores the original
 avatar and deletes its objects. Browser email/social login still requires a manual
 Reown check; CLI device E2E covers the real Connect approval HTTP protocol.
+
+### Public profiles and follows
+
+User reads accept exactly one explicit selector. The existing address argument remains supported.
+
+```ts
+await rare.user.get('0x...');
+await rare.user.get({ username: 'artist' });
+await rare.user.resolve({ userId: 123 });
+await rare.user.followers({ username: 'artist' }, { page: 1, perPage: 20 });
+await rare.user.following({ address: '0x...' });
+await account.following.follow({ userId: 123 });
+await account.following.unfollow({ username: 'artist' });
+```
+
+Profile and follower/following reads are public and omit email. Following or
+unfollowing requires an existing account session. The server derives the acting
+user from that session; the selector identifies the target user. Follow writes
+use the existing `createUserFollow` mutation, which creates a relationship only
+if missing. Repeated or concurrent follows create one relationship. The SDK does
+not automatically retry writes.
+
+Run `npm run test:integration:follows` manually against a deployed non-production
+API and GQL API containing these changes. Set `RARE_ACCOUNT_TEST_API_URL`,
+`RARE_ACCOUNT_TEST_PRIVATE_KEY`, and `RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` to
+two distinct disposable accounts with no existing follow relationship. The suite
+checks selector equivalence, public pagination/email privacy, concurrent and
+repeated follow/unfollow,
+unauthorized writes and self-follow rejection, then removes its relationship and
+revokes its sessions. It runs outside CI.

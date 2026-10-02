@@ -14,6 +14,8 @@ import type {
   PinMetadataParams,
   SearchPageResponse,
   UserProfile,
+  UserSelector,
+  UserListOptions,
 } from '../api.js';
 import type { NftIdentityParams } from '../nft-core.js';
 import type { SupportedChain } from '../../contracts/addresses.js';
@@ -108,8 +110,10 @@ export type NftNamespace = {
 }
 
 export type UserNamespace = {
-  get: (address: string) => Promise<UserProfile>;
-  resolve: (input: { username: string }) => Promise<UserProfile>;
+  get: (address: string | UserSelector) => Promise<UserProfile>;
+  resolve: (input: UserSelector) => Promise<UserProfile>;
+  followers: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
+  following: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
 }
 
 export type IpfsNamespace = {

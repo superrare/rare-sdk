@@ -1,3 +1,4 @@
+import type { UserSelector } from '../user-core.js';
 /** Sensitive credentials. Never print this object in logs or status output. */
 export type RareAccountSession = {
   revision: string;
@@ -103,6 +104,10 @@ export type RareAuthRequestOptions = { signal?: AbortSignal };
 export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
 
 export type RareAccountClient = {
+  following: {
+    follow: (input: UserSelector | string, options?: RareAuthRequestOptions) => Promise<void>;
+    unfollow: (input: UserSelector | string, options?: RareAuthRequestOptions) => Promise<void>;
+  };
   uploads: {
     upload: (file: Uint8Array | Blob, filename: string, options?: RareAuthRequestOptions & { contentType?: string }) => Promise<RareUpload>;
   };

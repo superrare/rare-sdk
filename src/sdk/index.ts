@@ -49,3 +49,5 @@ export { createMemoryAccountSessionStore } from './account-session-store.js';
 export type * from './types/account.js';
 
 export { AvatarProfileUpdateError } from './account-profile-core.js';
+
+export type { UserSelector, UserListOptions } from './user-core.js';

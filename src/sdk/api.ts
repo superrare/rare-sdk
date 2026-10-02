@@ -1,4 +1,5 @@
-import { normalizeProfileUsername } from './account-profile-core.js';
+import { userQuery, type UserSelector, type UserListOptions } from './user-core.js';
+export type { UserSelector, UserListOptions } from './user-core.js';
 import type { LiquidEdition } from '../data-access/liquid-editions.js';
 import { buildLiquidEditionSearchQuery, type LiquidEditionSearchParams } from './liquid-discovery-core.js';
 import { createApiClient, type ApiClient } from '../data-access/index.js';
@@ -48,8 +49,10 @@ export type RareApi = {
   getNftEvents: (universalTokenId: string, opts?: NftEventOptions) => Promise<SearchPageResponse<NftEvent>>;
   getCollection: (id: string) => Promise<Collection>;
   getCollectionEvents: (id: string, opts?: CollectionEventOptions) => Promise<SearchPageResponse<NftEvent>>;
-  getUser: (address: string) => Promise<UserProfile>;
-  resolveUser: (input: { username: string }) => Promise<UserProfile>;
+  getUser: (address: string | UserSelector) => Promise<UserProfile>;
+  resolveUser: (input: UserSelector) => Promise<UserProfile>;
+  getUserFollowers: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
+  getUserFollowing: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>>;
   getTokenPrice: (symbol: string) => Promise<{ symbol: string; priceUsd: number; decimals: number; chainId: number; address: string }>;
 };
 
@@ -120,6 +123,11 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
   const client = createApiClient(options.baseUrl, options.fetch);
   const fetchImpl = options.fetch ?? globalThis.fetch;
 
+  const resolveUser = async (input: UserSelector): Promise<UserProfile> => {
+    const { data } = await client.GET('/v1/users', { params: { query: userQuery(input) } });
+    if (!data) throw new Error('User not found.');
+    return data.data;
+  };
   return {
     pinFile: async (buffer, filename) => pinFileWithClient(client, fetchImpl, buffer, filename),
     pinJson: async (value, filename) => pinJsonWithClient(client, fetchImpl, value, filename),
@@ -135,12 +143,17 @@ export function createRareApi(options: RareApiOptions = {}): RareApi {
     getNftEvents: async (universalTokenId, opts) => getNftEventsWithClient(client, universalTokenId, opts),
     getCollection: async (id) => getCollectionWithClient(client, id),
     getCollectionEvents: async (id, opts) => getCollectionEventsWithClient(client, id, opts),
-    getUser: async (address) => getUserWithClient(client, address),
-    resolveUser: async (input) => {
-      const username = normalizeProfileUsername(input.username);
-      const { data } = await client.GET('/v1/users', { params: { query: { username } } });
-      if (!data) throw new Error('User not found.');
-      return data.data;
+    getUser: async (input) => typeof input === 'string' ? getUserWithClient(client, userQuery(input).address ?? input) : resolveUser(input),
+    resolveUser,
+    getUserFollowers: async (input, options) => {
+      const { data } = await client.GET('/v1/users/followers', { params: { query: userQuery(input, options) } });
+      if (!data) throw new Error('Invalid followers response.');
+      return data;
+    },
+    getUserFollowing: async (input, options) => {
+      const { data } = await client.GET('/v1/users/following', { params: { query: userQuery(input, options) } });
+      if (!data) throw new Error('Invalid following response.');
+      return data;
     },
     getTokenPrice: async (symbol) => getTokenPriceWithClient(client, symbol),
   };
@@ -404,7 +417,7 @@ function normalizeCollectionEventType(
   return Array.isArray(eventType) ? eventType : [eventType];
 }
 
-export async function getUser(address: string): Promise<UserProfile> {
+export async function getUser(address: string | UserSelector): Promise<UserProfile> {
   return createDefaultRareApi().getUser(address);
 }
 
