@@ -229,6 +229,23 @@ describe('account integration with deployed services', () => {
       const initial = await client.profile.get();
       const otherInitial = await other.profile.get();
       expect(initial.accountId).not.toBe(otherInitial.accountId);
+      const originalEmail = initial.email;
+      if (originalEmail === null || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(originalEmail)) {
+        throw new Error('The profile test needs an account with a valid email so its email can be restored through the public API');
+      }
+      const restoreProfile = async (): Promise<void> => {
+        await client.profile.update({
+          username: initial.username,
+          email: originalEmail,
+          profile: {
+            fullName: initial.profile.fullName ?? '', bio: initial.profile.bio ?? '',
+            website: initial.profile.website ?? '', twitterlink: initial.profile.twitterlink ?? '',
+            discordlink: initial.profile.discordlink ?? '', instagramlink: initial.profile.instagramlink ?? '',
+            youtubelink: initial.profile.youtubelink ?? '',
+            masthead_universal_token_id: initial.profile.masthead_universal_token_id ?? '',
+          },
+        });
+      };
       const username = `sdk_${randomBytes(8).toString('hex')}`;
       try {
         const renamed = await client.profile.update({ username });
@@ -280,9 +297,15 @@ describe('account integration with deployed services', () => {
         const cleared = { fullName: '', bio: '', website: '', twitterlink: '', discordlink: '', instagramlink: '', youtubelink: '', masthead_universal_token_id: '' };
         expect(await client.profile.update({ profile: cleared })).toEqual({ ...patched, profile: { ...patched.profile, ...cleared } });
         expect((await client.profile.get()).profile).toMatchObject(cleared);
-      } finally {
-        await client.profile.update({ username: initial.username });
+      } catch (error) {
+        try {
+          await restoreProfile();
+        } catch (cleanupError) {
+          throw new AggregateError([error, cleanupError], 'Profile test and restoration both failed', { cause: error });
+        }
+        throw error;
       }
+      await restoreProfile();
     } finally {
       for (const account of [client, other]) await account.auth.logout();
     }

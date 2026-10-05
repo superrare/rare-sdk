@@ -23,7 +23,7 @@ const removeObject = (key: string): void => {
     // Rejected requests and failures before storage have no object to delete.
     const stderr = error !== null && typeof error === 'object' && 'stderr' in error && error.stderr instanceof Uint8Array
       ? Buffer.from(error.stderr).toString('utf8') : '';
-    if (!/No URLs matched|NotFoundException|HTTPError 404|does not exist/.test(stderr)) throw error;
+    if (!/No URLs matched|URLs matched no objects or files|NotFoundException|HTTPError 404|does not exist/.test(stderr)) throw error;
   }
 };
 

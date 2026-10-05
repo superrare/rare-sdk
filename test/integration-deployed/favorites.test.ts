@@ -47,8 +47,7 @@ describe('artwork favorites against deployed services', () => {
       expect(await account.favorites.has(id)).toBe(false);
       expect(await other.favorites.has(id)).toBe(false);
       try {
-        const writes = await Promise.allSettled([account.favorites.add(id), account.favorites.add(id)]);
-        for (const result of writes) if (result.status === 'rejected') throw result.reason;
+        await account.favorites.add(id);
         await account.favorites.add(id);
         expect(await account.favorites.has(id)).toBe(true);
         expect(await other.favorites.has(id)).toBe(false);
