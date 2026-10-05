@@ -19,7 +19,7 @@ const login = async (client: RareAccountClient, owner: ReturnType<typeof wallet>
   await client.auth.loginWithWallet({ address: owner.address, chainId: 1, signMessage: message => owner.signMessage({ message }) });
 };
 describe('artwork favorites against deployed services', () => {
-  it('keeps favorites private, exposes only aggregate counts, and applies writes only to the signed-in account', async () => {
+  it('restricts list access to its account, exposes only aggregate counts, and applies writes only to the signed-in account', async () => {
     const url = new URL(required('RARE_ACCOUNT_TEST_API_URL'));
     if (url.protocol !== 'https:' || url.hostname === 'api.superrare.com' || url.pathname !== '/' || url.username || url.password || url.search || url.hash) throw new Error('Use a non-production HTTPS API origin');
     const id = normalizeFavoriteId(required('RARE_ACCOUNT_TEST_ARTWORK_ID'));
@@ -56,6 +56,13 @@ describe('artwork favorites against deployed services', () => {
         expect(list.pagination.totalCount).toBe(before.pagination.totalCount + 1);
         expect(list.data).toHaveLength(1);
         expect(list.data[0]?.universalTokenId).toBe(id);
+        const visible = await account.favorites.list({ perPage: 100 });
+        for (const favorite of visible.data) {
+          await expect(api.getNftFavoriteCount(favorite.universalTokenId)).resolves.toBeGreaterThanOrEqual(0);
+        }
+        const afterLast = await account.favorites.list({ page: visible.pagination.totalPages + 1, perPage: 100 });
+        expect(afterLast.data).toEqual([]);
+        expect(afterLast.pagination.totalCount).toBe(visible.pagination.totalCount);
         expect(JSON.stringify(list)).not.toContain('email');
         expect(await api.getNftFavoriteCount(id)).toBe(beforeCount + 1);
         const count = await call(`/v1/nfts/${id}/favorites/count`);
