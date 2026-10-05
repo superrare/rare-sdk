@@ -3471,7 +3471,6 @@ export interface components {
             creatorUserId: string;
             title: string;
             body: string;
-            imageUrl: string | null;
             imageUrls: string[];
             commentCount: number;
             likeCount: number;

@@ -13,6 +13,8 @@ describe('creator post planning and response parsing', () => {
   it('projects public fields and rejects malformed responses', () => {
     const row = { id: '1', creatorUserId: '2', title: 'Title', body: 'Body', imageUrl: null, imageUrls: [], commentCount: 0, likeCount: 0, publishedAt: '2026-10-02T00:00:00Z', createdAt: '2026-10-02T00:00:00Z', updatedAt: '2026-10-02T00:00:00Z', email: 'private@example.com' };
     expect(parsePost(row)).not.toHaveProperty('email');
+    expect(parsePost(row)).not.toHaveProperty('imageUrl');
+    expect(parsePost({ ...row, imageUrl: undefined }).imageUrls).toEqual([]);
     expect(() => parsePost({ ...row, likeCount: -1 })).toThrow();
     expect(() => parsePostPage({ data: [row], pagination: { page: 1, perPage: 101, totalCount: 1, totalPages: 1 } }, parsePost)).toThrow();
     expect(() => parsePostDeleted({ data: { deleted: false } })).toThrow();

@@ -23,10 +23,10 @@ export function postText(value: string, maximum: number): string {
   return value.trim();
 }
 export function parsePost(value: unknown): CreatorPost {
-  if (!isRecord(value) || (value.imageUrl !== null && typeof value.imageUrl !== 'string') || !Array.isArray(value.imageUrls) || !value.imageUrls.every(url => typeof url === 'string')) throw new RareAuthError('invalid_post_response');
+  if (!isRecord(value) || !Array.isArray(value.imageUrls) || !value.imageUrls.every(url => typeof url === 'string')) throw new RareAuthError('invalid_post_response');
   return {
     id: normalizePostId(requireString(value.id, 'id')), creatorUserId: normalizePostId(requireString(value.creatorUserId, 'creatorUserId')),
-    title: requireString(value.title, 'title'), body: requireString(value.body, 'body'), imageUrl: value.imageUrl, imageUrls: value.imageUrls,
+    title: requireString(value.title, 'title'), body: requireString(value.body, 'body'), imageUrls: value.imageUrls,
     commentCount: count(value.commentCount), likeCount: count(value.likeCount),
     publishedAt: requireString(value.publishedAt, 'publishedAt'), createdAt: requireString(value.createdAt, 'createdAt'), updatedAt: requireString(value.updatedAt, 'updatedAt'),
   };
