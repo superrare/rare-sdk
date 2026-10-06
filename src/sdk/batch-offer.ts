@@ -9,7 +9,7 @@ import {
 import { batchOfferAbi } from '../contracts/abis/batch-offer.js';
 import { tokenAbi } from '../contracts/abis/token.js';
 import { ETH_ADDRESS, chainIds, requireContractAddress, type SupportedChain } from '../contracts/addresses.js';
-import { approveNftContractIfNeeded, runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { approveNftContractIfNeeded, createApprovalSideEffectAlert } from './approvals-shell.js';
 import {
   preparePaymentForSpender,
   resolveCurrencyDecimals,
@@ -18,7 +18,12 @@ import { requireInput } from './validation-core.js';
 import { requireWallet } from './wallet-shell.js';
 import { stringifyAmountInput } from './amounts-core.js';
 import type { RareClientConfig } from './types/client.js';
-import type { BatchOfferNamespace } from './types/batch-offer.js';
+import type {
+  BatchOfferAcceptParams,
+  BatchOfferCreateParams,
+  BatchOfferNamespace,
+  BatchOfferRevokeParams,
+} from './types/batch-offer.js';
 import {
   planBatchOfferAccept,
   planBatchOfferCreate,
@@ -33,6 +38,7 @@ import {
   resolveApiNftMerkleProofFromRoots,
 } from './merkle-api.js';
 import { resolveCurrencyForSdk } from './currency.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 
 export type * from './types/batch-offer.js';
 
@@ -44,7 +50,7 @@ export function createBatchOfferNamespace(
   chain: SupportedChain,
 ): BatchOfferNamespace {
   return {
-    async create(params): ReturnType<BatchOfferNamespace['create']> {
+    create: defineTransactionMethod(async (params) => {
       const batchOfferCreator = requireContractAddress(chain, 'batchOfferCreator');
       const marketplaceSettingsSource = requireContractAddress(chain, 'auction');
       const { walletClient, account, accountAddress } = requireWallet(config);
@@ -70,7 +76,7 @@ export function createBatchOfferNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt, created } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'batch offer create',
         approvals: [{
           type: 'erc20',
@@ -78,47 +84,53 @@ export function createBatchOfferNamespace(
           target: plan.currency,
           spender: batchOfferCreator,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: batchOfferCreator,
-            abi: batchOfferAbi,
-            functionName: 'createBatchOffer',
-            args: [plan.root, plan.amount, plan.currency, plan.expiry],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          const logs = parseEventLogs({
-            abi: batchOfferAbi,
-            logs: targetReceipt.logs,
-            eventName: 'BatchOfferCreated',
-          });
-          const [createdLog] = logs;
-
-          if (!createdLog) {
-            throw new Error('Batch offer create transaction succeeded but BatchOfferCreated was not found in logs.');
-          }
-
-          return { txHash: targetTxHash, receipt: targetReceipt, created: createdLog };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: batchOfferCreator,
+        abi: batchOfferAbi,
+        functionName: 'createBatchOffer',
+        args: [plan.root, plan.amount, plan.currency, plan.expiry],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
 
       return {
-        txHash,
-        receipt,
-        batchOfferCreator,
-        creator: created.args.creator,
-        root: created.args.rootHash,
-        amount: created.args.amount,
-        currency: created.args.currency,
-        expiry: created.args.expiry,
-        requiredPayment: payment.requiredAmount,
-        approvalTxHash: payment.approvalTxHash,
-      };
-    },
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const { receipt, created } = await withApprovalAlert(async () => {
+            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            const logs = parseEventLogs({
+              abi: batchOfferAbi,
+              logs: targetReceipt.logs,
+              eventName: 'BatchOfferCreated',
+            });
+            const [createdLog] = logs;
 
-    async revoke(params): ReturnType<BatchOfferNamespace['revoke']> {
+            if (!createdLog) {
+              throw new Error('Batch offer create transaction succeeded but BatchOfferCreated was not found in logs.');
+            }
+
+            return { receipt: targetReceipt, created: createdLog };
+          });
+
+          return {
+            txHash,
+            receipt,
+            batchOfferCreator,
+            creator: created.args.creator,
+            root: created.args.rootHash,
+            amount: created.args.amount,
+            currency: created.args.currency,
+            expiry: created.args.expiry,
+            requiredPayment: payment.requiredAmount,
+            approvalTxHash: payment.approvalTxHash,
+          };
+        },
+      };
+    }),
+
+    revoke: defineTransactionMethod(async (params) => {
       const batchOfferCreator = requireContractAddress(chain, 'batchOfferCreator');
       const { walletClient, account, accountAddress } = requireWallet(config);
       const resolvedParams = await resolveBatchOfferRevokeParams({
@@ -139,30 +151,35 @@ export function createBatchOfferNamespace(
         account,
         chain: undefined,
       });
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-      const logs = parseEventLogs({
-        abi: batchOfferAbi,
-        logs: targetReceipt.logs,
-        eventName: 'BatchOfferRevoked',
-      });
-      const [revoked] = logs;
-
-      if (!revoked) {
-        throw new Error('Batch offer revoke transaction succeeded but BatchOfferRevoked was not found in logs.');
-      }
-
       return {
-        txHash: targetTxHash,
-        receipt: targetReceipt,
-        batchOfferCreator,
-        creator: revoked.args.creator,
-        root: revoked.args.rootHash,
-        amount: revoked.args.amount,
-        currency: revoked.args.currency,
-      };
-    },
+        submitted: { txHash: targetTxHash },
+        settle: async () => {
+          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+          const logs = parseEventLogs({
+            abi: batchOfferAbi,
+            logs: targetReceipt.logs,
+            eventName: 'BatchOfferRevoked',
+          });
+          const [revoked] = logs;
 
-    async accept(params): ReturnType<BatchOfferNamespace['accept']> {
+          if (!revoked) {
+            throw new Error('Batch offer revoke transaction succeeded but BatchOfferRevoked was not found in logs.');
+          }
+
+          return {
+            txHash: targetTxHash,
+            receipt: targetReceipt,
+            batchOfferCreator,
+            creator: revoked.args.creator,
+            root: revoked.args.rootHash,
+            amount: revoked.args.amount,
+            currency: revoked.args.currency,
+          };
+        },
+      };
+    }),
+
+    accept: defineTransactionMethod(async (params) => {
       const batchOfferCreator = requireContractAddress(chain, 'batchOfferCreator');
       const { walletClient, account, accountAddress } = requireWallet(config);
       const resolvedParams = await resolveBatchOfferAcceptParams({
@@ -194,7 +211,7 @@ export function createBatchOfferNamespace(
           autoApprove: plan.autoApprove,
         });
 
-      const { txHash, receipt, accepted } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'batch offer accept',
         approvals: [{
           type: 'nft',
@@ -202,54 +219,60 @@ export function createBatchOfferNamespace(
           target: plan.contract,
           operator: batchOfferCreator,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: batchOfferCreator,
-            abi: batchOfferAbi,
-            functionName: 'acceptBatchOffer',
-            args: [
-              plan.creator,
-              plan.proof,
-              plan.root,
-              plan.contract,
-              plan.tokenId,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          const logs = parseEventLogs({
-            abi: batchOfferAbi,
-            logs: targetReceipt.logs,
-            eventName: 'BatchOfferAccepted',
-          });
-          const [acceptedLog] = logs;
-
-          if (!acceptedLog) {
-            throw new Error('Batch offer accept transaction succeeded but BatchOfferAccepted was not found in logs.');
-          }
-
-          return { txHash: targetTxHash, receipt: targetReceipt, accepted: acceptedLog };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: batchOfferCreator,
+        abi: batchOfferAbi,
+        functionName: 'acceptBatchOffer',
+        args: [
+          plan.creator,
+          plan.proof,
+          plan.root,
+          plan.contract,
+          plan.tokenId,
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
 
       return {
-        txHash,
-        receipt,
-        batchOfferCreator,
-        seller: accepted.args.seller,
-        buyer: accepted.args.buyer,
-        creator: plan.creator,
-        contract: accepted.args.contractAddress,
-        tokenId: accepted.args.tokenId,
-        root: accepted.args.rootHash,
-        currency: accepted.args.currency,
-        amount: accepted.args.amount,
-        approvalTxHash,
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const { receipt, accepted } = await withApprovalAlert(async () => {
+            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            const logs = parseEventLogs({
+              abi: batchOfferAbi,
+              logs: targetReceipt.logs,
+              eventName: 'BatchOfferAccepted',
+            });
+            const [acceptedLog] = logs;
+
+            if (!acceptedLog) {
+              throw new Error('Batch offer accept transaction succeeded but BatchOfferAccepted was not found in logs.');
+            }
+
+            return { receipt: targetReceipt, accepted: acceptedLog };
+          });
+
+          return {
+            txHash,
+            receipt,
+            batchOfferCreator,
+            seller: accepted.args.seller,
+            buyer: accepted.args.buyer,
+            creator: plan.creator,
+            contract: accepted.args.contractAddress,
+            tokenId: accepted.args.tokenId,
+            root: accepted.args.rootHash,
+            currency: accepted.args.currency,
+            amount: accepted.args.amount,
+            approvalTxHash,
+          };
+        },
       };
-    },
+    }),
 
     async status(params): ReturnType<BatchOfferNamespace['status']> {
       const batchOfferCreator = requireContractAddress(chain, 'batchOfferCreator');
@@ -274,8 +297,8 @@ export function createBatchOfferNamespace(
 
 async function resolveBatchOfferCreateParams(
   config: RareClientConfig,
-  params: Parameters<BatchOfferNamespace['create']>[0],
-): Promise<Parameters<BatchOfferNamespace['create']>[0]> {
+  params: BatchOfferCreateParams,
+): Promise<BatchOfferCreateParams> {
   if (params.root !== undefined) {
     return params;
   }
@@ -294,7 +317,7 @@ async function resolveBatchOfferRevokeParams(opts: {
   batchOfferCreator: Address;
   chainId: number;
   accountAddress: Address;
-  params: Parameters<BatchOfferNamespace['revoke']>[0];
+  params: BatchOfferRevokeParams;
 }): Promise<{ root: `0x${string}` }> {
   const { params } = opts;
   if (params.root !== undefined || params.artifact !== undefined) {
@@ -326,8 +349,8 @@ async function resolveBatchOfferAcceptParams(opts: {
   publicClient: PublicClient;
   batchOfferCreator: Address;
   chainId: number;
-  params: Parameters<BatchOfferNamespace['accept']>[0];
-}): Promise<Parameters<BatchOfferNamespace['accept']>[0]> {
+  params: BatchOfferAcceptParams;
+}): Promise<BatchOfferAcceptParams> {
   const { params } = opts;
   if (
     params.proofArtifact !== undefined ||

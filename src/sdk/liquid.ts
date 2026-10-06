@@ -11,11 +11,11 @@ import {
   ensureTokenAllowance,
   toTokenAmount,
 } from './payments-shell.js';
-import { runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { createApprovalSideEffectAlert } from './approvals-shell.js';
 import { requireConfiguredAddress } from './validation-core.js';
 import { requireWallet } from './wallet-shell.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 import type {
-  DeployLiquidEditionResult,
   GeneratePresetCurvesResult,
   LiquidEditionNamespace,
   LiquidEditionMarketState,
@@ -23,7 +23,6 @@ import type {
   LiquidEditionPoolInfo,
   LiquidEditionCurrentPrice,
   LiquidEditionTelemetry,
-  SetLiquidEditionRenderContractResult,
 } from './types/liquid.js';
 import type { RareClientConfig } from './types/client.js';
 
@@ -229,7 +228,7 @@ export function createLiquidNamespace(
     },
 
     deploy: {
-      async multiCurve(params): Promise<DeployLiquidEditionResult> {
+      multiCurve: defineTransactionMethod(async (params) => {
         const { walletClient, account, accountAddress } = requireWallet(config);
         const liquidFactory = requireConfiguredAddress(addresses.liquidFactory, 'Liquid Editions factory', chain);
         const rawFactoryConfig = await fetchLiquidFactoryConfig(publicClient, liquidFactory);
@@ -264,7 +263,7 @@ export function createLiquidNamespace(
           initialRareLiquidity,
         );
 
-        const { txHash, receipt, contract } = await runWithApprovalSideEffectAlert({
+        const withApprovalAlert = createApprovalSideEffectAlert({
           operation: 'liquid edition deploy',
           approvals: [{
             type: 'erc20',
@@ -272,53 +271,56 @@ export function createLiquidNamespace(
             target: factoryConfig.baseToken,
             spender: liquidFactory,
           }],
-          run: async () => {
-            const targetTxHash = customMaxTotalSupply === undefined
-              ? await walletClient.writeContract({
-                  address: liquidFactory,
-                  abi: liquidFactoryAbi,
-                  functionName: 'createLiquidTokenMultiCurve',
-                  args: [
-                    accountAddress,
-                    params.tokenUri,
-                    params.name,
-                    params.symbol,
-                    initialRareLiquidity,
-                    curves,
-                  ],
-                  account,
-                  chain: undefined,
-                })
-              : await walletClient.writeContract({
-                  address: liquidFactory,
-                  abi: liquidFactoryAbi,
-                  functionName: 'createLiquidTokenMultiCurveWithSupply',
-                  args: [
-                    accountAddress,
-                    params.tokenUri,
-                    params.name,
-                    params.symbol,
-                    initialRareLiquidity,
-                    curves,
-                    customMaxTotalSupply,
-                  ],
-                  account,
-                  chain: undefined,
-                });
-
-            const deployed = await waitForLiquidEditionAddress(publicClient, targetTxHash);
-            return { txHash: targetTxHash, receipt: deployed.receipt, contract: deployed.contract };
-          },
         });
+        const txHash = await withApprovalAlert(() => customMaxTotalSupply === undefined
+          ? walletClient.writeContract({
+              address: liquidFactory,
+              abi: liquidFactoryAbi,
+              functionName: 'createLiquidTokenMultiCurve',
+              args: [
+                accountAddress,
+                params.tokenUri,
+                params.name,
+                params.symbol,
+                initialRareLiquidity,
+                curves,
+              ],
+              account,
+              chain: undefined,
+            })
+          : walletClient.writeContract({
+              address: liquidFactory,
+              abi: liquidFactoryAbi,
+              functionName: 'createLiquidTokenMultiCurveWithSupply',
+              args: [
+                accountAddress,
+                params.tokenUri,
+                params.name,
+                params.symbol,
+                initialRareLiquidity,
+                curves,
+                customMaxTotalSupply,
+              ],
+              account,
+              chain: undefined,
+            }));
+        const validatedCurves = validation.curves;
 
         return {
-          txHash,
-          receipt,
-          contract,
-          tokenUri: params.tokenUri,
-          curves: validation.curves,
+          submitted: { txHash },
+          settle: async () => {
+            const { receipt, contract } = await withApprovalAlert(() => waitForLiquidEditionAddress(publicClient, txHash));
+
+            return {
+              txHash,
+              receipt,
+              contract,
+              tokenUri: params.tokenUri,
+              curves: validatedCurves,
+            };
+          },
         };
-      },
+      }),
     },
 
     async getTokenUri(params): Promise<string> {
@@ -337,7 +339,7 @@ export function createLiquidNamespace(
       });
     },
 
-    async setRenderContract(params): Promise<SetLiquidEditionRenderContractResult> {
+    setRenderContract: defineTransactionMethod(async (params) => {
       const { walletClient, account } = requireWallet(config);
       const txHash = await walletClient.writeContract({
         address: params.contract,
@@ -347,18 +349,23 @@ export function createLiquidNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status === 'reverted') {
-        throw liquidEditionSetRenderContractRevertedError(txHash, receipt);
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: params.contract,
-        renderContract: params.renderContract,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          if (receipt.status === 'reverted') {
+            throw liquidEditionSetRenderContractRevertedError(txHash, receipt);
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: params.contract,
+            renderContract: params.renderContract,
+          };
+        },
       };
-    },
+    }),
 
     async getPoolInfo(params): Promise<LiquidEditionPoolInfo> {
       const [poolId, rawPoolKey] = await Promise.all([

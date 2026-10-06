@@ -9,7 +9,7 @@ import {
 } from 'viem';
 import { batchAuctionHouseAbi } from '../contracts/abis/batch-auctionhouse.js';
 import { ETH_ADDRESS, chainIds, requireContractAddress, type SupportedChain } from '../contracts/addresses.js';
-import { approveNftContractIfNeeded, runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { approveNftContractIfNeeded, createApprovalSideEffectAlert } from './approvals-shell.js';
 import {
   preparePaymentAmountForSpender,
   resolveCurrencyDecimals,
@@ -19,7 +19,12 @@ import { requireWallet } from './wallet-shell.js';
 import { stringifyAmountInput } from './amounts-core.js';
 import type { RareClientConfig } from './types/client.js';
 import type { WalletAccount } from './types/common.js';
-import type { BatchAuctionNamespace } from './types/batch-auction.js';
+import type {
+  BatchAuctionBidParams,
+  BatchAuctionCancelParams,
+  BatchAuctionCreateParams,
+  BatchAuctionNamespace,
+} from './types/batch-auction.js';
 import {
   planBatchAuctionBid,
   planBatchAuctionCreate,
@@ -39,6 +44,7 @@ import {
   resolveApiNftMerkleProofFromRoots,
 } from './merkle-api.js';
 import { resolveCurrencyForSdk } from './currency.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 
 export type * from './types/batch-auction.js';
 
@@ -48,7 +54,7 @@ export function createBatchAuctionNamespace(
   chain: SupportedChain,
 ): BatchAuctionNamespace {
   return {
-    async create(params): ReturnType<BatchAuctionNamespace['create']> {
+    create: defineTransactionMethod(async (params) => {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
       const { walletClient, account, accountAddress } = requireWallet(config);
       const resolvedParams = await resolveBatchAuctionCreateParams(config, params);
@@ -77,7 +83,7 @@ export function createBatchAuctionNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt, registered } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'batch auction create',
         approvals: nftApprovals.map((approval) => ({
           type: 'nft',
@@ -85,53 +91,60 @@ export function createBatchAuctionNamespace(
           target: approval.nftAddress,
           operator: erc721ApprovalManager,
         })),
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: batchAuctionHouse,
-            abi: batchAuctionHouseAbi,
-            functionName: 'registerAuctionMerkleRoot',
-            args: [
-              plan.root,
-              plan.currency,
-              plan.reserveAmount,
-              plan.duration,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          const logs = parseEventLogs({
-            abi: batchAuctionHouseAbi,
-            logs: targetReceipt.logs,
-            eventName: 'AuctionMerkleRootRegistered',
-          });
-          const [registeredLog] = logs;
-
-          if (!registeredLog) {
-            throw new Error('Batch auction create transaction succeeded but AuctionMerkleRootRegistered was not found in logs.');
-          }
-
-          return { txHash: targetTxHash, receipt: targetReceipt, registered: registeredLog };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: batchAuctionHouse,
+        abi: batchAuctionHouseAbi,
+        functionName: 'registerAuctionMerkleRoot',
+        args: [
+          plan.root,
+          plan.currency,
+          plan.reserveAmount,
+          plan.duration,
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
+      const approvalTxHashes = nftApprovals.map((approval) => approval.txHash);
 
       return {
-        txHash,
-        receipt,
-        batchAuctionHouse,
-        creator: registered.args.creator,
-        root: registered.args.merkleRoot,
-        currency: registered.args.currencyAddress,
-        reserveAmount: registered.args.startingAmount,
-        duration: registered.args.duration,
-        nonce: registered.args.nonce,
-        approvalTxHashes: nftApprovals.map((approval) => approval.txHash),
-      };
-    },
+        submitted: { txHash, approvalTxHashes },
+        settle: async () => {
+          const { receipt, registered } = await withApprovalAlert(async () => {
+            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            const logs = parseEventLogs({
+              abi: batchAuctionHouseAbi,
+              logs: targetReceipt.logs,
+              eventName: 'AuctionMerkleRootRegistered',
+            });
+            const [registeredLog] = logs;
 
-    async cancel(params): ReturnType<BatchAuctionNamespace['cancel']> {
+            if (!registeredLog) {
+              throw new Error('Batch auction create transaction succeeded but AuctionMerkleRootRegistered was not found in logs.');
+            }
+
+            return { receipt: targetReceipt, registered: registeredLog };
+          });
+
+          return {
+            txHash,
+            receipt,
+            batchAuctionHouse,
+            creator: registered.args.creator,
+            root: registered.args.merkleRoot,
+            currency: registered.args.currencyAddress,
+            reserveAmount: registered.args.startingAmount,
+            duration: registered.args.duration,
+            nonce: registered.args.nonce,
+            approvalTxHashes,
+          };
+        },
+      };
+    }),
+
+    cancel: defineTransactionMethod(async (params) => {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
       const { walletClient, account, accountAddress } = requireWallet(config);
       const resolvedParams = await resolveBatchAuctionCancelParams(
@@ -150,26 +163,31 @@ export function createBatchAuctionNamespace(
         account,
         chain: undefined,
       });
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-      const logs = parseEventLogs({
-        abi: batchAuctionHouseAbi,
-        logs: targetReceipt.logs,
-        eventName: 'AuctionMerkleRootCancelled',
-      });
-      const [cancelled] = logs;
-
-      if (!cancelled) {
-        throw new Error('Batch auction cancel transaction succeeded but AuctionMerkleRootCancelled was not found in logs.');
-      }
-
       return {
-        txHash: targetTxHash,
-        receipt: targetReceipt,
-        batchAuctionHouse,
-        creator: cancelled.args.creator,
-        root: cancelled.args.merkleRoot,
+        submitted: { txHash: targetTxHash },
+        settle: async () => {
+          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+          const logs = parseEventLogs({
+            abi: batchAuctionHouseAbi,
+            logs: targetReceipt.logs,
+            eventName: 'AuctionMerkleRootCancelled',
+          });
+          const [cancelled] = logs;
+
+          if (!cancelled) {
+            throw new Error('Batch auction cancel transaction succeeded but AuctionMerkleRootCancelled was not found in logs.');
+          }
+
+          return {
+            txHash: targetTxHash,
+            receipt: targetReceipt,
+            batchAuctionHouse,
+            creator: cancelled.args.creator,
+            root: cancelled.args.merkleRoot,
+          };
+        },
       };
-    },
+    }),
 
     async roots(params): ReturnType<BatchAuctionNamespace['roots']> {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
@@ -182,7 +200,7 @@ export function createBatchAuctionNamespace(
       })];
     },
 
-    async bid(params): ReturnType<BatchAuctionNamespace['bid']> {
+    bid: defineTransactionMethod(async (params) => {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
       const { walletClient, account, accountAddress } = requireWallet(config);
       const resolvedParams = await resolveBatchAuctionBidParams({
@@ -214,7 +232,7 @@ export function createBatchAuctionNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt, bid } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'batch auction bid',
         approvals: [{
           type: 'erc20',
@@ -222,58 +240,64 @@ export function createBatchAuctionNamespace(
           target: plan.currency,
           spender: erc20ApprovalManager,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: batchAuctionHouse,
-            abi: batchAuctionHouseAbi,
-            functionName: 'bidWithAuctionMerkleProof',
-            args: [
-              plan.currency,
-              plan.contract,
-              plan.tokenId,
-              plan.creator,
-              plan.root,
-              plan.amount,
-              plan.proof,
-            ],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          const logs = parseEventLogs({
-            abi: batchAuctionHouseAbi,
-            logs: targetReceipt.logs,
-            eventName: 'AuctionMerkleBid',
-          });
-          const [bidLog] = logs;
-
-          if (!bidLog) {
-            throw new Error('Batch auction bid transaction succeeded but AuctionMerkleBid was not found in logs.');
-          }
-
-          return { txHash: targetTxHash, receipt: targetReceipt, bid: bidLog };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: batchAuctionHouse,
+        abi: batchAuctionHouseAbi,
+        functionName: 'bidWithAuctionMerkleProof',
+        args: [
+          plan.currency,
+          plan.contract,
+          plan.tokenId,
+          plan.creator,
+          plan.root,
+          plan.amount,
+          plan.proof,
+        ],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
 
       return {
-        txHash,
-        receipt,
-        batchAuctionHouse,
-        bidder: bid.args.bidder,
-        creator: bid.args.creator,
-        contract: bid.args.contractAddress,
-        tokenId: bid.args.tokenId,
-        root: bid.args.merkleRoot,
-        currency: bid.args.currencyAddress,
-        amount: bid.args.amount,
-        nonce: bid.args.nonce,
-        requiredPayment: payment.requiredAmount,
-        approvalTxHash: payment.approvalTxHash,
-      };
-    },
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const { receipt, bid } = await withApprovalAlert(async () => {
+            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            const logs = parseEventLogs({
+              abi: batchAuctionHouseAbi,
+              logs: targetReceipt.logs,
+              eventName: 'AuctionMerkleBid',
+            });
+            const [bidLog] = logs;
 
-    async settle(params): ReturnType<BatchAuctionNamespace['settle']> {
+            if (!bidLog) {
+              throw new Error('Batch auction bid transaction succeeded but AuctionMerkleBid was not found in logs.');
+            }
+
+            return { receipt: targetReceipt, bid: bidLog };
+          });
+
+          return {
+            txHash,
+            receipt,
+            batchAuctionHouse,
+            bidder: bid.args.bidder,
+            creator: bid.args.creator,
+            contract: bid.args.contractAddress,
+            tokenId: bid.args.tokenId,
+            root: bid.args.merkleRoot,
+            currency: bid.args.currencyAddress,
+            amount: bid.args.amount,
+            nonce: bid.args.nonce,
+            requiredPayment: payment.requiredAmount,
+            approvalTxHash: payment.approvalTxHash,
+          };
+        },
+      };
+    }),
+
+    settle: defineTransactionMethod(async (params) => {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
       const { walletClient, account } = requireWallet(config);
       const plan = planBatchAuctionStatus(params);
@@ -286,31 +310,36 @@ export function createBatchAuctionNamespace(
         account,
         chain: undefined,
       });
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-      const logs = parseEventLogs({
-        abi: batchAuctionHouseAbi,
-        logs: targetReceipt.logs,
-        eventName: 'AuctionSettled',
-      });
-      const [settled] = logs;
-
-      if (!settled) {
-        throw new Error('Batch auction settle transaction succeeded but AuctionSettled was not found in logs.');
-      }
-
       return {
-        txHash: targetTxHash,
-        receipt: targetReceipt,
-        batchAuctionHouse,
-        seller: settled.args.seller,
-        bidder: settled.args.bidder,
-        contract: settled.args.contractAddress,
-        tokenId: settled.args.tokenId,
-        currency: settled.args.currencyAddress,
-        amount: settled.args.amount,
-        marketplaceFee: settled.args.marketplaceFee,
+        submitted: { txHash: targetTxHash },
+        settle: async () => {
+          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+          const logs = parseEventLogs({
+            abi: batchAuctionHouseAbi,
+            logs: targetReceipt.logs,
+            eventName: 'AuctionSettled',
+          });
+          const [settled] = logs;
+
+          if (!settled) {
+            throw new Error('Batch auction settle transaction succeeded but AuctionSettled was not found in logs.');
+          }
+
+          return {
+            txHash: targetTxHash,
+            receipt: targetReceipt,
+            batchAuctionHouse,
+            seller: settled.args.seller,
+            bidder: settled.args.bidder,
+            contract: settled.args.contractAddress,
+            tokenId: settled.args.tokenId,
+            currency: settled.args.currencyAddress,
+            amount: settled.args.amount,
+            marketplaceFee: settled.args.marketplaceFee,
+          };
+        },
       };
-    },
+    }),
 
     async status(params): ReturnType<BatchAuctionNamespace['status']> {
       const batchAuctionHouse = requireContractAddress(chain, 'batchAuctionHouse');
@@ -372,8 +401,8 @@ function currentUnixTimestamp(): bigint {
 
 async function resolveBatchAuctionCreateParams(
   config: RareClientConfig,
-  params: Parameters<BatchAuctionNamespace['create']>[0],
-): Promise<Parameters<BatchAuctionNamespace['create']>[0]> {
+  params: BatchAuctionCreateParams,
+): Promise<BatchAuctionCreateParams> {
   if (params.root !== undefined) {
     return params;
   }
@@ -393,8 +422,8 @@ async function resolveBatchAuctionCancelParams(
   publicClient: PublicClient,
   batchAuctionHouse: Address,
   accountAddress: Address,
-  params: Parameters<BatchAuctionNamespace['cancel']>[0],
-): Promise<Parameters<BatchAuctionNamespace['cancel']>[0]> {
+  params: BatchAuctionCancelParams,
+): Promise<BatchAuctionCancelParams> {
   if (params.root !== undefined || params.artifact !== undefined) {
     return params;
   }
@@ -423,8 +452,8 @@ async function resolveBatchAuctionBidParams(opts: {
   publicClient: PublicClient;
   batchAuctionHouse: Address;
   chainId: number;
-  params: Parameters<BatchAuctionNamespace['bid']>[0];
-}): Promise<Parameters<BatchAuctionNamespace['bid']>[0]> {
+  params: BatchAuctionBidParams;
+}): Promise<BatchAuctionBidParams> {
   const { params } = opts;
   if (
     params.proofArtifact !== undefined ||

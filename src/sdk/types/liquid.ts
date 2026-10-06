@@ -2,7 +2,7 @@ import type { LiquidEdition } from '../api.js';
 import type { Address, Hex } from 'viem';
 import type { CurvePresetKey, LiquidCurvePreview, LiquidCurveSegment } from '../../liquid/curve-config.js';
 import type { LiquidFactoryConfig } from '../../liquid/factory-config.js';
-import type { AmountInput, TransactionResult } from './common.js';
+import type { AmountInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type GeneratePresetCurvesParams = {
   preset: CurvePresetKey;
@@ -106,11 +106,11 @@ export type LiquidEditionNamespace = {
   generatePresetCurves: (params: GeneratePresetCurvesParams) => Promise<GeneratePresetCurvesResult>;
   validateCurves: (params: ValidateLiquidCurvesParams) => Promise<LiquidCurvePreview>;
   deploy: {
-    multiCurve: (params: DeployLiquidEditionParams) => Promise<DeployLiquidEditionResult>;
+    multiCurve: TransactionMethod<DeployLiquidEditionParams, DeployLiquidEditionResult>;
   };
   getTokenUri: (params: { contract: Address }) => Promise<string>;
   getRenderContract: (params: { contract: Address }) => Promise<Address>;
-  setRenderContract: (params: SetLiquidEditionRenderContractParams) => Promise<SetLiquidEditionRenderContractResult>;
+  setRenderContract: TransactionMethod<SetLiquidEditionRenderContractParams, SetLiquidEditionRenderContractResult>;
   getPoolInfo: (params: { contract: Address }) => Promise<LiquidEditionPoolInfo>;
   getMarketState: (params: { contract: Address }) => Promise<LiquidEditionMarketState>;
   getCurrentPrice: (params: { contract: Address }) => Promise<LiquidEditionCurrentPrice>;

@@ -1,5 +1,5 @@
 import type { Address, Hash } from 'viem';
-import type { AmountInput, CurrencyInput, IntegerInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TransactionMethod, TransactionResult } from './common.js';
 import type { BatchOfferNamespace } from './batch-offer.js';
 import type { Erc1155OfferNamespace } from './erc1155.js';
 
@@ -55,9 +55,9 @@ export type OfferStatus = {
 }
 
 export type OfferMarketplaceNamespace = {
-  create: (params: OfferCreateParams) => Promise<OfferCreateResult>;
-  cancel: (params: OfferCancelParams) => Promise<TransactionResult>;
-  accept: (params: OfferAcceptParams) => Promise<OfferAcceptResult>;
+  create: TransactionMethod<OfferCreateParams, OfferCreateResult>;
+  cancel: TransactionMethod<OfferCancelParams, TransactionResult>;
+  accept: TransactionMethod<OfferAcceptParams, OfferAcceptResult>;
   status: (params: OfferStatusParams) => Promise<OfferStatus>;
 }
 

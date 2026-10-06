@@ -75,6 +75,13 @@ export async function runWithApprovalSideEffectAlert<Result>(params: {
   }
 }
 
+export function createApprovalSideEffectAlert(params: {
+  operation: string;
+  approvals: readonly ApprovalSideEffect[];
+}): <Result>(run: () => Promise<Result>) => Promise<Result> {
+  return (run) => runWithApprovalSideEffectAlert({ ...params, run });
+}
+
 function hasApprovalTxHash(approval: ApprovalSideEffect): approval is ApprovalSideEffect & { approvalTxHash: Hash } {
   return approval.approvalTxHash !== undefined;
 }

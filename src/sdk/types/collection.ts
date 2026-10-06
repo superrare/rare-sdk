@@ -1,7 +1,7 @@
 import type { Address } from 'viem';
 import type { LazySovereignCollectionContractType } from '../collection-core.js';
 import type { Collection } from '../api.js';
-import type { IntegerInput, TransactionResult } from './common.js';
+import type { IntegerInput, TransactionMethod, TransactionResult } from './common.js';
 import type {
   DeployErc1155Params,
   DeployErc1155Result,
@@ -228,10 +228,10 @@ export type CollectionMintResult = {
 } & TransactionResult
 
 export type CollectionDeployNamespace = {
-  erc721: (params: DeployErc721Params) => Promise<DeployErc721Result>;
-  erc1155: (params: DeployErc1155Params) => Promise<DeployErc1155Result>;
-  lazyErc721: (params: DeployLazyErc721Params) => Promise<DeployLazyErc721Result>;
-  lazyBatchMint: (params: DeployLazyBatchMintParams) => Promise<DeployLazyBatchMintResult>;
+  erc721: TransactionMethod<DeployErc721Params, DeployErc721Result>;
+  erc1155: TransactionMethod<DeployErc1155Params, DeployErc1155Result>;
+  lazyErc721: TransactionMethod<DeployLazyErc721Params, DeployLazyErc721Result>;
+  lazyBatchMint: TransactionMethod<DeployLazyBatchMintParams, DeployLazyBatchMintResult>;
 }
 
 export type CollectionNamespace = {
@@ -239,9 +239,9 @@ export type CollectionNamespace = {
   status: (params: CollectionStatusParams) => Promise<CollectionStatusResult>;
   deploy: CollectionDeployNamespace;
   erc1155: Erc1155CollectionNamespace;
-  mint: (params: CollectionMintParams) => Promise<CollectionMintResult>;
-  mintBatch: (params: CollectionMintBatchParams) => Promise<CollectionMintBatchResult>;
-  prepareLazyMint: (params: CollectionPrepareLazyMintParams) => Promise<CollectionPrepareLazyMintResult>;
+  mint: TransactionMethod<CollectionMintParams, CollectionMintResult>;
+  mintBatch: TransactionMethod<CollectionMintBatchParams, CollectionMintBatchResult>;
+  prepareLazyMint: TransactionMethod<CollectionPrepareLazyMintParams, CollectionPrepareLazyMintResult>;
   getTokenCreator: (params: CollectionTokenCreatorParams) => Promise<CollectionTokenCreatorResult>;
   royalty: {
     status: (params: CollectionRoyaltyInfoParams) => Promise<CollectionRoyaltyInfoResult>;
@@ -249,10 +249,10 @@ export type CollectionNamespace = {
   metadata: {
     status: (params: CollectionMintConfigParams) => Promise<CollectionMintConfigResult>;
   };
-  setDefaultRoyaltyReceiver: (params: CollectionSetDefaultRoyaltyReceiverParams) => Promise<CollectionSetDefaultRoyaltyReceiverResult>;
-  setDefaultRoyaltyPercentage: (params: CollectionSetDefaultRoyaltyPercentageParams) => Promise<CollectionSetDefaultRoyaltyPercentageResult>;
-  setTokenRoyaltyReceiver: (params: CollectionSetTokenRoyaltyReceiverParams) => Promise<CollectionSetTokenRoyaltyReceiverResult>;
-  updateBaseUri: (params: CollectionUpdateBaseUriParams) => Promise<CollectionUpdateBaseUriResult>;
-  updateTokenUri: (params: CollectionUpdateTokenUriParams) => Promise<CollectionUpdateTokenUriResult>;
-  lockBaseUri: (params: CollectionLockBaseUriParams) => Promise<CollectionLockBaseUriResult>;
+  setDefaultRoyaltyReceiver: TransactionMethod<CollectionSetDefaultRoyaltyReceiverParams, CollectionSetDefaultRoyaltyReceiverResult>;
+  setDefaultRoyaltyPercentage: TransactionMethod<CollectionSetDefaultRoyaltyPercentageParams, CollectionSetDefaultRoyaltyPercentageResult>;
+  setTokenRoyaltyReceiver: TransactionMethod<CollectionSetTokenRoyaltyReceiverParams, CollectionSetTokenRoyaltyReceiverResult>;
+  updateBaseUri: TransactionMethod<CollectionUpdateBaseUriParams, CollectionUpdateBaseUriResult>;
+  updateTokenUri: TransactionMethod<CollectionUpdateTokenUriParams, CollectionUpdateTokenUriResult>;
+  lockBaseUri: TransactionMethod<CollectionLockBaseUriParams, CollectionLockBaseUriResult>;
 }

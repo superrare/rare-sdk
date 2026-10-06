@@ -15,6 +15,7 @@ import { requireContractAddress, type SupportedChain } from '../contracts/addres
 import type { RareClientConfig } from './types/client.js';
 import type { CollectionNamespace } from './types/collection.js';
 import { requireWallet } from './wallet-shell.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 import {
   buildCollectionMintBatchWrite,
   buildCollectionPrepareLazyMintWrite,
@@ -147,7 +148,7 @@ export function createCollectionNamespace(
     deploy: {
       ...collectionDeploy,
 
-      async lazyErc721(params): ReturnType<CollectionNamespace['deploy']['lazyErc721']> {
+      lazyErc721: defineTransactionMethod(async (params) => {
         const plan = planCreateLazySovereignCollection(params);
         const factoryAddress = requireContractAddress(chain, 'lazySovereignFactory');
         const { walletClient, account } = requireWallet(config);
@@ -165,30 +166,35 @@ export function createCollectionNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        const logs = parseEventLogs({
-          abi: lazySovereignFactoryAbi,
-          logs: receipt.logs,
-          eventName: 'SovereignNFTContractCreated',
-        });
-        const [createdLog] = logs;
-
-        if (!createdLog) {
-          throw new Error('Lazy ERC-721 collection transaction succeeded but SovereignNFTContractCreated was not found in logs.');
-        }
-
         return {
-          txHash,
-          receipt,
-          contract: createdLog.args.contractAddress,
-          factory: factoryAddress,
-          contractType: plan.contractType,
-          nextStep: 'Prepare lazy mint metadata, approve RareMinter, then Configure release sale and mint settings.',
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            const logs = parseEventLogs({
+              abi: lazySovereignFactoryAbi,
+              logs: receipt.logs,
+              eventName: 'SovereignNFTContractCreated',
+            });
+            const [createdLog] = logs;
+
+            if (!createdLog) {
+              throw new Error('Lazy ERC-721 collection transaction succeeded but SovereignNFTContractCreated was not found in logs.');
+            }
+
+            return {
+              txHash,
+              receipt,
+              contract: createdLog.args.contractAddress,
+              factory: factoryAddress,
+              contractType: plan.contractType,
+              nextStep: 'Prepare lazy mint metadata, approve RareMinter, then Configure release sale and mint settings.',
+            };
+          },
         };
-      },
+      }),
     },
 
-    async mintBatch(params): ReturnType<CollectionNamespace['mintBatch']> {
+    mintBatch: defineTransactionMethod(async (params) => {
       const plan = planCollectionMintBatch(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeCollectionBatchMint({
@@ -197,31 +203,36 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: collectionMintAbi,
-        logs: receipt.logs,
-        eventName: 'ConsecutiveTransfer',
-      });
-      const [mintLog] = logs;
-
-      if (!mintLog) {
-        throw new Error('Batch mint transaction succeeded but ConsecutiveTransfer was not found in logs.');
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        baseUri: plan.baseUri,
-        tokenCount: plan.tokenCount,
-        fromTokenId: mintLog.args.fromTokenId,
-        toTokenId: mintLog.args.toTokenId,
-        owner: mintLog.args.toAddress,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: collectionMintAbi,
+            logs: receipt.logs,
+            eventName: 'ConsecutiveTransfer',
+          });
+          const [mintLog] = logs;
 
-    async prepareLazyMint(params): ReturnType<CollectionNamespace['prepareLazyMint']> {
+          if (!mintLog) {
+            throw new Error('Batch mint transaction succeeded but ConsecutiveTransfer was not found in logs.');
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            baseUri: plan.baseUri,
+            tokenCount: plan.tokenCount,
+            fromTokenId: mintLog.args.fromTokenId,
+            toTokenId: mintLog.args.toTokenId,
+            owner: mintLog.args.toAddress,
+          };
+        },
+      };
+    }),
+
+    prepareLazyMint: defineTransactionMethod(async (params) => {
       const plan = planCollectionPrepareLazyMint(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeCollectionPrepareLazyMint({
@@ -230,36 +241,41 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: collectionMintAbi,
-        logs: receipt.logs,
-        eventName: 'PrepareMint',
-      });
-      const [prepareLog] = logs;
-
-      if (!prepareLog) {
-        throw new Error('Lazy prepare mint transaction succeeded but PrepareMint was not found in logs.');
-      }
-
-      const prepared = shapeCollectionPrepareMintEvent(prepareLog.args);
-      if (plan.minter === undefined) {
-        return {
-          txHash,
-          receipt,
-          contract: plan.contract,
-          ...prepared,
-        };
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        ...prepared,
-        minter: plan.minter,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: collectionMintAbi,
+            logs: receipt.logs,
+            eventName: 'PrepareMint',
+          });
+          const [prepareLog] = logs;
+
+          if (!prepareLog) {
+            throw new Error('Lazy prepare mint transaction succeeded but PrepareMint was not found in logs.');
+          }
+
+          const prepared = shapeCollectionPrepareMintEvent(prepareLog.args);
+          if (plan.minter === undefined) {
+            return {
+              txHash,
+              receipt,
+              contract: plan.contract,
+              ...prepared,
+            };
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            ...prepared,
+            minter: plan.minter,
+          };
+        },
       };
-    },
+    }),
 
     async getTokenCreator(params): ReturnType<CollectionNamespace['getTokenCreator']> {
       const plan = planCollectionToken(params);
@@ -294,7 +310,7 @@ export function createCollectionNamespace(
 
     },
 
-    async setDefaultRoyaltyReceiver(params): ReturnType<CollectionNamespace['setDefaultRoyaltyReceiver']> {
+    setDefaultRoyaltyReceiver: defineTransactionMethod(async (params) => {
       const plan = planCollectionReceiver(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeSetDefaultRoyaltyReceiver({
@@ -303,17 +319,22 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        receiver: plan.receiver,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    async setDefaultRoyaltyPercentage(params): ReturnType<CollectionNamespace['setDefaultRoyaltyPercentage']> {
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            receiver: plan.receiver,
+          };
+        },
+      };
+    }),
+
+    setDefaultRoyaltyPercentage: defineTransactionMethod(async (params) => {
       const plan = planCollectionRoyaltyPercentage(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeSetDefaultRoyaltyPercentage({
@@ -322,17 +343,22 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        percentage: plan.percentage,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    async setTokenRoyaltyReceiver(params): ReturnType<CollectionNamespace['setTokenRoyaltyReceiver']> {
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            percentage: plan.percentage,
+          };
+        },
+      };
+    }),
+
+    setTokenRoyaltyReceiver: defineTransactionMethod(async (params) => {
       const plan = planCollectionTokenReceiver(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeSetTokenRoyaltyReceiver({
@@ -341,16 +367,21 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        tokenId: plan.tokenId,
-        receiver: plan.receiver,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            tokenId: plan.tokenId,
+            receiver: plan.receiver,
+          };
+        },
       };
-    },
+    }),
 
     metadata: {
       async status(params): ReturnType<CollectionNamespace['metadata']['status']> {
@@ -369,7 +400,7 @@ export function createCollectionNamespace(
       },
     },
 
-    async updateBaseUri(params): ReturnType<CollectionNamespace['updateBaseUri']> {
+    updateBaseUri: defineTransactionMethod(async (params) => {
       const plan = planCollectionBaseUri(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeUpdateBaseUri({
@@ -378,23 +409,28 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: collectionOwnerAbi,
-        logs: receipt.logs,
-        eventName: 'MetadataUpdated',
-      });
-      const [metadataLog] = logs;
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        baseUri: metadataLog?.args.baseURI ?? plan.baseUri,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: collectionOwnerAbi,
+            logs: receipt.logs,
+            eventName: 'MetadataUpdated',
+          });
+          const [metadataLog] = logs;
 
-    async updateTokenUri(params): ReturnType<CollectionNamespace['updateTokenUri']> {
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            baseUri: metadataLog?.args.baseURI ?? plan.baseUri,
+          };
+        },
+      };
+    }),
+
+    updateTokenUri: defineTransactionMethod(async (params) => {
       const plan = planCollectionTokenUri(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeUpdateTokenUri({
@@ -403,24 +439,29 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: collectionOwnerAbi,
-        logs: receipt.logs,
-        eventName: 'TokenURIUpdated',
-      });
-      const [metadataLog] = logs;
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        tokenId: metadataLog?.args.tokenId ?? plan.tokenId,
-        tokenUri: metadataLog?.args.metadataUri ?? plan.tokenUri,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: collectionOwnerAbi,
+            logs: receipt.logs,
+            eventName: 'TokenURIUpdated',
+          });
+          const [metadataLog] = logs;
 
-    async lockBaseUri(params): ReturnType<CollectionNamespace['lockBaseUri']> {
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            tokenId: metadataLog?.args.tokenId ?? plan.tokenId,
+            tokenUri: metadataLog?.args.metadataUri ?? plan.tokenUri,
+          };
+        },
+      };
+    }),
+
+    lockBaseUri: defineTransactionMethod(async (params) => {
       const plan = planCollectionContract(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await writeLockBaseUri({
@@ -429,21 +470,26 @@ export function createCollectionNamespace(
         account,
         plan,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: collectionOwnerAbi,
-        logs: receipt.logs,
-        eventName: 'MetadataLocked',
-      });
-      const [metadataLog] = logs;
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        baseUri: metadataLog?.args.baseURI ?? '',
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: collectionOwnerAbi,
+            logs: receipt.logs,
+            eventName: 'MetadataLocked',
+          });
+          const [metadataLog] = logs;
+
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            baseUri: metadataLog?.args.baseURI ?? '',
+          };
+        },
       };
-    },
+    }),
   };
 }
 

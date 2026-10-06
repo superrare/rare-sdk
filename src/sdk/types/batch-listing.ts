@@ -1,5 +1,5 @@
 import type { Address, Hash } from 'viem';
-import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type BatchListingTokenEntry = {
   contract: Address;
@@ -111,9 +111,9 @@ export type BatchListingStatus = {
 }
 
 export type BatchListingNamespace = {
-  create: (params: BatchListingCreateParams) => Promise<BatchListingCreateResult>;
-  cancel: (params: BatchListingCancelParams) => Promise<BatchListingCancelResult>;
-  buy: (params: BatchListingBuyParams) => Promise<BatchListingBuyResult>;
-  setAllowlist: (params: BatchListingSetAllowListParams) => Promise<BatchListingSetAllowListResult>;
+  create: TransactionMethod<BatchListingCreateParams, BatchListingCreateResult>;
+  cancel: TransactionMethod<BatchListingCancelParams, BatchListingCancelResult>;
+  buy: TransactionMethod<BatchListingBuyParams, BatchListingBuyResult>;
+  setAllowlist: TransactionMethod<BatchListingSetAllowListParams, BatchListingSetAllowListResult>;
   status: (params: BatchListingStatusParams) => Promise<BatchListingStatus>;
 }
