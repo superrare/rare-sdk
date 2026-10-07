@@ -757,7 +757,7 @@ export function createSwapNamespace(
           autoApprove: params.autoApprove,
         });
         return {
-          submitted: { txHash: pending.submitted.txHash },
+          submitted: pending.submitted,
           settle: async () => {
             const result = await pending.settle();
             return {
@@ -769,6 +769,7 @@ export function createSwapNamespace(
               execution: 'raw-router',
               commands: params.commands,
               inputs: params.inputs,
+              approvalTxHash: result.approvalTxHash,
             };
           },
         };

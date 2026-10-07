@@ -28,5 +28,8 @@ export function defineTransactionMethod<Params, Result>(
 export function defineTransactionMethod<Params, Result>(
   submit: (params: Params & WaitForReceiptOption) => Promise<PendingTransaction<Result>>,
 ): (params: Params & WaitForReceiptOption) => Promise<Result | SubmittedTransaction<Result>> {
-  return async (params) => resolvePendingTransaction(await submit(params), params.waitForReceipt);
+  return async (params) => {
+    const paramsAtCall = { ...params };
+    return resolvePendingTransaction(await submit(paramsAtCall), paramsAtCall.waitForReceipt);
+  };
 }

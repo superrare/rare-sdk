@@ -1,8 +1,9 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { zeroAddress, type Address, type Hash } from 'viem';
+import { zeroAddress, zeroHash, type Address, type Hash } from 'viem';
 import { batchAuctionHouseAbi } from '../src/contracts/abis/batch-auctionhouse.js';
 import { batchOfferAbi } from '../src/contracts/abis/batch-offer.js';
 import { factoryAbi } from '../src/contracts/abis/factory.js';
+import { rareMinterAbi } from '../src/contracts/abis/rare-minter.js';
 import { tokenAbi } from '../src/contracts/abis/token.js';
 import { getContractAddresses, resolveCurrency } from '../src/contracts/addresses.js';
 import { ApprovalSideEffectError } from '../src/sdk/approvals-shell.js';
@@ -13,6 +14,7 @@ import type {
   RareClient,
   SubmittedTransaction,
   TransactionResult,
+  WaitForReceiptOption,
 } from '../src/sdk/index.js';
 import {
   account,
@@ -20,6 +22,7 @@ import {
   eventLog,
   type ChainDouble,
   type ChainDoubleOptions,
+  type MinedLog,
 } from './support/chain-double.js';
 
 const addresses = getContractAddresses('sepolia');
@@ -28,6 +31,10 @@ const nft: Address = '0x00000000000000000000000000000000000000C1';
 const counterparty: Address = '0x00000000000000000000000000000000000000D1';
 const root = hashBatchToken(nft, 1n);
 const marketplaceSettings: Address = '0x00000000000000000000000000000000000000E1';
+
+function rareMinterEvent(eventName: string, args: Readonly<Record<string, unknown>>): MinedLog {
+  return eventLog({ address: addresses.rareMinter ?? zeroAddress, abi: rareMinterAbi, eventName, args });
+}
 
 type Scenario = {
   name: string;
@@ -200,9 +207,12 @@ const scenarios: Scenario[] = [
     }),
   },
   {
-    name: 'listing.release.limits.setMint (receipt-derived read-back)',
-    options: { reads: { owner: account, getContractMintLimit: 5n } },
-    receiptFailure: { reads: { owner: account, getContractMintLimit: 4n } },
+    name: 'listing.release.limits.setMint (receipt event)',
+    options: {
+      reads: { owner: account },
+      receiptLogs: [rareMinterEvent('ContractMintLimitSet', { contractAddress: nft, limit: 5n })],
+    },
+    receiptFailure: { reads: { owner: account }, receiptLogs: [] },
     confirm: (rare) => rare.listing.release.limits.setMint({ contract: nft, limit: 5n }),
     submit: (rare) => rare.listing.release.limits.setMint({ contract: nft, limit: 5n, waitForReceipt: false }),
   },
@@ -211,6 +221,28 @@ const scenarios: Scenario[] = [
     receiptFailure: { receiptError: new Error('receipt polling timed out') },
     confirm: (rare) => rare.swap.buy({ token: nft, amountIn: 1n, minAmountOut: 1n, commands: '0x00', inputs: ['0x'] }),
     submit: (rare) => rare.swap.buy({
+      token: nft,
+      amountIn: 1n,
+      minAmountOut: 1n,
+      commands: '0x00',
+      inputs: ['0x'],
+      waitForReceipt: false,
+    }),
+  },
+  {
+    name: 'swap.sellToken on a raw route (ERC20 approval)',
+    approval: 'erc20',
+    receiptFailure: { receiptError: new Error('receipt polling timed out') },
+    confirm: (rare) => rare.swap.sellToken({
+      route: 'raw',
+      token: nft,
+      amountIn: 1n,
+      minAmountOut: 1n,
+      commands: '0x00',
+      inputs: ['0x'],
+    }),
+    submit: (rare) => rare.swap.sellToken({
+      route: 'raw',
       token: nft,
       amountIn: 1n,
       minAmountOut: 1n,
@@ -258,6 +290,7 @@ describe.each(scenarios)('$name with waitForReceipt: false', (scenario) => {
 
     await expect(submitted.wait()).resolves.toEqual(confirmed);
     expect(chain.waitedHashes()).toEqual([...chain.approvalHashes(), chain.mainHash()]);
+    expect(confirmed).toMatchObject(scenario.approval === undefined ? {} : { approvalTxHash: chain.approvalHashes()[0] });
   });
 
   it('surfaces receipt failures from wait() exactly as the default mode throws them', async () => {
@@ -292,18 +325,92 @@ describe('waitForReceipt: false around approvals', () => {
     await expect(submission).rejects.toMatchObject({ operation: 'auction bid', cause: broadcastError });
   });
 
-  it('defers receipt-derived reads until wait()', async () => {
-    const chain = createChainDouble({ reads: { owner: account, getContractMintLimit: 5n } });
+});
 
-    const submitted = await connect(chain).listing.release.limits.setMint({
-      contract: nft,
-      limit: 5n,
-      waitForReceipt: false,
-    });
+type ReleaseSetterScenario = {
+  name: string;
+  reads: Readonly<Record<string, unknown>>;
+  event: MinedLog;
+  emittedForAnotherCollection: MinedLog;
+  submit: (rare: RareClient) => Promise<{ wait: () => Promise<{ config: object }> }>;
+  expectedConfig: Readonly<Record<string, unknown>>;
+};
 
+const releaseSetterScenarios: ReleaseSetterScenario[] = [
+  {
+    name: 'limits.setMint',
+    reads: { owner: account, getContractMintLimit: 10n },
+    event: rareMinterEvent('ContractMintLimitSet', { contractAddress: nft, limit: 5n }),
+    emittedForAnotherCollection: rareMinterEvent('ContractMintLimitSet', { contractAddress: counterparty, limit: 5n }),
+    submit: (rare) => rare.listing.release.limits.setMint({ contract: nft, limit: 5n, waitForReceipt: false }),
+    expectedConfig: { contract: nft, limit: 5n, enabled: true },
+  },
+  {
+    name: 'limits.setTx',
+    reads: { owner: account, getContractTxLimit: 10n },
+    event: rareMinterEvent('ContractTxLimitSet', { contractAddress: nft, limit: 2n }),
+    emittedForAnotherCollection: rareMinterEvent('ContractTxLimitSet', { contractAddress: counterparty, limit: 2n }),
+    submit: (rare) => rare.listing.release.limits.setTx({ contract: nft, limit: 2n, waitForReceipt: false }),
+    expectedConfig: { contract: nft, limit: 2n, enabled: true },
+  },
+  {
+    name: 'allowlist.clear',
+    reads: { owner: account, getContractAllowListConfig: { root: `0x${'f'.repeat(64)}`, endTimestamp: 99n } },
+    event: rareMinterEvent('SetContractAllowListConfig', { _root: zeroHash, _endTimestamp: 0n, _contractAddress: nft }),
+    emittedForAnotherCollection: rareMinterEvent('SetContractAllowListConfig', {
+      _root: zeroHash,
+      _endTimestamp: 0n,
+      _contractAddress: counterparty,
+    }),
+    submit: (rare) => rare.listing.release.allowlist.clear({ contract: nft, waitForReceipt: false }),
+    expectedConfig: { contract: nft, root: zeroHash, endTimestamp: 0n, active: false },
+  },
+];
+
+describe.each(releaseSetterScenarios)('release $name with waitForReceipt: false', (scenario) => {
+  it('confirms its own transaction from the receipt event after a later update replaced the value', async () => {
+    const chain = createChainDouble({ reads: scenario.reads, receiptLogs: [scenario.event] });
+
+    const submitted = await scenario.submit(connect(chain));
+    const result = await submitted.wait();
+
+    expect(result.config).toMatchObject(scenario.expectedConfig);
     expect(chain.readFunctions()).toEqual(['owner']);
-    await submitted.wait();
-    expect(chain.readFunctions()).toEqual(['owner', 'getContractMintLimit']);
+  });
+
+  it.each([
+    { source: 'another contract', event: { ...scenario.event, address: counterparty } },
+    { source: 'another collection', event: scenario.emittedForAnotherCollection },
+  ])('rejects wait() when the only matching event comes from $source', async ({ event }) => {
+    const chain = createChainDouble({ reads: scenario.reads, receiptLogs: [event] });
+
+    const submitted = await scenario.submit(connect(chain));
+
+    await expect(submitted.wait()).rejects.toThrow('event was not found');
+  });
+});
+
+describe('waitForReceipt: false with caller-owned params', () => {
+  it('settles wait() against the params given at the call', async () => {
+    const chain = createChainDouble({
+      receiptLogs: [eventLog({
+        address: nft,
+        abi: tokenAbi,
+        eventName: 'Transfer',
+        args: { from: zeroAddress, to: account, tokenId: 7n },
+      })],
+    });
+    const params: { contract: Address; tokenUri: string; waitForReceipt: false } = {
+      contract: nft,
+      tokenUri: 'ipfs://token',
+      waitForReceipt: false,
+    };
+
+    const submitted = await connect(chain).collection.mint(params);
+    // eslint-disable-next-line functional/immutable-data -- the scenario is a caller mutating its own params
+    params.contract = counterparty;
+
+    await expect(submitted.wait()).resolves.toMatchObject({ tokenId: 7n });
   });
 });
 
@@ -311,11 +418,13 @@ describe('waitForReceipt typing', () => {
   it('keeps the default result type and narrows the submitted type on the literal flag', () => {
     const rare = connect(createChainDouble());
     const params = { contract: nft, tokenId: 1n, price: 1n };
-    const calls = (waitForReceipt: boolean) => ({
+    const calls = (waitForReceipt: boolean, options: WaitForReceiptOption, json: string) => ({
       omitted: rare.auction.bid(params),
       waiting: rare.auction.bid({ ...params, waitForReceipt: true }),
       submitted: rare.auction.bid({ ...params, waitForReceipt: false }),
       dynamic: rare.auction.bid({ ...params, waitForReceipt }),
+      spreadOption: rare.auction.bid({ ...params, ...options }),
+      untypedJson: rare.auction.bid(JSON.parse(json)),
     });
     const returned = expectTypeOf(calls).returns;
 
@@ -323,6 +432,8 @@ describe('waitForReceipt typing', () => {
     returned.toHaveProperty('waiting').resolves.toEqualTypeOf<AuctionBidResult>();
     returned.toHaveProperty('submitted').resolves.toEqualTypeOf<SubmittedTransaction<AuctionBidResult>>();
     returned.toHaveProperty('dynamic').resolves.toEqualTypeOf<AuctionBidResult | SubmittedTransaction<AuctionBidResult>>();
+    returned.toHaveProperty('spreadOption').resolves.toEqualTypeOf<AuctionBidResult | SubmittedTransaction<AuctionBidResult>>();
+    returned.toHaveProperty('untypedJson').resolves.toEqualTypeOf<AuctionBidResult>();
     expectTypeOf<SubmittedTransaction<AuctionBidResult>['approvalTxHash']>().toEqualTypeOf<Hash | undefined>();
     expectTypeOf<keyof SubmittedTransaction<TransactionResult>>().toEqualTypeOf<'txHash' | 'wait'>();
     expectTypeOf<Awaited<ReturnType<RareClient['auction']['bid']>>>().toEqualTypeOf<AuctionBidResult>();

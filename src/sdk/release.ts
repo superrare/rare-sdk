@@ -403,6 +403,49 @@ function readMintDirectSaleTokenRange(opts: {
   return shapeReleaseMintTokenRange(event.args._tokenIdStart, event.args._tokenIdEnd);
 }
 
+function readLimitSetEvent(opts: {
+  receipt: TransactionReceipt;
+  rareMinter: Address;
+  contract: Address;
+  eventName: 'ContractMintLimitSet' | 'ContractTxLimitSet';
+}): bigint {
+  const [event] = parseEventLogs({
+    abi: rareMinterAbi,
+    eventName: opts.eventName,
+    logs: opts.receipt.logs,
+  }).filter((log) =>
+    isAddressEqual(log.address, opts.rareMinter) &&
+    isAddressEqual(log.args.contractAddress, opts.contract),
+  );
+
+  if (event === undefined) {
+    throw new Error(`${opts.eventName} event was not found for ${opts.contract}.`);
+  }
+
+  return event.args.limit;
+}
+
+function readAllowlistConfigSetEvent(opts: {
+  receipt: TransactionReceipt;
+  rareMinter: Address;
+  contract: Address;
+}): RawAllowlistConfig {
+  const [event] = parseEventLogs({
+    abi: rareMinterAbi,
+    eventName: 'SetContractAllowListConfig',
+    logs: opts.receipt.logs,
+  }).filter((log) =>
+    isAddressEqual(log.address, opts.rareMinter) &&
+    isAddressEqual(log.args._contractAddress, opts.contract),
+  );
+
+  if (event === undefined) {
+    throw new Error(`SetContractAllowListConfig event was not found for ${opts.contract}.`);
+  }
+
+  return { root: event.args._root, endTimestamp: event.args._endTimestamp };
+}
+
 export function createReleaseNamespace(
   publicClient: PublicClient,
   config: RareClientConfig,
@@ -463,11 +506,7 @@ export function createReleaseNamespace(
           submitted: { txHash },
           settle: async () => {
             const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-            const allowlist = await readAllowlistConfig({
-              publicClient,
-              rareMinter,
-              contract: plan.contract,
-            });
+            const allowlist = readAllowlistConfigSetEvent({ receipt, rareMinter, contract: plan.contract });
             assertReleaseAllowlistConfigMatches(plan, allowlist);
 
             return {
@@ -507,11 +546,7 @@ export function createReleaseNamespace(
           submitted: { txHash },
           settle: async () => {
             const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-            const allowlist = await readAllowlistConfig({
-              publicClient,
-              rareMinter,
-              contract: plan.contract,
-            });
+            const allowlist = readAllowlistConfigSetEvent({ receipt, rareMinter, contract: plan.contract });
             assertReleaseAllowlistConfigMatches(plan, allowlist);
 
             return {
@@ -563,7 +598,12 @@ export function createReleaseNamespace(
           submitted: { txHash },
           settle: async () => {
             const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-            const limit = await readMintLimit({ publicClient, rareMinter, contract: plan.contract });
+            const limit = readLimitSetEvent({
+              receipt,
+              rareMinter,
+              contract: plan.contract,
+              eventName: 'ContractMintLimitSet',
+            });
             assertReleaseLimitMatches('mint limit', plan.limit, limit);
 
             return {
@@ -608,7 +648,12 @@ export function createReleaseNamespace(
           submitted: { txHash },
           settle: async () => {
             const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-            const limit = await readTxLimit({ publicClient, rareMinter, contract: plan.contract });
+            const limit = readLimitSetEvent({
+              receipt,
+              rareMinter,
+              contract: plan.contract,
+              eventName: 'ContractTxLimitSet',
+            });
             assertReleaseLimitMatches('transaction limit', plan.limit, limit);
 
             return {

@@ -64,7 +64,7 @@ const result = await wait();
 - `wait()` waits for the receipt and resolves with exactly what the call
   returns without the flag, including receipt-derived values such as token IDs,
   deployed contract addresses and parsed events. It rejects with the same
-  errors: reverted receipts, missing events, failed read-backs, and
+  errors: reverted receipts, missing or mismatched events, and
   `ApprovalSideEffectError` when an approval was already mined. Calling it again
   waits again, for example after an RPC timeout.
 - A failed broadcast still rejects the call itself.
