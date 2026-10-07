@@ -1,4 +1,5 @@
 import type { Address, PublicClient, WalletClient } from 'viem';
+import type { MessagingClient } from '../messaging.js';
 import type {
   LiquidEdition,
   LiquidEditionSearchParams,
@@ -135,6 +136,7 @@ export type CurrencyNamespace = {
  * Chain-bound RARE SDK surface returned by {@link createRareClient}.
  */
 export type RareClient = {
+  messaging: MessagingClient;
   /**
    * Supported RARE chain inferred from the viem public client.
    */
