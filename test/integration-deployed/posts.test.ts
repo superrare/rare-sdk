@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { isPrivateKeyString } from '../../src/sdk/validation.js';
 import { privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
@@ -85,4 +87,70 @@ describe('creator posts against deployed services', () => {
     } finally { await owner.posts.delete(post.id); }
     } finally { await Promise.all([owner.auth.logout(), other.auth.logout()]); }
   }, 180_000);
+});
+
+
+describe('creator post images and pagination against deployed services', () => {
+  it('round-trips an uploaded image and traverses posts, comments and favorites without missing or repeating records', async () => {
+    const apiBaseUrl = origin();
+    const signer = wallet('RARE_ACCOUNT_TEST_PRIVATE_KEY');
+    const account = createRareAccountClient({ apiBaseUrl });
+    const api = createRareApi({ baseUrl: apiBaseUrl });
+    const postIds: string[] = [];
+    const commentIds: string[] = [];
+    const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+    const comment = Buffer.from(randomBytes(16).toString('hex'));
+    const bytes = Buffer.concat([gif.subarray(0, -1), Buffer.from([0x21, 0xfe, comment.length]), comment, Buffer.from([0, 0x3b])]);
+    const key = createHash('sha256').update(bytes).digest('hex');
+    execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'buckets', 'describe', 'gs://rare-api-upload-dev', '--format=value(name)'], { stdio: 'pipe' });
+    try {
+      await account.auth.loginWithWallet({ address: signer.address, chainId: 1, signMessage: message => signer.signMessage({ message }) });
+      const profile = await account.profile.get();
+      const upload = await account.uploads.upload(bytes, 'post.gif', { contentType: 'image/gif' });
+      expect(Buffer.from(await (await fetch(upload.url)).arrayBuffer())).toEqual(bytes);
+      for (const index of [0, 1, 2]) {
+        const post = await account.posts.create({ title: `Image pagination ${Date.now()} ${index}`, body: 'Live pagination fixture', imageUrls: [upload.url] });
+        // eslint-disable-next-line functional/immutable-data
+        postIds.push(post.id);
+        expect((await api.getPost(post.id)).imageUrls).toEqual([upload.url]);
+        await account.postFavorites.add(post.id);
+      }
+      const firstPostId = postIds[0];
+      if (!firstPostId) throw new Error('Missing created post');
+      for (const index of [0, 1, 2]) {
+        const row = await account.posts.comment(firstPostId, `Pagination comment ${index}`);
+        // eslint-disable-next-line functional/immutable-data
+        commentIds.push(row.id);
+      }
+      const verifyPages = async (read: (page: number) => Promise<{ data: { id: string }[]; pagination: { totalCount: number; totalPages: number } }>, expectedIds: string[]): Promise<void> => {
+        const first = await read(1);
+        expect(first.data).toHaveLength(2);
+        expect(first.pagination.totalPages).toBeGreaterThanOrEqual(2);
+        const pages = await Promise.all(Array.from({ length: first.pagination.totalPages }, (_, index) => read(index + 1)));
+        const ids = pages.flatMap(page => page.data.map(row => row.id));
+        expect(new Set(ids).size).toBe(ids.length);
+        expect(ids).toHaveLength(first.pagination.totalCount);
+        for (const id of expectedIds) expect(ids).toContain(id);
+        for (const page of pages) expect(page.pagination.totalCount).toBe(first.pagination.totalCount);
+        const beyond = await read(first.pagination.totalPages + 1);
+        expect(beyond.data).toEqual([]);
+        expect(beyond.pagination.totalCount).toBe(first.pagination.totalCount);
+      };
+      await verifyPages(page => api.getPosts({ userId: Number(profile.accountId) }, { page, perPage: 2 }), postIds);
+      await verifyPages(page => api.getPostComments(firstPostId, { page, perPage: 2 }), commentIds);
+      await verifyPages(page => account.postFavorites.list({ page, perPage: 2 }), postIds);
+    } finally {
+      for (const id of postIds) {
+        await account.postFavorites.remove(id);
+        await account.posts.delete(id);
+      }
+      await account.auth.logout();
+      try {
+        execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'rm', `gs://rare-api-upload-dev/${key}`], { stdio: 'pipe' });
+      } catch (error) {
+        const stderr = error !== null && typeof error === 'object' && 'stderr' in error && error.stderr instanceof Uint8Array ? Buffer.from(error.stderr).toString('utf8') : '';
+        if (!/No URLs matched|URLs matched no objects or files|NotFoundException|HTTPError 404|does not exist/.test(stderr)) throw error;
+      }
+    }
+  }, 240_000);
 });
