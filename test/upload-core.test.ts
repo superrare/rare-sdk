@@ -12,7 +12,7 @@ describe('shared uploads', () => {
     expect(() => planUpload(new Uint8Array(20 * 1024 * 1024 + 1), 'large')).toThrow();
   });
   it('parses stored metadata and rejects malformed results', () => {
-    const result = { key: 'a'.repeat(64), url: 'https://storage.googleapis.com/bucket/key', previewUrl: null, contentType: 'application/octet-stream', size: 3 };
+    const result = { key: 'a'.repeat(64), url: 'https://storage.googleapis.com/bucket/key', contentType: 'application/octet-stream', size: 3 };
     expect(parseUpload(result)).toEqual(result);
     expect(() => parseUpload({ ...result, size: -1 })).toThrow();
     expect(() => parseUpload({ ...result, url: 'javascript:alert(1)' })).toThrow();

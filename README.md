@@ -254,17 +254,16 @@ Shared application uploads accept any file type up to 20 MiB:
 
 ```ts
 const asset = await account.uploads.upload(bytes, 'cover.png', { contentType: 'image/png' });
-// asset: { key, url, previewUrl, contentType, size }
+// asset: { key, url, contentType, size }
 await account.profile.update({ profile: { avatar: asset.url } });
 ```
 
 The uploader uses `POST /v1/uploads`, stores files by SHA-256, and does not edit
 profiles or other features. Identical bytes return the same stored object.
-`previewUrl` is null when no Imgix source is configured or the file is not an image.
 Browser callers may pass a `Blob` or `File`; its content type is used by default.
 Byte arrays default to `application/octet-stream` unless `contentType` is supplied.
-The original URL serves files as attachments. An Imgix preview requires a source
-connected to the upload bucket.
+The original URL serves files as attachments. Clients own image transformations
+and can apply their own Imgix source or other image service.
 
 Run `npm run test:integration:uploads` manually against a deployed dev API with
 `RARE_ACCOUNT_TEST_API_URL` and `RARE_ACCOUNT_TEST_PRIVATE_KEY` configured. This

@@ -105,7 +105,7 @@ export type RareAccountProfilePatch = {
 
 export type RareAuthRequestOptions = { signal?: AbortSignal };
 
-export type RareUpload = { key: string; url: string; previewUrl: string | null; contentType: string; size: number };
+export type RareUpload = { key: string; url: string; contentType: string; size: number };
 
 export type RareAccountClient = {
   drops: {

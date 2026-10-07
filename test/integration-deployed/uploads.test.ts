@@ -65,7 +65,7 @@ describe('uploads through deployed API and real GCS', () => {
       const before = await client.profile.get();
       const results = await Promise.all([client.uploads.upload(bytes, 'first.bin'), client.uploads.upload(bytes, 'second.bin')]);
       expect(results[0]).toEqual(results[1]);
-      expect(results[0]).toMatchObject({ key: objectKey(bytes), size: bytes.length, contentType: 'application/octet-stream', previewUrl: null });
+      expect(results[0]).toMatchObject({ key: objectKey(bytes), size: bytes.length, contentType: 'application/octet-stream' });
       expect(await client.uploads.upload(bytes, 'pretend.png', { contentType: 'image/png' })).toEqual(results[0]);
       expect(await client.profile.get()).toEqual(before);
       const downloaded = await fetch(results[0]!.url, { signal: AbortSignal.timeout(30_000) });
