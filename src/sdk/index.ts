@@ -42,3 +42,17 @@ export type {
   UserProfile,
   Pagination,
 } from './api.js';
+
+export { createRareAccountClient } from './account-client.js';
+export { RareAuthError } from './account-auth-core.js';
+export { createMemoryAccountSessionStore } from './account-session-store.js';
+export type * from './types/account.js';
+
+export { AvatarProfileUpdateError } from './account-profile-core.js';
+
+export type { UserSelector, UserListOptions } from './user-core.js';
+
+export type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from './favorites-core.js';
+
+export type { DropAnnouncement, DropType, DropMetadataInput, CreateDropInput, UpdateDropInput, DropListOptions } from './drops-core.js';
+export type { CreatorPost, CreatorPostComment, CreatePostInput } from './posts-core.js';

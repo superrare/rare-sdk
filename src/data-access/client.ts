@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from './schema.js';
-import { RareApiError } from './errors.js';
+import { RareApiError, parseApiError } from './errors.js';
 import { resolveRareApiBaseUrl } from './base-url.js';
 
 const errorMiddleware: Middleware = {
@@ -9,13 +9,15 @@ const errorMiddleware: Middleware = {
 
     const url = new URL(request.url);
     const path = url.pathname;
-    const errorMessage = await readErrorMessage(response);
+    const body = await readErrorBody(response);
     const fallback = response.statusText.length > 0 ? response.statusText : 'Request failed';
 
     throw new RareApiError(
-      errorMessage ?? fallback,
+      body.error ?? fallback,
       response.status,
       path,
+      body.code,
+      body.details,
     );
   },
 };
@@ -36,20 +38,11 @@ export function createApiClient(
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-async function readErrorMessage(response: Response): Promise<string | undefined> {
+async function readErrorBody(response: Response): Promise<ReturnType<typeof parseApiError>> {
   try {
     const body: unknown = await response.clone().json();
-    return isErrorBody(body) ? body.error : undefined;
+    return parseApiError(body);
   } catch {
-    return undefined;
+    return {};
   }
-}
-
-function isErrorBody(value: unknown): value is { error: string } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'error' in value &&
-    typeof value.error === 'string'
-  );
 }

@@ -1,6 +1,6 @@
 {
   "name": "@rareprotocol/rare-sdk",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "SuperRare / Rare Protocol TypeScript SDK: marketplace, minting, auctions, offers, releases, and the Rare API client",
   "type": "module",
   "license": "MIT",
@@ -121,8 +121,15 @@
     "generate:types": "openapi-typescript https://api.superrare.com/doc -o src/data-access/schema.d.ts",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "lint": "eslint src test",
-    "test": "npm run build && vitest run",
-    "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration"
+    "test": "npm run build && vitest run --exclude 'test/integration-deployed/**'",
+    "test:integration:uploads": "vitest run test/integration-deployed/uploads.test.ts",
+    "test:integration:account": "vitest run test/integration-deployed/account-auth.test.ts",
+    "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration",
+    "prepare": "npm run build",
+    "test:integration:follows": "vitest run test/integration-deployed/follows.test.ts",
+    "test:integration:favorites": "vitest run test/integration-deployed/favorites.test.ts",
+    "test:integration:posts": "vitest run test/integration-deployed/posts.test.ts",
+    "test:integration:drops": "vitest run test/integration-deployed/drops.test.ts"
   },
   "dependencies": {
     "merkletreejs": "0.6.0",
