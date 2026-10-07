@@ -1,6 +1,6 @@
 import type { Address, Hash, Hex } from 'viem';
 import type { BatchTokenListArtifact, BatchTokenProofArtifact } from '../batch-core.js';
-import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type BatchOfferRootSource =
   | { root: Hex; artifact?: BatchTokenListArtifact }
@@ -88,8 +88,8 @@ export type BatchOfferStatus = {
 }
 
 export type BatchOfferNamespace = {
-  create: (params: BatchOfferCreateParams) => Promise<BatchOfferCreateResult>;
-  revoke: (params: BatchOfferRevokeParams) => Promise<BatchOfferRevokeResult>;
-  accept: (params: BatchOfferAcceptParams) => Promise<BatchOfferAcceptResult>;
+  create: TransactionMethod<BatchOfferCreateParams, BatchOfferCreateResult>;
+  revoke: TransactionMethod<BatchOfferRevokeParams, BatchOfferRevokeResult>;
+  accept: TransactionMethod<BatchOfferAcceptParams, BatchOfferAcceptResult>;
   status: (params: BatchOfferStatusParams) => Promise<BatchOfferStatus>;
 }

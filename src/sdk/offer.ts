@@ -8,7 +8,7 @@ import { tokenAbi } from '../contracts/abis/token.js';
 import { ETH_ADDRESS, type SupportedChain } from '../contracts/addresses.js';
 import type { RareClientConfig } from './types/client.js';
 import type { OfferMarketplaceNamespace } from './types/offer.js';
-import { approveNftContractIfNeeded, runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { approveNftContractIfNeeded, createApprovalSideEffectAlert } from './approvals-shell.js';
 import {
   preparePaymentForSpender,
   resolveCurrencyDecimals,
@@ -24,6 +24,7 @@ import {
   shapeOfferStatus,
 } from './marketplace-core.js';
 import { resolveCurrencyForSdk } from './currency.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 
 export type * from './types/offer.js';
 
@@ -34,7 +35,7 @@ export function createOfferNamespace(
   addresses: { auction: Address },
 ): OfferMarketplaceNamespace {
   return {
-    async create(params): ReturnType<OfferMarketplaceNamespace['create']> {
+    create: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = requireInput(params.price, 'price');
@@ -52,7 +53,7 @@ export function createOfferNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'offer create',
         approvals: [{
           type: 'erc20',
@@ -60,25 +61,27 @@ export function createOfferNamespace(
           target: plan.currency,
           spender: addresses.auction,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: addresses.auction,
-            abi: auctionAbi,
-            functionName: 'offer',
-            args: [params.contract, plan.tokenId, plan.currency, plan.amount, false],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, approvalTxHash: payment.approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: addresses.auction,
+        abi: auctionAbi,
+        functionName: 'offer',
+        args: [params.contract, plan.tokenId, plan.currency, plan.amount, false],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
 
-    async cancel(params): ReturnType<OfferMarketplaceNamespace['cancel']> {
+      return {
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+          return { txHash, receipt, approvalTxHash: payment.approvalTxHash };
+        },
+      };
+    }),
+
+    cancel: defineTransactionMethod(async (params) => {
       const { walletClient, account } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const plan = planOfferCancel({ ...params, currency });
@@ -92,11 +95,16 @@ export function createOfferNamespace(
         chain: undefined,
       });
 
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-      return { txHash: targetTxHash, receipt: targetReceipt };
-    },
+      return {
+        submitted: { txHash: targetTxHash },
+        settle: async () => {
+          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+          return { txHash: targetTxHash, receipt: targetReceipt };
+        },
+      };
+    }),
 
-    async accept(params): ReturnType<OfferMarketplaceNamespace['accept']> {
+    accept: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = requireInput(params.price, 'price');
@@ -115,7 +123,7 @@ export function createOfferNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'offer accept',
         approvals: [{
           type: 'nft',
@@ -123,29 +131,31 @@ export function createOfferNamespace(
           target: params.contract,
           operator: addresses.auction,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: addresses.auction,
-            abi: auctionAbi,
-            functionName: 'acceptOffer',
-            args: [
-              params.contract,
-              plan.tokenId,
-              plan.currency,
-              plan.amount,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: addresses.auction,
+        abi: auctionAbi,
+        functionName: 'acceptOffer',
+        args: [
+          params.contract,
+          plan.tokenId,
+          plan.currency,
+          plan.amount,
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
+
+      return {
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+          return { txHash, receipt, approvalTxHash };
+        },
+      };
+    }),
 
     async status(params): ReturnType<OfferMarketplaceNamespace['status']> {
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;

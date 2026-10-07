@@ -1,5 +1,5 @@
 import type { Address } from 'viem';
-import type { AmountInput, IntegerInput, TransactionResult } from './common.js';
+import type { AmountInput, IntegerInput, TransactionMethod, TransactionResult } from './common.js';
 
 type Hex = `0x${string}`;
 
@@ -130,13 +130,13 @@ export type BuyRareResult = {
 } & TransactionResult
 
 export type SwapNamespace = {
-  buy: (params: RouterBuyParams) => Promise<TransactionResult>;
-  sell: (params: RouterSellParams) => Promise<TransactionResult>;
-  swapTokens: (params: RouterSwapTokensParams) => Promise<TransactionResult>;
+  buy: TransactionMethod<RouterBuyParams, TransactionResult>;
+  sell: TransactionMethod<RouterSellParams, TransactionResult>;
+  swapTokens: TransactionMethod<RouterSwapTokensParams, TransactionResult>;
   quoteBuyToken: (params: TokenTradeQuoteParams) => Promise<TokenTradeQuote>;
-  buyToken: (params: BuyTokenParams) => Promise<TokenTradeResult>;
+  buyToken: TransactionMethod<BuyTokenParams, TokenTradeResult>;
   quoteSellToken: (params: TokenTradeQuoteParams) => Promise<TokenTradeQuote>;
-  sellToken: (params: SellTokenParams) => Promise<TokenTradeResult>;
+  sellToken: TransactionMethod<SellTokenParams, TokenTradeResult>;
   quoteBuyRare: (params: BuyRareParams) => Promise<BuyRareQuote>;
-  buyRare: (params: BuyRareParams) => Promise<BuyRareResult>;
+  buyRare: TransactionMethod<BuyRareParams, BuyRareResult>;
 }

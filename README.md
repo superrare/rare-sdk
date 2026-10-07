@@ -39,6 +39,48 @@ Subpath exports mirror the ones previously published by the CLI package:
 | `@rareprotocol/rare-sdk/contracts` | contract addresses + ABIs per chain |
 | `@rareprotocol/rare-sdk/utils` | public helpers |
 
+## Returning as soon as a transaction is broadcast
+
+Write methods wait for the transaction receipt by default and resolve with
+`{ txHash, receipt, ... }`. Pass `waitForReceipt: false` to resolve as soon as
+the main transaction is broadcast, for example to record the hash of a payment
+before it is mined:
+
+```ts
+const { txHash, approvalTxHash, wait } = await rare.listing.buy({
+  contract: '0x…',
+  tokenId: '1',
+  price: '0.1',
+  waitForReceipt: false,
+});
+// record txHash
+const result = await wait();
+```
+
+- Prerequisite approvals (ERC20 allowance, NFT operator, collection minter)
+  are still sent and mined first. Their hashes are returned next to `txHash`
+  under the same names the full result uses: `approvalTxHash`,
+  `approvalTxHashes` or `approvalResetTxHash`.
+- `wait()` waits for the receipt and resolves with exactly what the call
+  returns without the flag, including receipt-derived values such as token IDs,
+  deployed contract addresses and parsed events. It rejects with the same
+  errors: reverted receipts, missing or mismatched events, and
+  `ApprovalSideEffectError` when an approval was already mined. Calling it again
+  waits again, for example after an RPC timeout.
+- A failed broadcast still rejects the call itself.
+- Wallets that fall back to `wallet_sendCalls` (Reown social login) only
+  report the hash once the bundle is confirmed, so with them the call resolves
+  after the transaction is mined.
+- Omitting the flag or passing `true` keeps the existing behaviour and result
+  type. A literal `false` narrows the type to `SubmittedTransaction<Result>`;
+  a non-literal boolean resolves to the union of both.
+
+Every `rare.*` method that sends a transaction supports the flag. Not supported
+yet: the low-level helpers exported from `@rareprotocol/rare-sdk/helpers`
+(`sendPreparedTransaction`, `ensureTokenAllowance`, `preparePayment`,
+`preparePaymentForSpender`, `preparePaymentAmountForSpender`,
+`approveNftContractIfNeeded`) still wait for their receipts.
+
 ## Regenerating the Rare API types
 
 Generate endpoint and response types from the production Rare API:

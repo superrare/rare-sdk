@@ -1,5 +1,5 @@
 import type { Address, Hash, Hex } from 'viem';
-import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type ReleaseConfigureParams = {
   contract: Address;
@@ -145,21 +145,21 @@ export type ReleaseAllowlistNamespace = {
   parse: (params: { input: string }) => ReleaseAllowlistArtifact;
   proof: (params: { artifact: ReleaseAllowlistArtifact; address: Address }) => ReleaseAllowlistWalletProof | null;
   getConfig: (params: { contract: Address }) => Promise<ReleaseAllowlistConfig>;
-  setConfig: (params: ReleaseSetAllowlistConfigParams) => Promise<ReleaseSetAllowlistConfigResult>;
-  clear: (params: { contract: Address }) => Promise<ReleaseSetAllowlistConfigResult>;
+  setConfig: TransactionMethod<ReleaseSetAllowlistConfigParams, ReleaseSetAllowlistConfigResult>;
+  clear: TransactionMethod<{ contract: Address }, ReleaseSetAllowlistConfigResult>;
 }
 
 export type ReleaseLimitsNamespace = {
   getMint: (params: { contract: Address }) => Promise<ReleaseLimitConfig>;
-  setMint: (params: ReleaseSetLimitParams) => Promise<ReleaseSetLimitResult>;
+  setMint: TransactionMethod<ReleaseSetLimitParams, ReleaseSetLimitResult>;
   getTx: (params: { contract: Address }) => Promise<ReleaseLimitConfig>;
-  setTx: (params: ReleaseSetLimitParams) => Promise<ReleaseSetLimitResult>;
+  setTx: TransactionMethod<ReleaseSetLimitParams, ReleaseSetLimitResult>;
 }
 
 export type ReleaseNamespace = {
   allowlist: ReleaseAllowlistNamespace;
   limits: ReleaseLimitsNamespace;
-  configure: (params: ReleaseConfigureParams) => Promise<ReleaseConfigureResult>;
-  mint: (params: ReleaseMintDirectSaleParams) => Promise<ReleaseMintDirectSaleResult>;
+  configure: TransactionMethod<ReleaseConfigureParams, ReleaseConfigureResult>;
+  mint: TransactionMethod<ReleaseMintDirectSaleParams, ReleaseMintDirectSaleResult>;
   status: (params: ReleaseStatusParams) => Promise<ReleaseStatus>;
 }

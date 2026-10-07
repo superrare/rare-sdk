@@ -1,5 +1,5 @@
 import type { Address, Hash } from 'viem';
-import type { AmountInput, CurrencyInput, IntegerInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TransactionMethod, TransactionResult } from './common.js';
 import type { BatchListingNamespace } from './batch-listing.js';
 import type { Erc1155ListingNamespace } from './erc1155.js';
 import type { ReleaseNamespace } from './release.js';
@@ -56,9 +56,9 @@ export type ListingStatus = {
 }
 
 export type ListingMarketplaceNamespace = {
-  create: (params: ListingCreateParams) => Promise<ListingCreateResult>;
-  cancel: (params: ListingCancelParams) => Promise<TransactionResult>;
-  buy: (params: ListingBuyParams) => Promise<ListingBuyResult>;
+  create: TransactionMethod<ListingCreateParams, ListingCreateResult>;
+  cancel: TransactionMethod<ListingCancelParams, TransactionResult>;
+  buy: TransactionMethod<ListingBuyParams, ListingBuyResult>;
   status: (params: ListingStatusParams) => Promise<ListingStatus>;
 }
 

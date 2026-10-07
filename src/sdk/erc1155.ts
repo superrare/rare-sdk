@@ -18,7 +18,8 @@ import { rareErc1155Abi } from '../contracts/abis/rare-erc1155.js';
 import { rareErc1155ContractFactoryAbi } from '../contracts/abis/rare-erc1155-contract-factory.js';
 import { rareErc1155MarketplaceAbi } from '../contracts/abis/rare-erc1155-marketplace.js';
 import { ETH_ADDRESS, contractAddresses, type ContractAddresses, type SupportedChain } from '../contracts/addresses.js';
-import { approveNftContractIfNeeded, MinterApprovalRequiredError, runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { approveNftContractIfNeeded, createApprovalSideEffectAlert, MinterApprovalRequiredError } from './approvals-shell.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 import { toCurrencyAmount, calculateMarketplacePaymentAmountFromSettings, preparePaymentAmountForSpender } from './payments-shell.js';
 import type { RareClientConfig } from './types/client.js';
 import type {
@@ -30,12 +31,14 @@ import type {
   Erc1155ListingNamespace,
   Erc1155OfferNamespace,
   Erc1155ReleaseNamespace,
+  Erc1155ReleaseSetAllowlistConfigParams,
 } from './types/erc1155.js';
 import type { CollectionDeployNamespace } from './types/collection.js';
 import type { WalletAccount } from './types/common.js';
 import { requireWallet } from './wallet-shell.js';
 import { resolveCurrencyForSdk } from './currency.js';
 import {
+  collectErc1155CheckoutApprovalTxHashes,
   planErc1155CollectionCreateToken,
   planErc1155CollectionMint,
   planErc1155CollectionMintBatch,
@@ -131,7 +134,7 @@ export function createErc1155DeployNamespace(
   addresses: ContractAddresses,
 ): Pick<CollectionDeployNamespace, 'erc1155'> {
   return {
-    async erc1155(params): ReturnType<CollectionDeployNamespace['erc1155']> {
+    erc1155: defineTransactionMethod(async (params) => {
       const erc1155 = requireErc1155Addresses(chain, addresses);
       const { walletClient, account } = requireWallet(config);
       const txHash = await walletClient.writeContract({
@@ -142,29 +145,34 @@ export function createErc1155DeployNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 deploy');
-      const logs = parseEventLogs({
-        abi: rareErc1155ContractFactoryAbi,
-        logs: receipt.logs,
-        eventName: 'RareERC1155ContractCreated',
-      });
-      const log = logs[0];
-      if (log === undefined) {
-        throw new Error('ERC1155 deploy transaction succeeded but RareERC1155ContractCreated was not found in logs.');
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: log.args.contractAddress,
-        factory: erc1155.erc1155ContractFactory,
-        defaultMinter: await publicClient.readContract({
-          address: erc1155.erc1155ContractFactory,
-          abi: rareErc1155ContractFactoryAbi,
-          functionName: 'defaultMinter',
-        }),
-      } satisfies DeployErc1155Result;
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 deploy');
+          const logs = parseEventLogs({
+            abi: rareErc1155ContractFactoryAbi,
+            logs: receipt.logs,
+            eventName: 'RareERC1155ContractCreated',
+          });
+          const log = logs[0];
+          if (log === undefined) {
+            throw new Error('ERC1155 deploy transaction succeeded but RareERC1155ContractCreated was not found in logs.');
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: log.args.contractAddress,
+            factory: erc1155.erc1155ContractFactory,
+            defaultMinter: await publicClient.readContract({
+              address: erc1155.erc1155ContractFactory,
+              abi: rareErc1155ContractFactoryAbi,
+              functionName: 'defaultMinter',
+            }),
+          } satisfies DeployErc1155Result;
+        },
+      };
+    }),
   };
 }
 
@@ -173,7 +181,7 @@ export function createErc1155CollectionNamespace(
   config: RareClientConfig,
 ): Erc1155CollectionNamespace {
   return {
-    async createToken(params): ReturnType<Erc1155CollectionNamespace['createToken']> {
+    createToken: defineTransactionMethod(async (params) => {
       const plan = planErc1155CollectionCreateToken(params);
       const { walletClient, account, accountAddress } = requireWallet(config);
       const royaltyReceiver = plan.royaltyReceiver ?? accountAddress;
@@ -185,29 +193,34 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 create token');
-      const logs = parseEventLogs({
-        abi: rareErc1155Abi,
-        logs: receipt.logs,
-        eventName: 'TokenCreated',
-      });
-      const log = logs[0];
-      if (log === undefined) {
-        throw new Error('ERC1155 create token transaction succeeded but TokenCreated was not found in logs.');
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        tokenId: log.args.tokenId,
-        maxSupply: plan.maxSupply,
-        tokenUri: plan.tokenUri,
-        royaltyReceiver,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 create token');
+          const logs = parseEventLogs({
+            abi: rareErc1155Abi,
+            logs: receipt.logs,
+            eventName: 'TokenCreated',
+          });
+          const log = logs[0];
+          if (log === undefined) {
+            throw new Error('ERC1155 create token transaction succeeded but TokenCreated was not found in logs.');
+          }
 
-    async mint(params): ReturnType<Erc1155CollectionNamespace['mint']> {
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            tokenId: log.args.tokenId,
+            maxSupply: plan.maxSupply,
+            tokenUri: plan.tokenUri,
+            royaltyReceiver,
+          };
+        },
+      };
+    }),
+
+    mint: defineTransactionMethod(async (params) => {
       const plan = planErc1155CollectionMint(params);
       const { walletClient, account, accountAddress } = requireWallet(config);
       const to = plan.to ?? accountAddress;
@@ -219,18 +232,23 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 mint');
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        tokenId: plan.tokenId,
-        quantity: plan.quantity,
-        to,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 mint');
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            tokenId: plan.tokenId,
+            quantity: plan.quantity,
+            to,
+          };
+        },
       };
-    },
+    }),
 
-    async mintBatch(params): ReturnType<Erc1155CollectionNamespace['mintBatch']> {
+    mintBatch: defineTransactionMethod(async (params) => {
       const plan = planErc1155CollectionMintBatch(params);
       const { walletClient, account, accountAddress } = requireWallet(config);
       const to = plan.to ?? accountAddress;
@@ -242,17 +260,22 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 batch mint');
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        to,
-        items: plan.items,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 batch mint');
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            to,
+            items: plan.items,
+          };
+        },
       };
-    },
+    }),
 
-    async setMinterApproval(params): ReturnType<Erc1155CollectionNamespace['setMinterApproval']> {
+    setMinterApproval: defineTransactionMethod(async (params) => {
       const plan = planErc1155CollectionSetMinterApproval(params);
       const { walletClient, account } = requireWallet(config);
       const txHash = await walletClient.writeContract({
@@ -263,17 +286,22 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 set minter approval');
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        minter: plan.minter,
-        approved: plan.approved,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 set minter approval');
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            minter: plan.minter,
+            approved: plan.approved,
+          };
+        },
       };
-    },
+    }),
 
-    async updateTokenUri(params): ReturnType<Erc1155CollectionNamespace['updateTokenUri']> {
+    updateTokenUri: defineTransactionMethod(async (params) => {
       const plan = planErc1155CollectionUpdateTokenUri(params);
       const { walletClient, account } = requireWallet(config);
       await publicClient.simulateContract({
@@ -291,17 +319,22 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 update token URI');
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        tokenId: plan.tokenId,
-        tokenUri: plan.tokenUri,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 update token URI');
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            tokenId: plan.tokenId,
+            tokenUri: plan.tokenUri,
+          };
+        },
       };
-    },
+    }),
 
-    async disable(params): ReturnType<Erc1155CollectionNamespace['disable']> {
+    disable: defineTransactionMethod(async (params) => {
       const { walletClient, account } = requireWallet(config);
       await publicClient.simulateContract({
         address: params.contract,
@@ -318,13 +351,18 @@ export function createErc1155CollectionNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 disable contract');
       return {
-        txHash,
-        receipt,
-        contract: params.contract,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 disable contract');
+          return {
+            txHash,
+            receipt,
+            contract: params.contract,
+          };
+        },
       };
-    },
+    }),
 
     async status(params): ReturnType<Erc1155CollectionNamespace['status']> {
       const plan = planErc1155CollectionStatus(params);
@@ -389,7 +427,7 @@ export function createErc1155ListingNamespace(
   return {
     release,
 
-    async create(params): ReturnType<Erc1155ListingNamespace['create']> {
+    create: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = await toCurrencyAmount(publicClient, chain, currency, params.price, 'price');
@@ -412,37 +450,39 @@ export function createErc1155ListingNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 listing create',
         approvals: [{ type: 'nft', approvalTxHash, target: plan.contract, operator: erc1155.erc1155ApprovalManager }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'setSalePrices',
-            args: [
-              plan.contract,
-              plan.currency,
-              [{
-                tokenId: plan.tokenId,
-                price: plan.price,
-                quantity: plan.quantity,
-                expirationTime: plan.expirationTime,
-              }],
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 listing create');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: erc1155.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'setSalePrices',
+        args: [
+          plan.contract,
+          plan.currency,
+          [{
+            tokenId: plan.tokenId,
+            price: plan.price,
+            quantity: plan.quantity,
+            expirationTime: plan.expirationTime,
+          }],
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
+      return {
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 listing create'));
+          return { txHash, receipt, approvalTxHash };
+        },
+      };
+    }),
 
-    async createBatch(params): ReturnType<Erc1155ListingNamespace['createBatch']> {
+    createBatch: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const items = await Promise.all(params.items.map(async (item, index) => ({
@@ -468,60 +508,64 @@ export function createErc1155ListingNamespace(
         autoApprove: params.autoApprove,
       });
 
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 listing create batch',
         approvals: [{ type: 'nft', approvalTxHash, target: plan.contract, operator: erc1155.erc1155ApprovalManager }],
-        run: async () => {
-          const requests = plan.items.map((item) => ({
-            tokenId: item.tokenId,
-            price: item.price,
-            quantity: item.quantity,
-            expirationTime: item.expirationTime,
-          }));
-          await publicClient.simulateContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'setSalePrices',
-            args: [
-              plan.contract,
-              plan.currency,
-              requests,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-          });
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'setSalePrices',
-            args: [
-              plan.contract,
-              plan.currency,
-              requests,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 listing create batch');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
+      });
+      const txHash = await withApprovalAlert(async () => {
+        const requests = plan.items.map((item) => ({
+          tokenId: item.tokenId,
+          price: item.price,
+          quantity: item.quantity,
+          expirationTime: item.expirationTime,
+        }));
+        await publicClient.simulateContract({
+          address: erc1155.erc1155Marketplace,
+          abi: rareErc1155MarketplaceAbi,
+          functionName: 'setSalePrices',
+          args: [
+            plan.contract,
+            plan.currency,
+            requests,
+            plan.splitAddresses,
+            plan.splitRatios,
+          ],
+          account,
+        });
+        return walletClient.writeContract({
+          address: erc1155.erc1155Marketplace,
+          abi: rareErc1155MarketplaceAbi,
+          functionName: 'setSalePrices',
+          args: [
+            plan.contract,
+            plan.currency,
+            requests,
+            plan.splitAddresses,
+            plan.splitRatios,
+          ],
+          account,
+          chain: undefined,
+        });
       });
       return {
-        txHash,
-        receipt,
-        contract: plan.contract,
-        currencyAddress: plan.currency,
-        items: plan.items,
-        splitAddresses: plan.splitAddresses,
-        splitRatios: plan.splitRatios,
-        approvalTxHash,
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 listing create batch'));
+          return {
+            txHash,
+            receipt,
+            contract: plan.contract,
+            currencyAddress: plan.currency,
+            items: plan.items,
+            splitAddresses: plan.splitAddresses,
+            splitRatios: plan.splitRatios,
+            approvalTxHash,
+          };
+        },
       };
-    },
+    }),
 
-    async cancel(params): ReturnType<Erc1155ListingNamespace['cancel']> {
+    cancel: defineTransactionMethod(async (params) => {
       const { walletClient, account } = requireWallet(config);
       const tokenIds = planErc1155ListingCancel(params);
       const txHash = await walletClient.writeContract({
@@ -532,11 +576,16 @@ export function createErc1155ListingNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 listing cancel');
-      return { txHash, receipt };
-    },
+      return {
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 listing cancel');
+          return { txHash, receipt };
+        },
+      };
+    }),
 
-    async buy(params): ReturnType<Erc1155ListingNamespace['buy']> {
+    buy: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = await toCurrencyAmount(publicClient, chain, currency, params.price, 'price');
@@ -566,7 +615,7 @@ export function createErc1155ListingNamespace(
             `read ${payment.requiredAmount.toString()} raw units.`,
         );
       }
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 listing buy',
         approvals: [{
           type: 'erc20',
@@ -574,24 +623,26 @@ export function createErc1155ListingNamespace(
           target: plan.currency,
           spender: erc1155.erc20ApprovalManager,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'buyBatch',
-            args: [plan.contract, plan.seller, plan.currency, plan.recipient, [{ tokenId: plan.tokenId, price: plan.price, quantity: plan.quantity }]],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 listing buy');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, buyer: accountAddress, recipient: plan.recipient, approvalTxHash: payment.approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: erc1155.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'buyBatch',
+        args: [plan.contract, plan.seller, plan.currency, plan.recipient, [{ tokenId: plan.tokenId, price: plan.price, quantity: plan.quantity }]],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
+      return {
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 listing buy'));
+          return { txHash, receipt, buyer: accountAddress, recipient: plan.recipient, approvalTxHash: payment.approvalTxHash };
+        },
+      };
+    }),
 
-    async checkout(params): ReturnType<Erc1155ListingNamespace['checkout']> {
+    checkout: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const inputPlan = planErc1155CheckoutInput(params);
       const resolvedItems = await Promise.all(inputPlan.map(async (item, index) => {
@@ -682,7 +733,7 @@ export function createErc1155ListingNamespace(
           approvalTxHash: payment.approvalTxHash,
         };
       }));
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 checkout',
         approvals: payments.map((payment) => ({
           type: 'erc20',
@@ -690,77 +741,81 @@ export function createErc1155ListingNamespace(
           target: payment.currencyAddress,
           spender: erc1155.erc20ApprovalManager,
         })),
-        run: async () => {
-          const finalPreflight = await simulateErc1155Checkout({
-            publicClient,
-            marketplace: erc1155.erc1155Marketplace,
-            account,
-            recipient: checkout.recipient,
-            items: checkoutContractItems,
-            value,
-          });
-          assertCheckoutPreflightCanSubmit(finalPreflight, { allowApprovalFixable: false });
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
+      });
+      const txHash = await withApprovalAlert(async () => {
+        const finalPreflight = await simulateErc1155Checkout({
+          publicClient,
+          marketplace: erc1155.erc1155Marketplace,
+          account,
+          recipient: checkout.recipient,
+          items: checkoutContractItems,
+          value,
+        });
+        assertCheckoutPreflightCanSubmit(finalPreflight, { allowApprovalFixable: false });
+        return walletClient.writeContract({
+          address: erc1155.erc1155Marketplace,
+          abi: rareErc1155MarketplaceAbi,
+          functionName: 'checkout',
+          args: [checkout.recipient, checkoutContractItems],
+          account,
+          chain: undefined,
+          value,
+        });
+      });
+      return {
+        submitted: { txHash, approvalTxHashes: collectErc1155CheckoutApprovalTxHashes(payments) },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 checkout'));
+          const processed = parseEventLogs({
             abi: rareErc1155MarketplaceAbi,
-            functionName: 'checkout',
-            args: [checkout.recipient, checkoutContractItems],
-            account,
-            chain: undefined,
-            value,
+            logs: receipt.logs,
+            eventName: 'CheckoutItemProcessed',
+          }).map((log): Erc1155CheckoutProcessedItemInput => ({
+            itemIndex: log.args.itemIndex,
+            itemKind: Number(log.args.itemKind),
+            contractAddress: log.args.contractAddress,
+            tokenId: log.args.tokenId,
+            seller: log.args.seller,
+            currencyAddress: log.args.currencyAddress,
+            price: log.args.price,
+            quantity: log.args.quantity,
+            filled: log.args.filled,
+            failureStage: Number(log.args.failureStage),
+            reason: log.args.reason,
+            failureData: log.args.failureData,
+            totalPaid: log.args.totalPaid,
+            decodedFailure: log.args.filled ? undefined : decodeCheckoutFailure(log.args.failureData),
+          }));
+          const completedLogs = parseEventLogs({
+            abi: rareErc1155MarketplaceAbi,
+            logs: receipt.logs,
+            eventName: 'CheckoutCompleted',
+          }).map((log) => ({
+            payer: log.args.payer,
+            recipient: log.args.recipient,
+            filledCount: log.args.filledCount,
+            skippedCount: log.args.skippedCount,
+            ethSpent: log.args.ethSpent,
+            ethRefunded: log.args.ethRefunded,
+          }));
+          const validatedCheckout = validateErc1155CheckoutLogs({
+            txHash,
+            expectedItems: checkoutContractItems,
+            completedLogs,
+            processedItems: processed,
+            ethValue: value,
           });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 checkout');
-          return { txHash: targetTxHash, receipt: targetReceipt };
+          return shapeErc1155CheckoutResult({
+            marketplace: erc1155.erc1155Marketplace,
+            txHash,
+            receipt,
+            completed: validatedCheckout.completed,
+            items: validatedCheckout.items,
+            payments,
+          });
         },
-      });
-      const processed = parseEventLogs({
-        abi: rareErc1155MarketplaceAbi,
-        logs: receipt.logs,
-        eventName: 'CheckoutItemProcessed',
-      }).map((log): Erc1155CheckoutProcessedItemInput => ({
-        itemIndex: log.args.itemIndex,
-        itemKind: Number(log.args.itemKind),
-        contractAddress: log.args.contractAddress,
-        tokenId: log.args.tokenId,
-        seller: log.args.seller,
-        currencyAddress: log.args.currencyAddress,
-        price: log.args.price,
-        quantity: log.args.quantity,
-        filled: log.args.filled,
-        failureStage: Number(log.args.failureStage),
-        reason: log.args.reason,
-        failureData: log.args.failureData,
-        totalPaid: log.args.totalPaid,
-        decodedFailure: log.args.filled ? undefined : decodeCheckoutFailure(log.args.failureData),
-      }));
-      const completedLogs = parseEventLogs({
-        abi: rareErc1155MarketplaceAbi,
-        logs: receipt.logs,
-        eventName: 'CheckoutCompleted',
-      }).map((log) => ({
-        payer: log.args.payer,
-        recipient: log.args.recipient,
-        filledCount: log.args.filledCount,
-        skippedCount: log.args.skippedCount,
-        ethSpent: log.args.ethSpent,
-        ethRefunded: log.args.ethRefunded,
-      }));
-      const validatedCheckout = validateErc1155CheckoutLogs({
-        txHash,
-        expectedItems: checkoutContractItems,
-        completedLogs,
-        processedItems: processed,
-        ethValue: value,
-      });
-      return shapeErc1155CheckoutResult({
-        marketplace: erc1155.erc1155Marketplace,
-        txHash,
-        receipt,
-        completed: validatedCheckout.completed,
-        items: validatedCheckout.items,
-        payments,
-      });
-    },
+      };
+    }),
 
     async status(params): ReturnType<Erc1155ListingNamespace['status']> {
       const plan = planErc1155ListingStatus(params);
@@ -788,7 +843,7 @@ export function createErc1155OfferNamespace(
 ): Erc1155OfferNamespace {
   const erc1155 = lazyErc1155Addresses(chain, addresses);
   return {
-    async create(params): ReturnType<Erc1155OfferNamespace['create']> {
+    create: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = await toCurrencyAmount(publicClient, chain, currency, params.price, 'price');
@@ -803,7 +858,7 @@ export function createErc1155OfferNamespace(
         amount: plan.totalPrice,
         autoApprove: params.autoApprove,
       });
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 offer create',
         approvals: [{
           type: 'erc20',
@@ -811,24 +866,26 @@ export function createErc1155OfferNamespace(
           target: plan.currency,
           spender: erc1155.erc20ApprovalManager,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'makeOffer',
-            args: [plan.contract, plan.tokenId, plan.currency, plan.price, plan.quantity, plan.expirationTime],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 offer create');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, approvalTxHash: payment.approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: erc1155.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'makeOffer',
+        args: [plan.contract, plan.tokenId, plan.currency, plan.price, plan.quantity, plan.expirationTime],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
+      return {
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 offer create'));
+          return { txHash, receipt, approvalTxHash: payment.approvalTxHash };
+        },
+      };
+    }),
 
-    async cancel(params): ReturnType<Erc1155OfferNamespace['cancel']> {
+    cancel: defineTransactionMethod(async (params) => {
       const { walletClient, account } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const plan = planErc1155OfferCancel({ ...params, currency });
@@ -840,11 +897,16 @@ export function createErc1155OfferNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 offer cancel');
-      return { txHash, receipt };
-    },
+      return {
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 offer cancel');
+          return { txHash, receipt };
+        },
+      };
+    }),
 
-    async accept(params): ReturnType<Erc1155OfferNamespace['accept']> {
+    accept: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = await toCurrencyAmount(publicClient, chain, currency, params.price, 'price');
@@ -858,33 +920,35 @@ export function createErc1155OfferNamespace(
         operator: erc1155.erc1155ApprovalManager,
         autoApprove: params.autoApprove,
       });
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 offer accept',
         approvals: [{ type: 'nft', approvalTxHash, target: plan.contract, operator: erc1155.erc1155ApprovalManager }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: erc1155.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'acceptOffer',
-            args: [
-              plan.contract,
-              plan.tokenId,
-              plan.buyer,
-              plan.currency,
-              plan.price,
-              plan.quantity,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 offer accept');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt, approvalTxHash };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: erc1155.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'acceptOffer',
+        args: [
+          plan.contract,
+          plan.tokenId,
+          plan.buyer,
+          plan.currency,
+          plan.price,
+          plan.quantity,
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
+      return {
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 offer accept'));
+          return { txHash, receipt, approvalTxHash };
+        },
+      };
+    }),
 
     async status(params): ReturnType<Erc1155OfferNamespace['status']> {
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
@@ -941,7 +1005,7 @@ function createErc1155ReleaseNamespace(
           nowSeconds: nowSeconds(),
         });
       },
-      async setConfig(params) {
+      setConfig: defineTransactionMethod(async (params) => {
         const plan = planErc1155ReleaseAllowlistConfig(params);
         await uploadErc1155ReleaseAllowlistArtifact(config, params, plan.root);
         const { walletClient, account } = requireWallet(config);
@@ -953,19 +1017,24 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist set');
         return {
-          txHash,
-          receipt,
-          config: shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
-            marketplace: addresses.erc1155Marketplace,
-            contract: plan.contract,
-            tokenId: plan.tokenId,
-            nowSeconds: nowSeconds(),
-          }),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist set');
+            return {
+              txHash,
+              receipt,
+              config: shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
+                marketplace: addresses.erc1155Marketplace,
+                contract: plan.contract,
+                tokenId: plan.tokenId,
+                nowSeconds: nowSeconds(),
+              }),
+            };
+          },
         };
-      },
-      async setConfigBatch(params) {
+      }),
+      setConfigBatch: defineTransactionMethod(async (params) => {
         const plans = planErc1155ReleaseAllowlistConfigBatch(params);
         const { walletClient, account } = requireWallet(config);
         const requests = plans.map((plan) => ({ tokenId: plan.tokenId, root: plan.root, endTimestamp: plan.endTimestamp }));
@@ -984,20 +1053,25 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist set batch');
-        const now = nowSeconds();
         return {
-          txHash,
-          receipt,
-          configs: plans.map((plan) => shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
-            marketplace: addresses.erc1155Marketplace,
-            contract: plan.contract,
-            tokenId: plan.tokenId,
-            nowSeconds: now,
-          })),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist set batch');
+            const now = nowSeconds();
+            return {
+              txHash,
+              receipt,
+              configs: plans.map((plan) => shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
+                marketplace: addresses.erc1155Marketplace,
+                contract: plan.contract,
+                tokenId: plan.tokenId,
+                nowSeconds: now,
+              })),
+            };
+          },
         };
-      },
-      async clear(params) {
+      }),
+      clear: defineTransactionMethod(async (params) => {
         const plan = planErc1155ReleaseClearAllowlistConfig(params);
         const { walletClient, account } = requireWallet(config);
         const txHash = await walletClient.writeContract({
@@ -1008,18 +1082,23 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist clear');
         return {
-          txHash,
-          receipt,
-          config: shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
-            marketplace: addresses.erc1155Marketplace,
-            contract: plan.contract,
-            tokenId: plan.tokenId,
-            nowSeconds: nowSeconds(),
-          }),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release allowlist clear');
+            return {
+              txHash,
+              receipt,
+              config: shapeErc1155ReleaseAllowlistConfig([plan.root, plan.endTimestamp], {
+                marketplace: addresses.erc1155Marketplace,
+                contract: plan.contract,
+                tokenId: plan.tokenId,
+                nowSeconds: nowSeconds(),
+              }),
+            };
+          },
         };
-      },
+      }),
     },
     limits: {
       async getMint(params) {
@@ -1032,7 +1111,7 @@ function createErc1155ReleaseNamespace(
         });
         return shapeErc1155ReleaseLimitConfig(limit, { marketplace: addresses.erc1155Marketplace, contract: params.contract, tokenId });
       },
-      async setMint(params) {
+      setMint: defineTransactionMethod(async (params) => {
         const plan = planErc1155ReleaseLimitConfig(params);
         const { walletClient, account } = requireWallet(config);
         const txHash = await walletClient.writeContract({
@@ -1043,14 +1122,19 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release mint limit set');
         return {
-          txHash,
-          receipt,
-          config: shapeErc1155ReleaseLimitConfig(plan.limit, { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId }),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release mint limit set');
+            return {
+              txHash,
+              receipt,
+              config: shapeErc1155ReleaseLimitConfig(plan.limit, { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId }),
+            };
+          },
         };
-      },
-      async setMintBatch(params) {
+      }),
+      setMintBatch: defineTransactionMethod(async (params) => {
         const plans = planErc1155ReleaseLimitConfigBatch(params);
         const { walletClient, account } = requireWallet(config);
         const requests = plans.map((plan) => ({ tokenId: plan.tokenId, limit: plan.limit }));
@@ -1069,16 +1153,21 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release mint limit set batch');
         return {
-          txHash,
-          receipt,
-          configs: plans.map((plan) => shapeErc1155ReleaseLimitConfig(
-            plan.limit,
-            { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId },
-          )),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release mint limit set batch');
+            return {
+              txHash,
+              receipt,
+              configs: plans.map((plan) => shapeErc1155ReleaseLimitConfig(
+                plan.limit,
+                { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId },
+              )),
+            };
+          },
         };
-      },
+      }),
       async getTx(params) {
         const tokenId = planErc1155ListingStatus({ contract: params.contract, tokenId: params.tokenId, seller: zeroAddress }).tokenId;
         const limit = await publicClient.readContract({
@@ -1089,7 +1178,7 @@ function createErc1155ReleaseNamespace(
         });
         return shapeErc1155ReleaseLimitConfig(limit, { marketplace: addresses.erc1155Marketplace, contract: params.contract, tokenId });
       },
-      async setTx(params) {
+      setTx: defineTransactionMethod(async (params) => {
         const plan = planErc1155ReleaseLimitConfig(params);
         const { walletClient, account } = requireWallet(config);
         const txHash = await walletClient.writeContract({
@@ -1100,14 +1189,19 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release transaction limit set');
         return {
-          txHash,
-          receipt,
-          config: shapeErc1155ReleaseLimitConfig(plan.limit, { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId }),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release transaction limit set');
+            return {
+              txHash,
+              receipt,
+              config: shapeErc1155ReleaseLimitConfig(plan.limit, { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId }),
+            };
+          },
         };
-      },
-      async setTxBatch(params) {
+      }),
+      setTxBatch: defineTransactionMethod(async (params) => {
         const plans = planErc1155ReleaseLimitConfigBatch(params);
         const { walletClient, account } = requireWallet(config);
         const requests = plans.map((plan) => ({ tokenId: plan.tokenId, limit: plan.limit }));
@@ -1126,19 +1220,24 @@ function createErc1155ReleaseNamespace(
           account,
           chain: undefined,
         });
-        const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release transaction limit set batch');
         return {
-          txHash,
-          receipt,
-          configs: plans.map((plan) => shapeErc1155ReleaseLimitConfig(
-            plan.limit,
-            { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId },
-          )),
+          submitted: { txHash },
+          settle: async () => {
+            const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release transaction limit set batch');
+            return {
+              txHash,
+              receipt,
+              configs: plans.map((plan) => shapeErc1155ReleaseLimitConfig(
+                plan.limit,
+                { marketplace: addresses.erc1155Marketplace, contract: plan.contract, tokenId: plan.tokenId },
+              )),
+            };
+          },
         };
-      },
+      }),
     },
 
-    async configure(params) {
+    configure: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const price = await toCurrencyAmount(publicClient, chain, currency, params.price, 'price');
@@ -1151,45 +1250,47 @@ function createErc1155ReleaseNamespace(
         minter: addresses.erc1155Marketplace,
         autoApprove: params.autoApprove,
       });
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 release configure',
         approvals: [{ type: 'minter', approvalTxHash, target: plan.contract, minter: addresses.erc1155Marketplace }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: addresses.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'prepareMintDirectSales',
-            args: [
-              plan.contract,
-              plan.currency,
-              [{ tokenId: plan.tokenId, price: plan.price, startTime: plan.startTime, maxMints: plan.maxMints }],
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 release configure');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: addresses.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'prepareMintDirectSales',
+        args: [
+          plan.contract,
+          plan.currency,
+          [{ tokenId: plan.tokenId, price: plan.price, startTime: plan.startTime, maxMints: plan.maxMints }],
+          plan.splitAddresses,
+          plan.splitRatios,
+        ],
+        account,
+        chain: undefined,
+      }));
       return {
-        txHash,
-        receipt,
-        marketplace: addresses.erc1155Marketplace,
-        contract: plan.contract,
-        tokenId: plan.tokenId,
-        currencyAddress: plan.currency,
-        price: plan.price,
-        startTime: plan.startTime,
-        maxMints: plan.maxMints,
-        splitRecipients: plan.splitAddresses,
-        splitRatios: plan.splitRatios,
-        approvalTxHash,
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release configure'));
+          return {
+            txHash,
+            receipt,
+            marketplace: addresses.erc1155Marketplace,
+            contract: plan.contract,
+            tokenId: plan.tokenId,
+            currencyAddress: plan.currency,
+            price: plan.price,
+            startTime: plan.startTime,
+            maxMints: plan.maxMints,
+            splitRecipients: plan.splitAddresses,
+            splitRatios: plan.splitRatios,
+            approvalTxHash,
+          };
+        },
       };
-    },
+    }),
 
-    async configureBatch(params) {
+    configureBatch: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currency = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
       const items = await Promise.all(params.items.map(async (item, index) => ({
@@ -1205,61 +1306,65 @@ function createErc1155ReleaseNamespace(
         minter: addresses.erc1155Marketplace,
         autoApprove: params.autoApprove,
       });
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 release configure batch',
         approvals: [{ type: 'minter', approvalTxHash, target: plan.contract, minter: addresses.erc1155Marketplace }],
-        run: async () => {
-          const requests = plan.items.map((item) => ({
-            tokenId: item.tokenId,
-            price: item.price,
-            startTime: item.startTime,
-            maxMints: item.maxMints,
-          }));
-          await publicClient.simulateContract({
-            address: addresses.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'prepareMintDirectSales',
-            args: [
-              plan.contract,
-              plan.currency,
-              requests,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-          });
-          const targetTxHash = await walletClient.writeContract({
-            address: addresses.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'prepareMintDirectSales',
-            args: [
-              plan.contract,
-              plan.currency,
-              requests,
-              plan.splitAddresses,
-              plan.splitRatios,
-            ],
-            account,
-            chain: undefined,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 release configure batch');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
+      });
+      const txHash = await withApprovalAlert(async () => {
+        const requests = plan.items.map((item) => ({
+          tokenId: item.tokenId,
+          price: item.price,
+          startTime: item.startTime,
+          maxMints: item.maxMints,
+        }));
+        await publicClient.simulateContract({
+          address: addresses.erc1155Marketplace,
+          abi: rareErc1155MarketplaceAbi,
+          functionName: 'prepareMintDirectSales',
+          args: [
+            plan.contract,
+            plan.currency,
+            requests,
+            plan.splitAddresses,
+            plan.splitRatios,
+          ],
+          account,
+        });
+        return walletClient.writeContract({
+          address: addresses.erc1155Marketplace,
+          abi: rareErc1155MarketplaceAbi,
+          functionName: 'prepareMintDirectSales',
+          args: [
+            plan.contract,
+            plan.currency,
+            requests,
+            plan.splitAddresses,
+            plan.splitRatios,
+          ],
+          account,
+          chain: undefined,
+        });
       });
       return {
-        txHash,
-        receipt,
-        marketplace: addresses.erc1155Marketplace,
-        contract: plan.contract,
-        currencyAddress: plan.currency,
-        items: plan.items,
-        splitRecipients: plan.splitAddresses,
-        splitRatios: plan.splitRatios,
-        approvalTxHash,
+        submitted: { txHash, approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release configure batch'));
+          return {
+            txHash,
+            receipt,
+            marketplace: addresses.erc1155Marketplace,
+            contract: plan.contract,
+            currencyAddress: plan.currency,
+            items: plan.items,
+            splitRecipients: plan.splitAddresses,
+            splitRatios: plan.splitRatios,
+            approvalTxHash,
+          };
+        },
       };
-    },
+    }),
 
-    async cancel(params) {
+    cancel: defineTransactionMethod(async (params) => {
       const plan = planErc1155ReleaseCancel(params);
       const { walletClient, account } = requireWallet(config);
       await publicClient.simulateContract({
@@ -1277,17 +1382,22 @@ function createErc1155ReleaseNamespace(
         account,
         chain: undefined,
       });
-      const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release cancel');
       return {
-        txHash,
-        receipt,
-        marketplace: addresses.erc1155Marketplace,
-        contract: plan.contract,
-        tokenIds: plan.tokenIds,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release cancel');
+          return {
+            txHash,
+            receipt,
+            marketplace: addresses.erc1155Marketplace,
+            contract: plan.contract,
+            tokenIds: plan.tokenIds,
+          };
+        },
       };
-    },
+    }),
 
-    async mint(params) {
+    mint: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const plan = planErc1155ReleaseMint({
         ...params,
@@ -1322,41 +1432,43 @@ function createErc1155ReleaseNamespace(
         amount,
         autoApprove: params.autoApprove,
       });
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'erc1155 release mint',
         approvals: [{ type: 'erc20', approvalTxHash: payment.approvalTxHash, target: currency, spender: addresses.erc20ApprovalManager }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: addresses.erc1155Marketplace,
-            abi: rareErc1155MarketplaceAbi,
-            functionName: 'mintDirectSaleBatch',
-            args: [plan.contract, currency, plan.recipient, [{ tokenId: plan.tokenId, price, quantity: plan.quantity, proof: plan.proof }]],
-            account,
-            chain: undefined,
-            value: payment.value,
-          });
-          const targetReceipt = await waitForSuccessfulReceipt(publicClient, targetTxHash, 'erc1155 release mint');
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: addresses.erc1155Marketplace,
+        abi: rareErc1155MarketplaceAbi,
+        functionName: 'mintDirectSaleBatch',
+        args: [plan.contract, currency, plan.recipient, [{ tokenId: plan.tokenId, price, quantity: plan.quantity, proof: plan.proof }]],
+        account,
+        chain: undefined,
+        value: payment.value,
+      }));
       return {
-        txHash,
-        receipt,
-        marketplace: addresses.erc1155Marketplace,
-        contract: plan.contract,
-        tokenId: plan.tokenId,
-        buyer: accountAddress,
-        recipient: plan.recipient,
-        seller: directSale[0],
-        quantity: plan.quantity,
-        currencyAddress: currency,
-        price,
-        totalPrice: amount,
-        requiredPayment: payment.requiredAmount,
-        approvalTxHash: payment.approvalTxHash,
-        allowlistRequired: plan.proof.length > 0,
+        submitted: { txHash, approvalTxHash: payment.approvalTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => waitForSuccessfulReceipt(publicClient, txHash, 'erc1155 release mint'));
+          return {
+            txHash,
+            receipt,
+            marketplace: addresses.erc1155Marketplace,
+            contract: plan.contract,
+            tokenId: plan.tokenId,
+            buyer: accountAddress,
+            recipient: plan.recipient,
+            seller: directSale[0],
+            quantity: plan.quantity,
+            currencyAddress: currency,
+            price,
+            totalPrice: amount,
+            requiredPayment: payment.requiredAmount,
+            approvalTxHash: payment.approvalTxHash,
+            allowlistRequired: plan.proof.length > 0,
+          };
+        },
       };
-    },
+    }),
 
     async status(params) {
       const tokenId = planErc1155ListingStatus({ contract: params.contract, tokenId: params.tokenId, seller: zeroAddress }).tokenId;
@@ -1436,7 +1548,7 @@ function createErc1155ReleaseNamespace(
 
 async function uploadErc1155ReleaseAllowlistArtifact(
   config: RareClientConfig,
-  params: Parameters<Erc1155ReleaseNamespace['allowlist']['setConfig']>[0],
+  params: Erc1155ReleaseSetAllowlistConfigParams,
   expectedRoot: Hex,
 ): Promise<void> {
   if (params.root !== undefined || params.artifact === undefined) {

@@ -10,8 +10,9 @@ import {
 } from './bridge-core.js';
 import { toPositiveWei } from './amounts-core.js';
 import { preparePaymentAmountForSpender } from './payments-shell.js';
-import { runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { createApprovalSideEffectAlert } from './approvals-shell.js';
 import { getConfiguredAccountAddress, requireWallet } from './wallet-shell.js';
+import { defineTransactionMethod, type PendingTransaction } from './transaction-submission.js';
 import type { RareClientConfig } from './types/client.js';
 import type {
   BridgeNamespace,
@@ -33,9 +34,9 @@ export function createBridgeNamespace(
       return buildBridgeQuote(publicClient, config, sourceChain, params);
     },
 
-    async send(params): ReturnType<BridgeNamespace['send']> {
+    send: defineTransactionMethod(async (params) => {
       return executeBridge(publicClient, config, sourceChain, params);
-    },
+    }),
   };
 }
 
@@ -44,7 +45,7 @@ async function executeBridge(
   config: RareClientConfig,
   sourceChain: SupportedChain,
   params: BridgeSendParams,
-): Promise<BridgeResult> {
+): Promise<PendingTransaction<BridgeResult>> {
   const { walletClient, account, accountAddress } = requireWallet(config);
   const quote = await buildBridgeQuote(publicClient, config, sourceChain, {
     ...params,
@@ -68,7 +69,7 @@ async function executeBridge(
     destinationBridgeInfo: getBridgeInfo(quote.destinationChain),
     distributionData: quote.distributionData,
   });
-  const { txHash, receipt, estimatedGas } = await runWithApprovalSideEffectAlert({
+  const withApprovalAlert = createApprovalSideEffectAlert({
     operation: 'bridge send',
     approvals: [{
       type: 'erc20',
@@ -76,35 +77,41 @@ async function executeBridge(
       target: quote.rareTokenAddress,
       spender: quote.sourceBridgeAddress,
     }],
-    run: async () => {
-      const gas = await estimateBridgeGas(publicClient, {
-        account: accountAddress,
-        sourceBridgeAddress: quote.sourceBridgeAddress,
-        args: sendArgs,
-        nativeFee: quote.nativeFee,
-      });
-      const targetTxHash = await walletClient.writeContract({
-        address: quote.sourceBridgeAddress,
-        abi: rareBridgeAbi,
-        functionName: 'send',
-        args: sendArgs,
-        value: quote.nativeFee,
-        account,
-        chain: undefined,
-      });
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+  });
+  const { txHash, estimatedGas } = await withApprovalAlert(async () => {
+    const gas = await estimateBridgeGas(publicClient, {
+      account: accountAddress,
+      sourceBridgeAddress: quote.sourceBridgeAddress,
+      args: sendArgs,
+      nativeFee: quote.nativeFee,
+    });
+    const targetTxHash = await walletClient.writeContract({
+      address: quote.sourceBridgeAddress,
+      abi: rareBridgeAbi,
+      functionName: 'send',
+      args: sendArgs,
+      value: quote.nativeFee,
+      account,
+      chain: undefined,
+    });
 
-      return { txHash: targetTxHash, receipt: targetReceipt, estimatedGas: gas };
-    },
+    return { txHash: targetTxHash, estimatedGas: gas };
   });
 
   return {
-    ...quote,
-    estimatedGas,
-    txHash,
-    receipt,
-    approvalTxHash: approval.approvalTxHash,
-    ccipExplorerUrl: buildCcipExplorerUrl(txHash),
+    submitted: { txHash, approvalTxHash: approval.approvalTxHash },
+    settle: async () => {
+      const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+
+      return {
+        ...quote,
+        estimatedGas,
+        txHash,
+        receipt,
+        approvalTxHash: approval.approvalTxHash,
+        ccipExplorerUrl: buildCcipExplorerUrl(txHash),
+      };
+    },
   };
 }
 
