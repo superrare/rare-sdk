@@ -11,6 +11,7 @@ export type * from './types/batch-auction.js';
 export type * from './types/release.js';
 export type * from './types/erc1155.js';
 export type * from './types/token.js';
+export type * from './types/nft.js';
 export type * from './types/liquid.js';
 export type * from './types/bridge.js';
 export type * from './types/swap.js';
