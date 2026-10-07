@@ -1,4 +1,10 @@
 export { createRareClient } from './client.js';
+export { createMessagingClient } from './messaging.js';
+export type {
+  MessagingClient, MessagingClientOptions, MessagingSend, MessagingCommand,
+  MessagingMessageCommand, MessagingCreateDirect, MessagingCreateRoom,
+  MessagingMessage, MessagingConversation, MessagingPage, MessagingChanges, MessagingAttachment,
+} from './messaging.js';
 
 export type * from './types/common.js';
 export type * from './types/client.js';
