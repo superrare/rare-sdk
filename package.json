@@ -87,7 +87,7 @@
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test",
     "test:integration:uploads": "vitest run test/integration-deployed/uploads.test.ts",
     "test:integration:account": "vitest run test/integration-deployed/account-auth.test.ts",
-    "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration",
+    "test:integration": "RARE_API_INTEGRATION=1 vitest run test/integration/liquid-edition-discovery.test.ts",
     "prepare": "npm run build",
     "test:integration:follows": "vitest run test/integration-deployed/follows.test.ts",
     "test:integration:favorites": "vitest run test/integration-deployed/favorites.test.ts",
@@ -98,9 +98,9 @@
     "test:integration:notifications": "vitest run test/integration-deployed/notifications.test.ts",
     "lint": "eslint src test scripts eslint-local-rules",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
-    "test": "npm run build && npm run test:typecheck && vitest run --exclude 'test/e2e-live/**' --config vitest.config.ts",
+    "test": "npm run build && npm run test:typecheck && vitest run --exclude 'test/e2e-live/**' --exclude 'test/integration-deployed/**' --config vitest.config.ts",
     "test:live": "npm run build && npm run test:typecheck && vitest run --config vitest.config.ts",
-    "test:coverage": "npm run build && npm run test:typecheck && vitest run --exclude 'test/e2e-live/**' --coverage --config vitest.config.ts"
+    "test:coverage": "npm run build && npm run test:typecheck && vitest run --exclude 'test/e2e-live/**' --exclude 'test/integration-deployed/**' --coverage --config vitest.config.ts"
   },
   "dependencies": {
     "merkletreejs": "0.6.0",
