@@ -206,6 +206,10 @@ export function createRareClient(config: RareClientConfig): RareClient {
       },
     },
     nft: {
+      async favoriteCount(params) {
+        assertNoClientChainOverride(params, 'rare.nft.favoriteCount', chain);
+        return api.getNftFavoriteCount(buildNftUniversalTokenId({ ...params, chainId }));
+      },
       async get(params): ReturnType<RareClient['nft']['get']> {
         assertNoClientChainOverride(params, 'rare.nft.get', chain);
         return api.getNft(buildNftUniversalTokenId({ ...params, chainId }));
@@ -233,7 +237,14 @@ export function createRareClient(config: RareClientConfig): RareClient {
         return api.pinJson(value, filename);
       },
     },
+    drops: { list: api.getDrops, get: api.getDrop },
+    posts: { list: api.getPosts, get: api.getPost, comments: api.getPostComments },
     user: {
+      followers: (input, options) => api.getUserFollowers(input, options),
+      following: (input, options) => api.getUserFollowing(input, options),
+      async resolve(input): ReturnType<RareClient['user']['resolve']> {
+        return api.resolveUser(input);
+      },
       async get(address): ReturnType<RareClient['user']['get']> {
         return api.getUser(address);
       },
