@@ -9,7 +9,7 @@ import { isAddress } from 'viem';
 import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
 import { DEFAULT_RARE_API_BASE_URL } from '../data-access/base-url.js';
 import {
-  isRecord, joinAuthPath, normalizeAuthBaseUrl, parseAuthErrorCode, resolveSigningOrigin,
+  isAccountRequestAuthority, isRecord, joinAuthPath, normalizeAuthBaseUrl, parseAuthErrorCode, resolveSigningOrigin,
   RareAuthError, requirePositiveNumber, requireString,
 } from './account-auth-core.js';
 import { AvatarProfileUpdateError, parseAccountProfile, planAvatarUpload, validateAccountProfilePatch } from './account-profile-core.js';
@@ -238,6 +238,20 @@ export function createRareAccountClient(options: RareAccountClientOptions = {}):
     return result;
   };
   return {
+    authenticatedFetch: async (input, init) => {
+      const pending = new Request(input, init);
+      const target = new URL(pending.url);
+      const authority = new URL(apiBaseUrl);
+      if (!isAccountRequestAuthority(target, authority)) {
+        throw new RareAuthError('request_authority_mismatch');
+      }
+      const token = await accessToken({ signal: pending.signal });
+      const headers = new Headers(pending.headers);
+      headers.set('Authorization', `Bearer ${token}`);
+      // Token refresh happens before sending. Do not replay an ambiguous mutation or a 401.
+      return fetchImpl(new Request(pending, { headers, redirect: 'error', credentials: 'omit',
+        signal: AbortSignal.any([pending.signal, AbortSignal.timeout(30_000)]) }));
+    },
     notifications: createNotificationsClient(postRequest),
     messaging: createMessagingClient(async (method, path, body, headers, requestOptions = {}) => {
       const token = await accessToken(requestOptions);
