@@ -147,6 +147,7 @@ export type CartNamespace = {
     /** Authorizes a reviewed quote and reserves any required claims, without paying. */
     authorize: (preparation: CartCheckoutPreparation) => Promise<CartApiPreparedPurchase>;
     prepare: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
+    coinflow: CartApiNamespace['checkout']['coinflow'];
     purchase: (params: CartPurchaseParams) => Promise<CartPurchaseResult>;
     execute: (params: CartCheckoutParams) => Promise<CartCheckoutResult>;
   };
