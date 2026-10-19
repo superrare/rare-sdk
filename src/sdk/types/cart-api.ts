@@ -4,6 +4,7 @@ import type {CartAdjustmentsNamespace} from '../cart-adjustments-core.js';
 export type {CartAdjustmentCreateParams,CartAdjustment,CartAdjustmentListParams,CartAdjustmentRequestOptions,CartAdjustmentAssignment,CartAdjustmentAssignmentCreateParams,CartAdjustmentAssignmentListParams} from '../cart-adjustments-core.js';
 import type { Address, Hex } from 'viem';
 import type { IntegerInput } from './common.js';
+import type { ShippingDetails } from './shipping-addresses.js';
 import type {
   CartFulfillmentKind,
   CartSellerFulfillmentKind,
@@ -254,6 +255,15 @@ export type CartCheckoutIntentItem = {
 export type CartCheckoutIntent = {
   paymentCurrency: Address;
   items: readonly CartCheckoutIntentItem[];
+  delivery?: { recipientDetails: ShippingDetails } | { savedAddressId: string };
+};
+export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
+export type CartCheckoutBreakdown = { displayPrice: bigint; shipping: bigint; networkFee: bigint; total: bigint };
+export type CartCardCheckout = {
+  checkoutJwtToken: string;
+  sessionKey: string;
+  config: { merchantId: string; env: 'sandbox' | 'prod' };
+  preparedPurchase: CartApiPreparedPurchase;
 };
 
 export type CartCheckoutFee = { label: string; currency: Address; amount: bigint };
@@ -274,6 +284,8 @@ export type CartCheckoutPreparation = {
   preparedAt: string;
   expiresAt: string;
   preparationReference: string;
+  idempotencyKey?: string;
+  breakdown?: CartCheckoutBreakdown;
   intent: CartCheckoutIntent;
   paymentAmount: bigint;
   fees: CartCheckoutFee[];
@@ -285,6 +297,7 @@ export type CartCheckoutPreparation = {
 export type CartCheckoutPreviewWire = {
   preparationReference: string;
   preparation: CartApiPreparedPurchaseWire;
+  breakdown?: { displayPrice: string; shipping: string; networkFee: string; total: string };
 };
 
 export type CartApiPreparedPurchaseWire = {
@@ -382,7 +395,8 @@ export type CartApiNamespace = {
   checkout: {
     receipt: (orderId: Hex) => Promise<CartCheckoutReceipt>;
     preview: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
-    prepare: (preparationReference: string) => Promise<CartApiPreparedPurchase>;
+    prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
+    coinflow: (input: CartDeliveryCheckout) => Promise<CartCardCheckout>;
   };
 };
 
