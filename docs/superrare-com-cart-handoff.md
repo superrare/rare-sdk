@@ -46,10 +46,6 @@ Use `rare.cart.listing.search({ eligibility: 'eligible' })` for an authenticated
 catalog of open Listings and gated Listings the account can purchase. The server
 revalidates eligibility during checkout. No separate print campaign API is needed.
 
-The claims and print interfaces require the corresponding backend migrations,
-endpoints, and pipeline workers. Their presence in SDK source does not establish
-that a particular Rare API deployment supports them.
-
 ## Prepare a known-order NFT release with optional prints
 
 Use one Product per artwork. Create it with `rare.cart.catalog.products.create`
@@ -99,25 +95,8 @@ then uses the matching Product's private print configuration. Never select a
 production file from an assumed next token ID in the browser. An NFT and its
 optional print purchased together do not need a purchase-generated claim.
 
-## Check the application and deployment versions
+## Use the public SDK interfaces
 
-Before changing the frontend, inspect its dependency pins and installed exports.
-The existing application has used published `@rareprotocol/rare-sdk` alongside
-a separately git-pinned `@rareprotocol/cart-sdk` alias. Do not assume either
-installed version includes the authenticated Cart and eligibility interfaces.
-
-Use an SDK revision containing this PR and its Cart dependencies. Record the
-tested SDK revision, Rare API deployment, chain, and configured Cart address.
-Do not upgrade unrelated SDK consumers as an incidental change.
-
-[Superrare-com migration PR #2197](https://github.com/superrare/superrare-monorepo/pull/2197)
-explicitly consolidates that application onto one SDK dependency and removes the
-temporary alias. Its migration catalog records the import audit and NFT flow
-verification. It pins SDK revision `59c296e` from
-[wallet-adapter PR #25](https://github.com/superrare/rare-sdk/pull/25), which adds
-the supported `/wallet` entry point for direct viem writes outside SDK
-namespaces. High-level SDK writes apply wallet compatibility handling
-automatically. Neither connect-com nor rare-api is migrated by that PR.
 
 Check the public interfaces in these files rather than importing SDK internals:
 
@@ -569,11 +548,11 @@ cases against a compatible backend:
 Run application typechecking, lint, and browser flow checks. Run the SDK's
 relevant checks after changing its interface. The dedicated live eligibility
 suite is `npm run test:integration:eligibility`; it needs a test deployment with
-the new backend and the dedicated test account and RPC configuration. Do not run
-funded write tests against production or report a source-only check as live
-integration coverage.
+Cart and eligibility endpoints, a dedicated test account, and RPC configuration.
+Do not run funded write tests against production or report a source-only check
+as live integration coverage.
 
-For the new print methods, run `npm run test:integration:prints` in this repo and
+For print methods, run `npm run test:integration:prints` in this repo and
 `npm run test:prints:e2e` in rare-cli against the same compatible feature API.
 Set `RARE_ACCOUNT_TEST_API_URL` explicitly for the SDK and `RARE_API_BASE_URL`
 explicitly for the CLI. Use registered dedicated test accounts and Sepolia RPC
@@ -588,8 +567,6 @@ commands through delivery preview and signed Order preparation. Neither suite
 pays or submits a physical Order. A separate funded sandbox fulfillment run is required to prove provider
 submission and the private signed download end to end.
 
-At handoff, report the SDK revision, API deployment, chain, test commands and
-results, and any endpoint still missing from the SDK or backend.
 
 ## Use consistent list and mutation results
 
