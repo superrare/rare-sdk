@@ -2,6 +2,7 @@ import type { RareAuthRequestOptions } from './account.js';
 import type { CartSplit } from './cart.js';
 import type { Address, Hex } from 'viem';
 import type { IntegerInput } from './common.js';
+import type { AccountCheckoutRecoveryWire } from './orders.js';
 import type { ShippingDetails } from './shipping-addresses.js';
 import type {
   CartFulfillmentKind,
@@ -257,6 +258,11 @@ export type CartCheckoutIntent = {
 };
 export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
 export type CartCheckoutBreakdown = { displayPrice: bigint; shipping: bigint; networkFee: bigint; total: bigint };
+export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' | 'preparedPurchase'> & {
+  orderId?: Hex;
+  preparedPurchase?: CartApiPreparedPurchase;
+};
+
 export type CartCardCheckout = {
   checkoutJwtToken: string;
   sessionKey: string;
@@ -373,6 +379,8 @@ export type CartApiNamespace = {
       listMine: (params?: CartProductsMineParams, options?: RareAuthRequestOptions) => Promise<CartProductSearchResult>;
       update: (id: string, input: CreateCartProduct, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
       publish: (id: string) => Promise<CartApiProduct>;
+      getMine: (id: string) => Promise<CartApiProduct>;
+      archive: (id: string) => Promise<CartApiProduct>;
       search: (params?: CartProductSearchParams) => Promise<CartProductSearchResult>;
       get: (id: string) => Promise<CartApiProduct>;
     };
@@ -393,6 +401,8 @@ export type CartApiNamespace = {
     receipt: (orderId: Hex) => Promise<CartCheckoutReceipt>;
     preview: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
     prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
+    /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
+    recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
     coinflow: (input: CartDeliveryCheckout) => Promise<CartCardCheckout>;
   };
 };
