@@ -163,6 +163,7 @@ export function createCartNamespace(
     },
     checkout: {
       receipt: api.checkout.receipt,
+      recover: api.checkout.recover,
       authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
       coinflow: api.checkout.coinflow,
       prepare(intent) {
