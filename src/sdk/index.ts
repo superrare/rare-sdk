@@ -42,3 +42,26 @@ export type {
   UserProfile,
   Pagination,
 } from './api.js';
+
+export { RareAuthError } from './account-auth-core.js';
+export { createMemoryAccountSessionStore } from './account-session-store.js';
+export type * from './types/account.js';
+
+export { AvatarProfileUpdateError } from './account-profile-core.js';
+
+export type { UserSelector, UserListOptions } from './user-core.js';
+
+export type { ArtworkFavorite, FavoriteArtworkInput, FavoritesListOptions } from './favorites-core.js';
+
+export type { DropAnnouncement, DropType, DropMetadataInput, CreateDropInput, UpdateDropInput, DropListOptions } from './drops-core.js';
+export type { CreatorPost, CreatorPostComment, CreatorPostCommentPage, PostCommentListOptions, CreatePostInput } from './posts-core.js';
+
+export type * from './types/messaging.js';
+
+export { createRareApi } from './api.js';
+export type { RareApi, RareApiOptions } from './api.js';
+
+export type * from './types/notifications.js';
+
+export { createBrowserAccountSessionStore } from './browser-session-store.js';
+export { RareApiError } from '../data-access/errors.js';
