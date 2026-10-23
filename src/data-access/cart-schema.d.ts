@@ -2578,6 +2578,7 @@ export interface paths {
                     fulfillmentKind?: number | null;
                     settlementCurrency?: string;
                     productId?: string;
+                    eligibility?: "eligible";
                     sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "deadlineAsc";
                     page?: number;
                     perPage?: number;
