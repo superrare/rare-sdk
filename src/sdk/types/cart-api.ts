@@ -118,6 +118,8 @@ export type CartApiListingRoot = {
 };
 
 export type CartApiListingSearchParams = {
+  /** Include open Listings and gated Listings the authenticated account can purchase. */
+  eligibility?: 'eligible';
   q?: string;
   sku?: Hex;
   seller?: Address;
