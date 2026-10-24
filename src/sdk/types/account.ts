@@ -66,7 +66,7 @@ export type RareWalletLoginOptions = {
 /** Sends API-relative paths using authentication owned by the application. */
 export type RareAccountTransport = (path: string, init: RequestInit) => Promise<Response>;
 
-export type RareAccountFeatures = Omit<RareAccountClient, 'auth'>;
+export type RareAccountFeatures = Omit<RareAccountClient, 'auth' | 'authenticatedFetch'>;
 
 export type RareAccountProfile = {
   accountId: string;
@@ -115,6 +115,12 @@ export type RareUploadMethod = {
 };
 
 export type RareAccountClient = {
+  /**
+   * Fetch authenticated Rare API requests using this client's session and renewal lock.
+   * Rejects requests outside this API origin/base path and never follows redirects or retries writes.
+   * Pass the account client to createRareClient({ accountClient }) to share login with Cart.
+   */
+  authenticatedFetch: typeof globalThis.fetch;
   messaging: RareMessagingClient;
   notifications: RareNotificationsClient;
   drops: {

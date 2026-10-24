@@ -1,5 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from './schema.js';
+import type { paths as CartPaths } from './cart-schema.js';
 import { RareApiError, parseApiError } from './errors.js';
 import { resolveRareApiBaseUrl } from './base-url.js';
 
@@ -33,6 +34,19 @@ export function createApiClient(
 
   client.use(errorMiddleware);
 
+  return client;
+}
+
+/** Keep Cart request inference separate from unrelated public API paths. */
+export function createCartApiClient(
+  baseUrl?: string,
+  fetch?: typeof globalThis.fetch,
+): ReturnType<typeof createClient<CartPaths>> {
+  const client = createClient<CartPaths>({
+    baseUrl: resolveRareApiBaseUrl(baseUrl),
+    ...(fetch === undefined ? {} : { fetch }),
+  });
+  client.use(errorMiddleware);
   return client;
 }
 

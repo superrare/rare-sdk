@@ -3,6 +3,8 @@ import { once } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createSiweMessage } from 'viem/siwe';
+import { createPublicClient, http, zeroAddress } from 'viem';
+import { sepolia } from 'viem/chains';
 import { createRareClient } from '../../src/sdk/client.js';
 import { createMemoryAccountSessionStore } from '../../src/sdk/account-session-store.js';
 import type { RareAccountSession, RareDeviceAuthorization } from '../../src/sdk/types/account.js';
@@ -69,6 +71,72 @@ describe('account authentication over HTTP', () => {
       reply(response, { data: { ...profile, profile: { ...profile.profile, bio: 'Updated bio' } } });
     };
     expect(await sdk.profile.update({ profile: { bio: 'Updated bio' } })).toMatchObject({ profile: { bio: 'Updated bio' } });
+  });
+
+  it.each(['existing account', 'unified client'])('shares %s refresh and session locking with Cart, keeping public reads anonymous', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 1));
+    const received: string[] = [];
+    handler = async (request, response) => {
+      if (request.url === '/auth/v2/token') {
+        // eslint-disable-next-line functional/immutable-data
+        received.push('refresh');
+        return reply(response, tokens);
+      }
+      if (request.url?.startsWith('/v1/cart/listings/search')) {
+        expect(request.headers.authorization).toBeUndefined();
+        return reply(response, { data: [], pagination: {} });
+      }
+      expect(request.url?.startsWith('/v1/cart/listings/preview')).toBe(true);
+      expect(request.headers.authorization).toBe('Bearer access-2');
+      // eslint-disable-next-line functional/immutable-data
+      received.push('preview');
+      return reply(response, { data: { listings: [] } });
+    };
+    const rare = createRareClient({
+      publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: origin,
+      ...(mode === 'existing account' ? { accountClient: client(storage) } : { sessionStore: storage }),
+    });
+    await rare.cart.api.listing.search();
+    const intent = { seller: account.address, deadline: 9999999999n, listings: [{ sku: `0x${'12'.repeat(32)}` as const,
+      settlementCurrency: zeroAddress, unitPrice: 0n, quantity: 1n }] };
+    await Promise.all([rare.cart.api.listing.preview(intent), rare.cart.api.listing.preview(intent)]);
+    expect(received).toEqual(['refresh', 'preview', 'preview']);
+  });
+
+  it('rejects an authenticated Cart API origin mismatch before reading or refreshing its session', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 1));
+    const rare = createRareClient({
+      publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: 'https://different.example', accountClient: client(storage),
+    });
+    await expect(rare.cart.api.listing.invalidate(`0x${'11'.repeat(32)}`)).rejects.toMatchObject({ code: 'request_authority_mismatch' });
+    expect(await storage.get()).toEqual(expect.objectContaining({ refreshToken: 'refresh-1' }));
+  });
+
+  it('does not forward credentials across API base paths or redirects, or replay unauthorized Cart mutations', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set({ ...session(), apiBaseUrl: `${origin}/api`, authBaseUrl: `${origin}/api/auth/v2` });
+    const authenticated = createRareClient({ apiBaseUrl: `${origin}/api`, sessionStore: storage });
+    await expect(authenticated.authenticatedFetch(`${origin}/api-other/v1/cart/checkout/prepare`)).rejects.toMatchObject({ code: 'request_authority_mismatch' });
+    const received: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      received.push(request.url ?? '');
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      if (request.url === '/api/redirect') {
+        response.writeHead(307, { Location: `${origin}/outside` }); response.end(); return;
+      }
+      reply(response, { code: 'authentication_required' }, 401);
+    };
+    await expect(authenticated.authenticatedFetch(`${origin}/api/redirect`, { method: 'POST' })).rejects.toThrow();
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: `${origin}/api`, accountClient: authenticated });
+    await expect(rare.cart.api.listing.invalidate(`0x${'11'.repeat(32)}`)).rejects.toMatchObject({ status: 401 });
+    expect(received).toHaveLength(2);
+    expect(received.every(path => path.startsWith('/api/'))).toBe(true);
   });
 
   it('defaults to the production API and rejects the removed separate auth URL', async () => {
