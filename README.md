@@ -846,14 +846,17 @@ Feature methods keep the same request and response types. This client has no `au
 methods and never acquires or refreshes an SDK bearer session.
 
 ```ts
-const account = createRareClient({
+const rare = createRareClient({
   transport: (path, init) => fetch(`/api/rare${path}`, {
     ...init,
     credentials: 'same-origin',
     redirect: 'error',
   }),
 });
-const inbox = await account.messaging.inbox();
+const inbox = await rare.messaging.inbox();
+const master = await rare.upload(printFile, 'master.tiff', { access: 'private' });
+const addresses = await rare.shippingAddresses.list();
+const orders = await rare.orders.list();
 ```
 
 The transport receives API-relative paths such as `/v1/messaging/conversations`,
@@ -866,6 +869,9 @@ JavaScript. Authenticated API errors retain the SDK's normal error handling.
 
 Signed storage uploads bypass this API transport and use the optional `apiFetch`
 implementation with `credentials: 'omit'`, without authentication headers.
+Use this same `rare.upload` method for production files and public
+display images. SuperRare's existing session belongs in the application transport;
+there is no separate print uploader or upload-specific login.
 Without a transport, `createRareClient` retains its existing bearer-token
 login, session storage and refresh behavior.
 
@@ -933,6 +939,62 @@ npm run docs:build
 ```
 
 The generated reference is written to `docs/reference/`.
+
+## Print authoring and delivery checkout
+
+`rare.prints` exposes creator-owned drops, supported specifications, production
+quotes, frozen Listing preparations, and public print reads. It uses Rare API
+directly. Pass the authenticated account client to `createRareClient`.
+
+Upload print masters with `accountClient.upload(file, filename, { access:
+'private' })`. Pass the returned `key` as `print.productionUploadKey` when creating
+a standalone drop. Upload supplemental display images with public access and use
+their URLs in `print.images`. The SDK does not publish master download URLs.
+
+Prepare seller terms with `rare.prints.listings.prepare`, then call
+`rare.prints.listings.signAndPublish(preparation)` to sign and publish the frozen
+terms. This helper checks the chain, configured Cart contract, seller, and Listing
+digest before requesting the wallet signature.
+NFT transfer fulfillments require Cart collection approval. A missing approval
+raises `NftApprovalRequiredError` before the signature request. Pass
+`{ autoApprove: true }` as the second argument to explicitly authorize the existing
+Cart approval flow. The SDK verifies NFT ownership first and returns
+`approvalTxHash` when it submits an approval. If signing or publication fails after
+approval, `ApprovalSideEffectError` identifies the approval that remains active.
+
+Use `rare.prints.drops.update` for presentation edits. Production file and
+specification changes are allowed only before pricing is configured. Later
+physical changes require a new drop and SKU so existing signed terms stay intact.
+
+Purchases use `rare.cart.checkout`. Add `delivery: { savedAddressId }` or
+`delivery: { recipientDetails }` to the usual checkout intent. The returned
+preparation includes an idempotency key and an optional price breakdown. Retain
+that preparation for retries. `purchase({ preparation })` submits the delivery
+draft through generic Cart checkout. `rare.cart.checkout.coinflow` prepares a card
+session without a separate print payment flow.
+
+Saving an address is a separate, explicit operation. Use
+`accountClient.shippingAddresses.list`, `save`, and `delete`. Checkout does not
+implicitly save delivery details. `save` accepts an address UUID and `makeDefault`
+to create or replace an entry and select the default.
+
+`accountClient.orders.list` returns `{ data, nextCursor }` for account-owned
+fulfillment Orders. `orders.get(cartOrderId)` returns payment and fulfillment
+status without private address data. A fulfillment status of `COMPLETED` means
+the provider accepted the order, not that the item shipped or arrived. These
+methods do not include legacy NFT purchase history.
+
+Run `npm run test:integration:prints` against a non-production feature deployment.
+The test requires `RARE_ACCOUNT_TEST_API_URL` or `RARE_API_BASE_URL`, plus a registered
+test account in `RARE_ACCOUNT_TEST_PRIVATE_KEY` or `E2E_SELLER_PRIVATE_KEYS`. It saves
+and removes a fixture address, uploads reusable images, publishes and archives a
+test Listing, and quotes delivery. It prepares an idempotent unpaid Cart order
+but does not send a payment or submit a physical order.
+
+The focused commerce OpenAPI types come from the backend source document. Regenerate
+them with `npm run generate:commerce-types -- /path/to/openapi.json`. Keep these
+types separate from the existing generated discovery types to avoid unrelated
+schema changes while the API migration is in progress.
 
 ## Development and releases
 
