@@ -84,7 +84,7 @@ describe('account authentication over HTTP', () => {
         return reply(response, tokens);
       }
       if (request.url?.startsWith('/v1/cart/listings/search')) {
-        expect(request.headers.authorization).toBeUndefined();
+        expect(request.headers.authorization).toBe(request.url.includes('eligibility=eligible') ? 'Bearer access-2' : undefined);
         return reply(response, { data: [], pagination: {} });
       }
       expect(request.url?.startsWith('/v1/cart/listings/preview')).toBe(true);
@@ -99,6 +99,7 @@ describe('account authentication over HTTP', () => {
       ...(mode === 'existing account' ? { accountClient: client(storage) } : { sessionStore: storage }),
     });
     await rare.cart.api.listing.search();
+    await rare.cart.listing.search({ eligibility: 'eligible' });
     const intent = { seller: account.address, deadline: 9999999999n, listings: [{ sku: `0x${'12'.repeat(32)}` as const,
       settlementCurrency: zeroAddress, unitPrice: 0n, quantity: 1n }] };
     await Promise.all([rare.cart.api.listing.preview(intent), rare.cart.api.listing.preview(intent)]);

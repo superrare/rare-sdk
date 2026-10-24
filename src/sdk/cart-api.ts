@@ -117,7 +117,7 @@ export function createCartApiNamespace(
       return wire.listings.map(normalizeListing);
     },
     search: async (params: CartApiListingSearchParams = {}): Promise<CartApiListingSearchResult> => getData(
-      client.GET('/v1/cart/listings/search', { params: { query: { ...params, chainId, cartAddress: cartAddress() } } }),
+      (params.eligibility === undefined ? client : protectedClient).GET('/v1/cart/listings/search', { params: { query: { ...params, chainId, cartAddress: cartAddress() } } }),
       'Rare API did not return Cart Listing search results.',
     ),
     get: async (listingDigest: Hex): Promise<CartApiListing> => getWrappedData(
@@ -134,6 +134,7 @@ export function createCartApiNamespace(
     publish: async (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => getWrappedData(
       protectedClient.POST('/v1/cart/listing-roots', { body: {
         artifact: toCartListingRootArtifactWire(artifact),
+        ...(intent.eligibilityRuleId === undefined ? {} : { eligibilityRuleId: intent.eligibilityRuleId }),
         intent: {
           seller: intent.seller,
           deadline: intent.deadline.toString(),

@@ -118,6 +118,8 @@ export type CartApiListingRoot = {
 };
 
 export type CartApiListingSearchParams = {
+  /** Include open Listings and gated Listings the authenticated account can purchase. */
+  eligibility?: 'eligible';
   q?: string;
   sku?: Hex;
   seller?: Address;
@@ -201,6 +203,8 @@ export type CartListingIntent = {
   seller: Address;
   listings: readonly CartListingIntentItem[];
   deadline: bigint;
+  /** Attach the owned rule atomically when publishing every Listing in this root. */
+  eligibilityRuleId?: string;
 };
 
 export type CartListingPreviewWire = {
