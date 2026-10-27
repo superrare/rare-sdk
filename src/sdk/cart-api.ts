@@ -42,8 +42,6 @@ import type {
   CartDeliveryCheckout,
   CartCardCheckout,
   CartCheckoutRecovery,
-  CreateCartProduct,
-  AddCartVariants,
 } from './types/cart-api.js';
 
 type CartApiTransport = {
