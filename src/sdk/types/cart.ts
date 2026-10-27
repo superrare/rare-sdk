@@ -1,3 +1,4 @@
+import type { CartOrdersNamespace } from './orders.js';
 import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
   CartApiListingRoot, CartApiNamespace, CartApiPreparedPurchase, CartCheckoutIntent,
@@ -122,6 +123,7 @@ export type CartValidationResult<T> = { isValid: true; value: T } | { isValid: f
 
 export type CartNamespace = {
   purchaseEligibility: PurchaseEligibilityNamespace;
+  orders: CartOrdersNamespace;
   catalog: {
     products: CartApiNamespace['catalog']['products'];
     variants: CartApiNamespace['catalog']['variants'];
