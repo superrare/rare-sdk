@@ -257,7 +257,7 @@ export type CartCheckoutIntent = {
   delivery?: { recipientDetails: ShippingDetails } | { savedAddressId: string };
 };
 export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
-export type CartCheckoutBreakdown = { displayPrice: bigint; shipping: bigint; networkFee: bigint; total: bigint };
+export type CartCheckoutBreakdown = { displayPrice: bigint; production: bigint; shipping: bigint; networkFee: bigint; total: bigint };
 export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' | 'preparedPurchase'> & {
   orderId?: Hex;
   preparedPurchase?: CartApiPreparedPurchase;
@@ -301,7 +301,7 @@ export type CartCheckoutPreparation = {
 export type CartCheckoutPreviewWire = {
   preparationReference: string;
   preparation: CartApiPreparedPurchaseWire;
-  breakdown?: { displayPrice: string; shipping: string; networkFee: string; total: string };
+  breakdown?: { displayPrice: string; production: string; shipping: string; networkFee: string; total: string };
 };
 
 export type CartApiPreparedPurchaseWire = {

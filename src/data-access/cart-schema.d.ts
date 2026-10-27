@@ -2572,13 +2572,13 @@ export interface paths {
                 query: {
                     chainId: string | number;
                     cartAddress: string;
+                    eligibility?: "eligible";
                     q?: string;
                     sku?: string;
                     seller?: string;
                     fulfillmentKind?: number | null;
                     settlementCurrency?: string;
                     productId?: string;
-                    eligibility?: "eligible";
                     sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "deadlineAsc";
                     page?: number;
                     perPage?: number;
@@ -4825,7 +4825,7 @@ export interface components {
             /** Format: date-time */
             validUntil?: string | null;
         };
-};
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
