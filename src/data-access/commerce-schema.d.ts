@@ -358,17 +358,6 @@ export interface paths {
                                     images: string[];
                                     /** Format: uuid */
                                     printDropId: string | null;
-                                    printProduct?: {
-                                        id: string;
-                                        paper: string;
-                                        size: string;
-                                        widthInches: number;
-                                        heightInches: number;
-                                        /** @enum {string} */
-                                        sizeCategory: "small" | "medium" | "large" | "extraLarge";
-                                        /** @enum {string} */
-                                        format: "rectangular" | "square";
-                                    };
                                 }[];
                                 /** Format: date-time */
                                 createdAt: string;
@@ -484,17 +473,6 @@ export interface paths {
                                     images: string[];
                                     /** Format: uuid */
                                     printDropId: string | null;
-                                    printProduct?: {
-                                        id: string;
-                                        paper: string;
-                                        size: string;
-                                        widthInches: number;
-                                        heightInches: number;
-                                        /** @enum {string} */
-                                        sizeCategory: "small" | "medium" | "large" | "extraLarge";
-                                        /** @enum {string} */
-                                        format: "rectangular" | "square";
-                                    };
                                 }[];
                                 /** Format: date-time */
                                 createdAt: string;
@@ -2584,6 +2562,7 @@ export interface paths {
                         "application/json": {
                             data: {
                                 id: string;
+                                description: string;
                                 paper: string;
                                 size: string;
                                 widthInches: number;
@@ -2592,7 +2571,6 @@ export interface paths {
                                 sizeCategory: "small" | "medium" | "large" | "extraLarge";
                                 /** @enum {string} */
                                 format: "rectangular" | "square";
-                                description: string;
                                 /** @enum {boolean} */
                                 automaticOrientation: true;
                                 fileRequirements: {
@@ -2656,6 +2634,7 @@ export interface paths {
                         "application/json": {
                             data: {
                                 id: string;
+                                description: string;
                                 paper: string;
                                 size: string;
                                 widthInches: number;
@@ -2664,7 +2643,6 @@ export interface paths {
                                 sizeCategory: "small" | "medium" | "large" | "extraLarge";
                                 /** @enum {string} */
                                 format: "rectangular" | "square";
-                                description: string;
                                 /** @enum {boolean} */
                                 automaticOrientation: true;
                                 fileRequirements: {
@@ -2848,6 +2826,257 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+    "/v1/prints/release-manifests/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find your private print preparation for a release */
+        get: {
+            parameters: {
+                query: {
+                    chainId: "11155111";
+                    releaseContractAddress: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owned manifest context, or null */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            } | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/release-manifests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a page of your private release print associations */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                    expectedVersion?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private manifest page; no production storage references */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                entries: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    metadataUri: string | null;
+                                    productionUploadKey: string | null;
+                                }[];
+                            };
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+            };
+        };
+        /**
+         * Save up to 100 private release print associations with version and retry protection
+         * @description Preparation only. Release addresses are unverified context; this operation cannot publish prints or infer token identities. Omitted entries remain unchanged.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedVersion: number;
+                        /** Format: uuid */
+                        idempotencyKey: string;
+                        /** @enum {string} */
+                        chainId: "11155111";
+                        releaseContractAddress: string | null;
+                        entries: {
+                            /** Format: uuid */
+                            id: string;
+                            metadataUri: string | null;
+                            productionUploadKey: string | null;
+                        }[];
+                        /** @default [] */
+                        removeEntryIds?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Committed version and changed entries; idempotent retries return the original mutation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                entries: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    metadataUri: string | null;
+                                    productionUploadKey: string | null;
+                                }[];
+                                removedEntryIds: string[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/estimates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        specificationId: string;
+                        /** @default 1 */
+                        copies?: number;
+                        destinationCountryCode: string;
+                        /**
+                         * @default Standard
+                         * @enum {string}
+                         */
+                        shippingMethod?: "Standard";
+                    };
+                };
+            };
+            responses: {
+                /** @description Creator estimate */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                currency: "USD";
+                                productionCostUsdCents: string;
+                                shippingCostUsdCents: string;
+                                /** Format: date-time */
+                                quotedAt: string;
+                                /** Format: date-time */
+                                expiresAt: string;
+                                assumptions: {
+                                    specificationId: string;
+                                    /** @default 1 */
+                                    copies: number;
+                                    destinationCountryCode: string;
+                                    /**
+                                     * @default Standard
+                                     * @enum {string}
+                                     */
+                                    shippingMethod: "Standard";
+                                };
+                                warnings: ("estimate_only" | "artwork_price_taxes_and_checkout_fees_excluded" | "destinationCountryCode.UsSalesTaxWarning")[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
