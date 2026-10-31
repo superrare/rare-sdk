@@ -104,16 +104,36 @@ const published = await rare.cart.listing.publish({
   autoApprove: true,
 });
 
+// Rare API can also request a wallet-independent route for exact settlement
+// obligations. Exact-output is the default; exact-input remains available for
+// compatible Universal Router execution plans.
+const routingQuote = await rare.cart.routing.quote({
+  paymentCurrency,
+  obligations: settlementObligations,
+  mode: 'exact-output',
+});
+rare.cart.routing.assertFresh(routingQuote);
+
 // Preparation is wallet-independent and creates no signature, approval,
 // persistence, or transaction.
 const preparation = await rare.cart.checkout.prepare({
   paymentCurrency,
-  items: [{ listingDigest, quantity: 1n, recipient: buyerAddress }],
+  items: [{ kind: 'listing', listingDigest, quantity: 1n, recipient: buyerAddress }],
 });
 
 // Purchase revalidates, obtains the platform-signed immutable order, performs
 // preflight, optionally approves, executes, and verifies the receipt.
 const purchase = await rare.cart.checkout.purchase({ preparation, autoApprove: true });
+
+// Listing-less swaps use the same quote, signing, and purchase flow.
+// exact-input fixes the spending budget; exact-output fixes the tokens received.
+const swap = await rare.cart.checkout.prepare({ paymentCurrency,
+  items: [{ kind: 'swap', mode: 'exact-input', outputCurrency,
+    inputAmount: 1_000_000n, recipient: buyerAddress }],
+});
+// Both quote directions produce fixed signed input and output amounts.
+// Execution movement changes protocol spread, not the promised token output.
+const swapPurchase = await rare.cart.checkout.purchase({ preparation: swap, autoApprove: true });
 ```
 
 `autoApprove` defaults to `false`. Cart collects the exact platform-signed
@@ -122,6 +142,17 @@ amounts, while favorable routing variance is protocol spread. The signed route
 also carries the exact native `routerValue` forwarded to Universal Router.
 Pure portable Listing Root, authorization, order, route, hashing, and Merkle
 builders are available from `@rareprotocol/rare-sdk/utils` for advanced use.
+Cart routing uses the client-level `uniswapApiKey` (or
+`resolveUniswapApiKey`) and requires no wallet, account, approval, or write.
+It asks Uniswap for the protected quote and compiled `/swap` transaction,
+extracts the opaque Universal Router program, and validates only the Cart
+command-family policy and transaction envelope. Universal Router remains the
+authority for paths, pools, recipients, payer flags, exact-input/output
+semantics, refunds, and internal V4 actions. Existing Liquid Editions routing
+continues to use its established SDK flow.
+The result contains JSON-safe exact settlements, expected and protected input
+amounts, expiration, and normalized quote evidence. Once the platform accepts
+and signs the route, execution never requotes or substitutes it.
 Methods return structured results and reject on RPC, API, wallet, or validation
 failure.
 
