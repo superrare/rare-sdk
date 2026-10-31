@@ -972,6 +972,59 @@ is automatic. `fileRequirements` reports accepted content types and maximum byte
 Use the selected product `id` in the existing draft `specificationId`
 field. Product responses omit prices, shipping and destination country lists.
 
+Use `rare.prints.estimates.create({ specificationId: product.id,
+destinationCountryCode: 'US' })` to estimate production and Standard shipping
+before preparing a sale. `copies` defaults to one and supports 1–1000. The returned
+`PrintEstimate` contains separate USD cent totals for all requested copies,
+`quotedAt`, `expiresAt`, and the country/copy/shipping assumptions. It excludes
+artwork price, taxes, and checkout fees; final collector checkout costs may differ.
+The request uses account authentication and does not create a drop, order,
+payment, or wallet signature. It accepts `{ signal }` as a second argument.
+
+Private files can be prepared before a Release reveals through
+`rare.prints.releaseManifests`. `save(id, input)` upserts at most 100 explicit entry
+associations per request; omitted entries remain unchanged and `removeEntryIds`
+deletes only the named associations. Keep the manifest ID, stable entry IDs,
+`idempotencyKey`, and request unchanged on a retry. Start with `expectedVersion: 0`
+and use the returned version for the next edit. Each entry has a nullable final
+`metadataUri` and nullable private `productionUploadKey`, so incomplete preparation
+can be saved. A save returns its committed header, changed entries, and removed
+entry IDs; it does not return the entire collection.
+
+Resume with `lookup({ chainId: '11155111', releaseContractAddress })`, then
+`get(id, { page, perPage, expectedVersion })`. Reads return `{ data, pagination }`;
+pin `expectedVersion` while loading multiple pages and reload after a conflict.
+These methods use the account session and accept `{ signal }` separately. Release
+addresses are preparation context, not verified token ownership. Saving never
+infers token IDs from row order, publishes a print, or signs an offer. Revealed
+token association and artist review/publication remain separate operations.
+
+After reveal, call `rare.prints.releaseManifests.associations.verify(id,
+{ expectedVersion, tokenIds }, { signal })` with up to 100 distinct decimal token
+IDs. Results distinguish `VERIFIED`, `UNVERIFIED`, and `CONFLICT` and include the
+finalized block evidence and exact metadata URI used for the check. Manifest page
+entries include an optional association summary for resuming preparation. A
+verified association is ready for artist review; this method never signs or
+publishes a sale. Drop creation still uses `sourceUniversalTokenId` and
+`productionUploadKey`; the server derives and rechecks the manifest relationship.
+
+New drops can opt into collector-selected formats with
+`print.formatSelectionMode: 'COLLECTOR_FORMATS_V1'`. Configure the full server
+catalog snapshot with `rare.prints.options.configureAll({ dropId, input:
+{ displayPriceUsdCents } })`. The result has `listingOptionId` and `options`;
+prepare and publish **one** listing using `listingOptionId`. All formats share
+that artwork SKU, signed listing, and finite quantity. Existing standard-mode
+drafts continue to use `options.configure` and their original recovery artifacts.
+
+For a new-format sale, choose the public option's `id` and pass
+`optionSelections: [{ preparationId: option.preparationId, optionId: option.id }]`
+with the generic Cart checkout intent and delivery details. Each public option
+includes its product snapshot; format changes require a fresh checkout review.
+The SDK retains the reviewed mapping through preview, authorization, and Coinflow.
+Keep it with the original idempotency key when retrying or recovering. A checkout
+supports one selected format per artwork and up to five physical artwork
+selections. Legacy standard checkouts may omit the mapping.
+
 Run `npm run test:integration:print-products` against a deployment containing the
 product endpoints for a read-only catalog check. This check requires only
 `RARE_API_BASE_URL`.

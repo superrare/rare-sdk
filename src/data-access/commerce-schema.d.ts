@@ -623,6 +623,31 @@ export interface paths {
                                     maxQuantityPerCheckout: string;
                                     /** Format: uuid */
                                     eligibilityRuleId: string | null;
+                                    specificationId?: string;
+                                    product?: {
+                                        id: string;
+                                        description: string;
+                                        paper: string;
+                                        size: string;
+                                        widthInches: number;
+                                        heightInches: number;
+                                        /** @enum {string} */
+                                        sizeCategory: "small" | "medium" | "large" | "extraLarge";
+                                        /** @enum {string} */
+                                        format: "rectangular" | "square";
+                                        /** @enum {boolean} */
+                                        automaticOrientation: true;
+                                        fileRequirements: {
+                                            acceptedContentTypes: ("image/jpeg" | "image/png")[];
+                                            maximumBytes: number;
+                                        };
+                                        printAreas: {
+                                            name: string;
+                                            required: boolean;
+                                            recommendedWidthPixels: number;
+                                            recommendedHeightPixels: number;
+                                        }[];
+                                    };
                                 }[];
                             };
                         };
@@ -857,6 +882,8 @@ export interface paths {
                         /** @enum {string} */
                         chainId: "11155111";
                         print: {
+                            /** @enum {string} */
+                            formatSelectionMode?: "COLLECTOR_FORMATS_V1";
                             sourceUniversalTokenId?: components["schemas"]["UniversalTokenId"];
                             name: string;
                             description: string;
@@ -1841,6 +1868,8 @@ export interface paths {
                         /** Format: uuid */
                         preparationId: string;
                         /** Format: uuid */
+                        optionId?: string;
+                        /** Format: uuid */
                         idempotencyKey: string;
                         paymentCurrency: string;
                         nftRecipient: string;
@@ -2045,6 +2074,8 @@ export interface paths {
                         /** Format: uuid */
                         preparationId: string;
                         /** Format: uuid */
+                        optionId?: string;
+                        /** Format: uuid */
                         idempotencyKey: string;
                         paymentCurrency: string;
                         nftRecipient: string;
@@ -2239,6 +2270,8 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         preparationId: string;
+                        /** Format: uuid */
+                        optionId?: string;
                         /** Format: uuid */
                         idempotencyKey: string;
                         paymentCurrency: string;
@@ -2767,6 +2800,31 @@ export interface paths {
                                     maxQuantityPerCheckout: string;
                                     /** Format: uuid */
                                     eligibilityRuleId: string | null;
+                                    specificationId?: string;
+                                    product?: {
+                                        id: string;
+                                        description: string;
+                                        paper: string;
+                                        size: string;
+                                        widthInches: number;
+                                        heightInches: number;
+                                        /** @enum {string} */
+                                        sizeCategory: "small" | "medium" | "large" | "extraLarge";
+                                        /** @enum {string} */
+                                        format: "rectangular" | "square";
+                                        /** @enum {boolean} */
+                                        automaticOrientation: true;
+                                        fileRequirements: {
+                                            acceptedContentTypes: ("image/jpeg" | "image/png")[];
+                                            maximumBytes: number;
+                                        };
+                                        printAreas: {
+                                            name: string;
+                                            required: boolean;
+                                            recommendedWidthPixels: number;
+                                            recommendedHeightPixels: number;
+                                        }[];
+                                    };
                                 }[];
                             }[];
                         };
@@ -2848,6 +2906,752 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/release-manifests/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find your private print preparation for a release */
+        get: {
+            parameters: {
+                query: {
+                    chainId: "11155111";
+                    releaseContractAddress: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owned manifest context, or null */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Private print release request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/release-manifests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a page of your private release print associations */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                    expectedVersion?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private manifest page; no production storage references */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                entries: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    metadataUri: string | null;
+                                    productionUploadKey: string | null;
+                                    association?: {
+                                        /** @enum {string} */
+                                        status: "VERIFIED" | "UNVERIFIED" | "CONFLICT";
+                                        universalTokenId: string | null;
+                                        /** Format: date-time */
+                                        checkedAt: string | null;
+                                    };
+                                }[];
+                            };
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Private print release request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Save up to 100 private release print associations with version and retry protection
+         * @description Preparation only. Release addresses are unverified context; this operation cannot publish prints or infer token identities. Omitted entries remain unchanged.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedVersion: number;
+                        /** Format: uuid */
+                        idempotencyKey: string;
+                        /** @enum {string} */
+                        chainId: "11155111";
+                        releaseContractAddress: string | null;
+                        entries: {
+                            /** Format: uuid */
+                            id: string;
+                            metadataUri: string | null;
+                            productionUploadKey: string | null;
+                        }[];
+                        /** @default [] */
+                        removeEntryIds?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Committed version and changed entries; idempotent retries return the original mutation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                chainId: "11155111";
+                                releaseContractAddress: string | null;
+                                version: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                entries: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    metadataUri: string | null;
+                                    productionUploadKey: string | null;
+                                    association?: {
+                                        /** @enum {string} */
+                                        status: "VERIFIED" | "UNVERIFIED" | "CONFLICT";
+                                        universalTokenId: string | null;
+                                        /** Format: date-time */
+                                        checkedAt: string | null;
+                                    };
+                                }[];
+                                removedEntryIds: string[];
+                            };
+                        };
+                    };
+                };
+                /** @description Private print release request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private print release request failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/estimates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Estimate production and Standard shipping for a reference country */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        specificationId: string;
+                        /** @default 1 */
+                        copies?: number;
+                        destinationCountryCode: string;
+                        /**
+                         * @default Standard
+                         * @enum {string}
+                         */
+                        shippingMethod?: "Standard";
+                    };
+                };
+            };
+            responses: {
+                /** @description Creator estimate; final checkout costs may differ */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                currency: "USD";
+                                productionCostUsdCents: string;
+                                shippingCostUsdCents: string;
+                                /** Format: date-time */
+                                quotedAt: string;
+                                /** Format: date-time */
+                                expiresAt: string;
+                                assumptions: {
+                                    specificationId: string;
+                                    /** @default 1 */
+                                    copies: number;
+                                    destinationCountryCode: string;
+                                    /**
+                                     * @default Standard
+                                     * @enum {string}
+                                     */
+                                    shippingMethod: "Standard";
+                                };
+                                warnings: ("estimate_only" | "artwork_price_taxes_and_checkout_fees_excluded" | "destinationCountryCode.UsSalesTaxWarning")[];
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid print request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print configuration or availability changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print cannot be purchased or published */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Please retry later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print operation failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print dependency unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/drops/{id}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Configure collector formats sharing one artwork listing and quantity */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        displayPriceUsdCents: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Approved immutable format set */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                listingOptionId: string;
+                                options: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    drop_id: string;
+                                    option_key: string;
+                                    sku: string;
+                                    metadata: components["schemas"]["CartJsonObject"];
+                                    /** Format: date-time */
+                                    created_at: string;
+                                    /** Format: date-time */
+                                    updated_at: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid print request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print configuration or availability changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print cannot be purchased or published */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Please retry later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print operation failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print dependency unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/release-manifests/{id}/associations/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify minted release artworks against final metadata and private print associations
+         * @description Reads finalized chain evidence. Exact metadata matches establish readiness; no offers are published and existing orders remain unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expectedVersion: number;
+                        tokenIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Verification results for the requested token IDs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                manifestId: string;
+                                manifestVersion: number;
+                                results: {
+                                    tokenId: string;
+                                    universalTokenId: string;
+                                    /** Format: uuid */
+                                    entryId: string | null;
+                                    /** @enum {string} */
+                                    status: "VERIFIED" | "UNVERIFIED" | "CONFLICT";
+                                    reasonCode: string | null;
+                                    metadataUri: string | null;
+                                    blockNumber: string | null;
+                                    blockHash: string | null;
+                                    /** Format: date-time */
+                                    checkedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Private release verification failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private release verification failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private release verification failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private release verification failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Private release verification failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

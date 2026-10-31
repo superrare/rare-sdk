@@ -2,6 +2,32 @@ import type { paths } from '../../data-access/commerce-schema.js';
 import type { CartListingRootArtifact } from './cart.js';
 import type { Hex } from 'viem';
 import type { SearchPageResponse } from '../api.js';
+import type { RareAuthRequestOptions } from './account.js';
+
+export type CreatePrintEstimate = paths['/v1/prints/estimates']['post']['requestBody']['content']['application/json'];
+/** Provider totals for every requested copy. Artwork price, taxes and checkout fees are excluded. */
+export type PrintEstimate = paths['/v1/prints/estimates']['post']['responses'][200]['content']['application/json']['data'];
+export type SavePrintReleaseManifest = paths['/v1/prints/release-manifests/{id}']['put']['requestBody']['content']['application/json'];
+export type PrintReleaseManifestMutation = paths['/v1/prints/release-manifests/{id}']['put']['responses'][200]['content']['application/json']['data'];
+export type PrintReleaseManifestEntry = PrintReleaseManifestPage['data']['entries'][number];
+export type PrintReleaseManifestQuery = NonNullable<paths['/v1/prints/release-manifests/{id}']['get']['parameters']['query']>;
+export type PrintReleaseManifestPage = paths['/v1/prints/release-manifests/{id}']['get']['responses'][200]['content']['application/json'];
+export type LookupPrintReleaseManifest = NonNullable<paths['/v1/prints/release-manifests/lookup']['get']['parameters']['query']>;
+export type PrintReleaseManifestHeader = NonNullable<paths['/v1/prints/release-manifests/lookup']['get']['responses'][200]['content']['application/json']['data']>;
+export type VerifyPrintReleaseAssociations = paths['/v1/prints/release-manifests/{id}/associations/verify']['post']['requestBody']['content']['application/json'];
+export type PrintReleaseAssociationVerification = paths['/v1/prints/release-manifests/{id}/associations/verify']['post']['responses'][200]['content']['application/json']['data'];
+export type PrintReleaseAssociationResult = PrintReleaseAssociationVerification['results'][number];
+
+/** Private preparation only. Saving a manifest never signs, publishes, or associates a token by row order. */
+export type PrintReleaseManifestsNamespace = {
+  save: (id: string, input: SavePrintReleaseManifest, options?: RareAuthRequestOptions) => Promise<PrintReleaseManifestMutation>;
+  get: (id: string, query?: PrintReleaseManifestQuery, options?: RareAuthRequestOptions) => Promise<PrintReleaseManifestPage>;
+  lookup: (query: LookupPrintReleaseManifest, options?: RareAuthRequestOptions) => Promise<PrintReleaseManifestHeader | null>;
+  associations: {
+    /** Checks finalized on-chain token URIs against saved metadata associations; never publishes an offer. */
+    verify: (id: string, input: VerifyPrintReleaseAssociations, options?: RareAuthRequestOptions) => Promise<PrintReleaseAssociationVerification>;
+  };
+};
 
 /** Every draft requires a chain and private production file. NFT source attribution is optional. */
 export type CreatePrintDrop = paths['/v1/prints/drops']['post']['requestBody']['content']['application/json'];
@@ -9,6 +35,9 @@ export type PrintDrop = paths['/v1/prints/drops/mine/{id}']['get']['responses'][
 export type PublicPrintDrop = paths['/v1/prints/drops/{id}']['get']['responses'][200]['content']['application/json']['data'];
 export type PrintOption = paths['/v1/prints/drops/{id}/options/standard']['put']['responses'][200]['content']['application/json']['data'];
 export type ConfigurePrintOption = paths['/v1/prints/drops/{id}/options/standard']['put']['requestBody']['content']['application/json'];
+export type ConfigureAllPrintOptions = paths['/v1/prints/drops/{id}/options']['put']['requestBody']['content']['application/json'];
+/** All formats share one artwork SKU and one prepared listing. Prepare listingOptionId once. */
+export type PrintOptionSet = paths['/v1/prints/drops/{id}/options']['put']['responses'][200]['content']['application/json']['data'];
 /** Creators may replace the private production file after configuration or publication. Existing order snapshots remain unchanged; specification edits still require an unconfigured draft. */
 export type UpdatePrintDrop = paths['/v1/prints/drops/{id}']['patch']['requestBody']['content']['application/json'];
 export type PreparePrintListing = paths['/v1/prints/listings/prepare']['post']['requestBody']['content']['application/json'];
@@ -27,6 +56,7 @@ export type PrintBatchOptions<T> = { previousResults?: readonly PrintBatchResult
 export type PrintDropCreation = Omit<PrintDrop, 'options'>;
 export type PrintPublication = { preparation: PrintListingPreparation; signedArtifact: SignedPrintListingArtifact };
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
+export type AllPrintOptionsConfiguration = { dropId: string; input: ConfigureAllPrintOptions };
 export type PrintListingPublication = { preparationId: string; artifact: SignedPrintListingArtifact };
 export type PrintListingSigning = { preparation: PrintListingPreparation; signedArtifact?: SignedPrintListingArtifact };
 
@@ -37,6 +67,10 @@ export type PrintCreateOperation = {
 export type PrintConfigureOperation = {
   (input: PrintOptionConfiguration): Promise<PrintOption>;
   (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
+};
+export type PrintConfigureAllOperation = {
+  (input: AllPrintOptionsConfiguration): Promise<PrintOptionSet>;
+  (items: readonly PrintBatchItem<AllPrintOptionsConfiguration>[], options?: PrintBatchOptions<PrintOptionSet>): Promise<PrintBatchResult<PrintOptionSet>[]>;
 };
 export type PrintPrepareOperation = {
   (input: PreparePrintListing): Promise<PrintListingPreparation>;
@@ -53,6 +87,10 @@ export type PrintPublishOperation = {
 
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
+  estimates: {
+    create: (input: CreatePrintEstimate, options?: RareAuthRequestOptions) => Promise<PrintEstimate>;
+  };
+  releaseManifests: PrintReleaseManifestsNamespace;
   products: {
     list: (options?: PrintProductRequestOptions) => Promise<PrintProduct[]>;
     get: (id: string, options?: PrintProductRequestOptions) => Promise<PrintProduct>;
@@ -67,7 +105,7 @@ export type PrintsNamespace = {
     activity: (id: string, options?: { page?: number; perPage?: number }) => Promise<PrintActivity>;
   };
   releases: { list: (input: { universalTokenId: string }) => Promise<PublicPrintDrop[]> };
-  options: { configure: PrintConfigureOperation };
+  options: { configure: PrintConfigureOperation; configureAll: PrintConfigureAllOperation };
   listings: {
     prepare: PrintPrepareOperation;
     submitSigned: PrintSubmitSignedOperation;

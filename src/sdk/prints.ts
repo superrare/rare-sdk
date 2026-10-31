@@ -5,7 +5,8 @@ import { toCartListingRootArtifactWire } from './cart-api.js';
 import type { RareClientConfig } from './types/client.js';
 import type { PrintsNamespace, CreatePrintDrop, PrintDropCreation, PrintBatchItem, PrintBatchOptions, PrintBatchResult,
   PrintOptionConfiguration, PrintOption, PreparePrintListing, PrintListingPreparation,
-  PrintListingPublication, SignedPrintListingArtifact, PrintListingSigning, PrintPublication } from './types/prints.js';
+  PrintListingPublication, SignedPrintListingArtifact, PrintListingSigning, PrintPublication,
+  AllPrintOptionsConfiguration, PrintOptionSet } from './types/prints.js';
 import { isPrintBatch } from './prints-batch-core.js';
 import { runPrintBatch } from './prints-batch-shell.js';
 import { PrintPublicationError } from './prints-errors.js';
@@ -16,6 +17,10 @@ import { cartAbi } from '../contracts/abis/cart.js';
 import { getAddress, isAddressEqual } from 'viem';
 import { getContractAddresses } from '../contracts/addresses.js';
 import { resolveChainFromPublicClient } from './wallet-shell.js';
+import { validatePrintEstimateInput } from './print-estimates-core.js';
+import { createPrintReleaseManifestsNamespace } from './print-release-manifests.js';
+import { featureError } from './feature-error.js';
+import { validatePrintFormatConfiguration } from './print-formats-core.js';
 
 export function createPrintsNamespace(config: RareClientConfig, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
   const publicClient = createApiClient(config.apiBaseUrl, config.apiFetch);
@@ -46,6 +51,18 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
   function configure(input: PrintOptionConfiguration | readonly PrintBatchItem<PrintOptionConfiguration>[], options: PrintBatchOptions<PrintOption> = {}) {
     const operation = (value: PrintOptionConfiguration) => data(client.PUT('/v1/prints/drops/{id}/options/standard', { params: { path: { id: value.dropId } }, body: value.input }));
     return isPrintBatch<PrintOptionConfiguration>(input) ? runPrintBatch(input, options, operation) : operation(input);
+  }
+  function configureAll(input: AllPrintOptionsConfiguration): Promise<PrintOptionSet>;
+  function configureAll(items: readonly PrintBatchItem<AllPrintOptionsConfiguration>[], options?: PrintBatchOptions<PrintOptionSet>): Promise<PrintBatchResult<PrintOptionSet>[]>;
+  function configureAll(input: AllPrintOptionsConfiguration | readonly PrintBatchItem<AllPrintOptionsConfiguration>[], options: PrintBatchOptions<PrintOptionSet> = {}) {
+    const operation = (value: AllPrintOptionsConfiguration) => {
+      const validation = validatePrintFormatConfiguration(value);
+      if (!validation.success) return Promise.reject(featureError('invalid_print_format_configuration'));
+      return data(client.PUT('/v1/prints/drops/{id}/options', {
+        params: { path: { id: validation.data.dropId } }, body: validation.data.input,
+      }));
+    };
+    return isPrintBatch<AllPrintOptionsConfiguration>(input) ? runPrintBatch(input, options, operation) : operation(input);
   }
   function prepare(input: PreparePrintListing): Promise<PrintListingPreparation>;
   function prepare(input: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
@@ -105,6 +122,14 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     }
   };
   return {
+    estimates: {
+      async create(input, options = {}) {
+        const validation = validatePrintEstimateInput(input);
+        if (!validation.success) throw featureError('invalid_print_estimate');
+        return data(client.POST('/v1/prints/estimates', { body: input, signal: options.signal }));
+      },
+    },
+    releaseManifests: createPrintReleaseManifestsNamespace(client),
     products: {
       list: (options = {}) => data(publicClient.GET('/v1/prints/products', { signal: options.signal })),
       get: (id, options = {}) => data(publicClient.GET('/v1/prints/products/{id}', { params: { path: { id } }, signal: options.signal })),
@@ -119,7 +144,7 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
       activity: (id, options = {}) => data(publicClient.GET('/v1/prints/drops/{id}/activity', { params: { path: { id }, query: favoritePageQuery(options) } })),
     },
     releases: { list: input => data(publicClient.GET('/v1/prints/releases', { params: { query: input } })) },
-    options: { configure },
+    options: { configure, configureAll },
     listings: { prepare, submitSigned, publish },
   };
 }
