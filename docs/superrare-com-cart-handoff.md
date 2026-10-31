@@ -32,21 +32,7 @@ Use `rare.cart.listing.search({ eligibility: 'eligible' })` for an authenticated
 catalog of open Listings and gated Listings the account can purchase. The server
 revalidates eligibility during checkout. No separate print campaign API is needed.
 
-The claims and print interfaces require the corresponding backend migrations,
-endpoints, and pipeline workers. Their presence in SDK source does not establish
-that a particular Rare API deployment supports them.
-
-## Check the application and deployment versions
-
-Before changing the frontend, inspect its dependency pins and installed exports.
-The existing application has used published `@rareprotocol/rare-sdk` alongside
-a separately git-pinned `@rareprotocol/cart-sdk` alias. Do not assume either
-installed version includes the authenticated Cart and eligibility interfaces.
-
-Use an SDK revision containing this PR and its Cart dependencies. Record the
-tested SDK revision, Rare API deployment, chain, and configured Cart address.
-Do not upgrade unrelated SDK consumers or remove the compatibility alias as
-an incidental change.
+## Use the public SDK interfaces
 
 Check the public interfaces in these files rather than importing SDK internals:
 
@@ -58,20 +44,50 @@ Check the public interfaces in these files rather than importing SDK internals:
 - [`src/sdk/types/shipping-addresses.ts`](../src/sdk/types/shipping-addresses.ts)
 - [`src/sdk/types/orders.ts`](../src/sdk/types/orders.ts)
 
-## Configure one authenticated client
+## Configure one client with the application's transport
 
-Supply the application's existing viem clients and one session store:
+Use the application's existing viem clients and authenticated API transport:
 
 ```typescript
-const rare = createRareClient({ publicClient, walletClient, apiBaseUrl, sessionStore });
+import { createRareClient } from '@rareprotocol/rare-sdk';
+
+const rare = createRareClient({
+	publicClient,
+	walletClient,
+	apiBaseUrl,
+	transport: (path, init) => fetch(`/api/rare${path}`, {
+		...init,
+		credentials: 'same-origin',
+		redirect: 'error',
+	}),
+});
 ```
 
-Account and protected Cart methods share this client's login and renewal lock.
-Wallet connection alone does not authenticate an account. Account identity and
-transaction-signing wallets remain separate. For application-owned sessions,
-configure `transport` on the same constructor instead of `sessionStore`.
-Authenticated fetch wiring stays internal; consumers call typed SDK methods.
-See [Account integration](auth/integration.md) for authentication behavior.
+The application owns login, logout, refresh, and account switching. This client
+does not expose `auth` methods or start another SDK session. Wallet connection
+alone does not authenticate an account. Account identity and the transaction
+signing wallet remain separate inputs.
+
+Pass the original viem wallet client to `createRareClient`. SDK namespace writes
+apply wallet compatibility handling automatically. For direct viem writes outside
+SDK namespaces, use `createRareWalletClient({ publicClient, walletClient })` from
+`@rareprotocol/rare-sdk/wallet`. Do not import private SDK modules or apply a
+second compatibility wrapper to SDK namespace writes.
+
+The transport receives API-relative paths. Its server proxy must validate
+cookie-authenticated writes against CSRF and forward credentials only to the
+configured Rare API. Do not expose HttpOnly cookies or service credentials to
+browser code. Signed storage transfers bypass the authenticated API transport.
+Use `rare.upload` for both private masters and public display images.
+
+For SDK-managed bearer authentication, omit `transport`, supply `sessionStore`,
+and use `rare.auth`. Cart shares that client's session and renewal lock. See
+[Account integration](auth/integration.md) for the authentication contract.
+
+Keep SDK instances and private query caches scoped to the account, chain, and
+environment. Do not share account-bound clients between server requests.
+Clear private caches when an account or wallet changes. A tRPC adapter may
+forward requests, but it must not become another eligibility or fee engine.
 
 ## Build discovery, seller, and buyer flows
 
@@ -384,7 +400,7 @@ and retries. Do not resubmit a physical order from the SDK or frontend.
 
 Read `rare.cart.orders.get(orderId)` for payment status and `fulfillments`.
 Each fulfillment includes `orderLineIndex`, status, and nullable `providerOrderId`.
-`COMPLETED` means provider acceptance, not shipment or delivery. Poll this read
+`SUBMITTED` means provider acceptance, not shipment or delivery. Poll this read
 when useful; it does not initiate work.
 
 After an interrupted signed checkout, call
@@ -422,9 +438,15 @@ credentials in logs.
 Use `rare.cart.orders.list({ page, perPage })` for `{ data, pagination }` pages,
 and `rare.cart.orders.get(cartOrderId)` for one account-owned Cart
 Order. History includes NFT-only, swap-only, print, and mixed orders.
-Order reads do not require a blockchain RPC connection. The identifier is the Cart Order's bytes32 ID, not an internal fulfillment
-UUID or provider Order ID. These methods do not include legacy NFT purchase
+Order reads do not require a blockchain RPC connection.
+The identifier is the Cart Order's bytes32 ID, not an internal fulfillment UUID or provider Order ID. These methods do not include legacy NFT purchase
 history and do not return private postal snapshots.
+
+Orders expose a generic lifecycle: `PENDING`, `CONFIRMED`, `FULFILLED`, `FAILED`,
+and `CANCELLED`. `CONFIRMED` means the purchase succeeded. `FULFILLED` means every
+merchandise item is delivered. NFT and currency-swap items become fulfilled when
+execution is indexed. Mixed orders stay confirmed while physical delivery is
+outstanding.
 
 Keep payment state separate from each line's fulfillment state. Fulfillment
 `SUBMITTED` means the provider accepted the order. Later provider reads can move
@@ -448,6 +470,9 @@ is account-private and is not projected into public catalog or activity data.
 No additional carrier service is needed; carrier-confirmed delivery is not
 provided by this integration.
 
+Checkout recovery retains its internal authorization statuses such as `READY`
+and `EXECUTED`; those are separate from the public order lifecycle.
+
 Persist enough account-scoped recovery state to reconnect a confirmed payment
 to its Cart Order. Poll stored backend status with the application's query
 library. Backend workers own submission, retries, and reconciliation, so closing
@@ -456,6 +481,9 @@ provider confirmation from the transaction receipt alone, or ask the buyer to
 pay again while fulfillment is pending.
 
 ## Extend missing SDK capabilities instead of bypassing them
+
+If integration requires backend or SDK changes, send Keegan a DM with the use
+case and the missing or incorrect behavior.
 
 The account shipping, print authoring, delivery checkout, card session, and
 fulfillment Order methods above now exist. The Cart catalog supports the creator
@@ -467,9 +495,10 @@ If the endpoint exists, add a typed SDK method using the existing transport and
 error handling. If it does not exist, add it in the owning backend layer before
 wiring the frontend. Preserve the user's task scope when proposing those changes.
 
-Add a named, typed SDK method for missing authenticated capabilities. Reuse
-the internal account transport rather than exposing a raw authenticated request
-function or asking consumers to read session credentials.
+Authenticated request wiring stays internal to the SDK. Add a named, typed SDK
+method for missing authenticated capabilities and reuse its existing account
+transport. Consumers configure `sessionStore` or application-owned `transport`
+on one `createRareClient`; they do not read credentials or pass a separate client.
 Do not import private SDK modules or replace a missing method with another
 component-local request client.
 
@@ -493,11 +522,11 @@ cases against a compatible backend:
 Run application typechecking, lint, and browser flow checks. Run the SDK's
 relevant checks after changing its interface. The dedicated live eligibility
 suite is `npm run test:integration:eligibility`; it needs a test deployment with
-the new backend and the dedicated test account and RPC configuration. Do not run
-funded write tests against production or report a source-only check as live
-integration coverage.
+Cart and eligibility endpoints, a dedicated test account, and RPC configuration.
+Do not run funded write tests against production or report a source-only check
+as live integration coverage.
 
-For the new print methods, run `npm run test:integration:prints` in this repo and
+For print methods, run `npm run test:integration:prints` in this repo and
 `npm run test:prints:e2e` in rare-cli against the same compatible feature API.
 Set `RARE_ACCOUNT_TEST_API_URL` explicitly for the SDK and `RARE_API_BASE_URL`
 explicitly for the CLI. Use registered dedicated test accounts and Sepolia RPC
@@ -512,8 +541,6 @@ commands through delivery preview and signed Order preparation. Neither suite
 pays or submits a physical Order. A separate funded sandbox fulfillment run is required to prove provider
 submission and the private signed download end to end.
 
-At handoff, report the SDK revision, API deployment, chain, test commands and
-results, and any endpoint still missing from the SDK or backend.
 
 ## Use consistent list and mutation results
 
