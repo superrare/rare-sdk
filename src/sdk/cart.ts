@@ -7,10 +7,9 @@ import { buildCartListingRootArtifact, cartDomain, hashCartListing, hashCartList
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
-import { cartFulfillmentKinds, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
+import { cartFulfillmentKinds, type CartCheckoutAuthorization, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
 import { requireWallet } from './wallet-shell.js';
 import { createCartApiNamespace } from './cart-api.js';
-import type { CartCheckoutPreparation } from './types/cart-api.js';
 import { createCartRoutingNamespace } from './cart-routing.js';
 import { createEligibilityNamespace } from './eligibility.js';
 
@@ -46,7 +45,7 @@ export function createCartNamespace(
   chainId: number,
   addresses: { cart?: Address; cartLens?: Address },
   authenticatedFetch?: typeof globalThis.fetch,
-): CartNamespace {
+): Omit<CartNamespace, 'orders'> {
   const api = createCartApiNamespace({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }, { chainId, cartAddress: addresses.cart }, authenticatedFetch);
   const requireCart = (): Address => {
     if (!addresses.cart) throw new Error(`Cart is not deployed on "${chain}". Available on: sepolia.`);
@@ -159,7 +158,9 @@ export function createCartNamespace(
     },
     checkout: {
       receipt: api.checkout.receipt,
+      recover: api.checkout.recover,
       authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
+      coinflow: api.checkout.coinflow,
       prepare(intent) {
         const validation = validateCartCheckoutIntent(intent);
         if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'Cart checkout intent is invalid.', validation.issues);
@@ -229,11 +230,33 @@ async function purchaseCartCheckout(
 
 async function authorizeCartCheckout(
   api: ReturnType<typeof createCartApiNamespace>, chainId: number, cart: Address,
-  preparation: CartCheckoutPreparation,
+  preparation: CartCheckoutAuthorization,
 ) {
+  if (!('schemaVersion' in preparation)) {
+    if ('preparationReference' in preparation) {
+      if (preparation.preparationReference.trim().length === 0 || preparation.preparationReference.length > 512) {
+        throw new CartPreparationError('invalid_preparation', 'Use the original checkout preparation reference.');
+      }
+      return api.checkout.prepare(preparation.preparationReference);
+    }
+    const validation = validateCartCheckoutIntent(preparation);
+    if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'The saved checkout draft is invalid.', validation.issues);
+    return api.checkout.prepare(preparation);
+  }
   const validation = validateCartCheckoutPreparationForPurchase(preparation, { chainId: BigInt(chainId), cart });
   if (!validation.isValid) throw new CartPreparationError('invalid_preparation', 'Cart checkout preparation cannot be authorized.', validation.issues);
-  const preparedPurchase = await api.checkout.prepare(preparation.preparationReference);
+  const delivery = preparation.intent.delivery;
+  const idempotencyKey = preparation.idempotencyKey;
+  if (delivery !== undefined && idempotencyKey === undefined) {
+    throw new CartPreparationError('invalid_preparation', 'Delivery checkout requires its original idempotency key.');
+  }
+  const preparedPurchase = await api.checkout.prepare(delivery === undefined || idempotencyKey === undefined
+    ? preparation.preparationReference
+    : { ...preparation.intent, delivery, idempotencyKey });
+  if (preparedPurchase.executePurchase.order.paymentAmount > preparation.paymentAmount) {
+    throw new CartPreparationError('quote_changed', 'The checkout total increased. Review a fresh quote before purchasing.');
+  }
+
   const swapValidation = validateCartApprovedSwapOutputs(preparation.lines, preparedPurchase.executePurchase.lines);
   if (!swapValidation.isValid) {
     throw new CartPreparationError('quote_changed', 'The quoted token outputs changed. Review a fresh quote before purchasing.', swapValidation.issues);

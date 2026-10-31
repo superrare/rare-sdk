@@ -846,14 +846,17 @@ Feature methods keep the same request and response types. This client has no `au
 methods and never acquires or refreshes an SDK bearer session.
 
 ```ts
-const account = createRareClient({
+const rare = createRareClient({
   transport: (path, init) => fetch(`/api/rare${path}`, {
     ...init,
     credentials: 'same-origin',
     redirect: 'error',
   }),
 });
-const inbox = await account.messaging.inbox();
+const inbox = await rare.messaging.inbox();
+const master = await rare.upload(printFile, 'master.tiff', { access: 'private' });
+const addresses = await rare.shippingAddresses.list();
+const orders = await rare.cart.orders.list();
 ```
 
 The transport receives API-relative paths such as `/v1/messaging/conversations`,
@@ -866,6 +869,9 @@ JavaScript. Authenticated API errors retain the SDK's normal error handling.
 
 Signed storage uploads bypass this API transport and use the optional `apiFetch`
 implementation with `credentials: 'omit'`, without authentication headers.
+Use this same `rare.upload` method for production files and public
+display images. SuperRare's existing session belongs in the application transport;
+there is no separate print uploader or upload-specific login.
 Without a transport, `createRareClient` retains its existing bearer-token
 login, session storage and refresh behavior.
 
@@ -936,6 +942,78 @@ npm run docs:build
 ```
 
 The generated reference is written to `docs/reference/`.
+
+## Print authoring and delivery checkout
+
+`rare.prints` exposes creator-owned drops, supported print products, production
+quotes, frozen Listing preparations, and public print reads. It uses Rare API
+directly and shares the account session configured through `createRareClient`.
+
+Print products are public reads: `await rare.prints.products.list({ signal })` and
+`await rare.prints.products.get("GLOBAL-FAP-8X12", { signal })`. The catalog has eight
+Enhanced matte art paper presets in rectangular and square sizes. `printAreas`
+contains provider recommended pixel dimensions, not upload minimums. Orientation
+is automatic. `fileRequirements` reports accepted content types and maximum bytes.
+Use the selected product `id` in the existing draft `specificationId`
+field. Product responses omit prices, shipping and destination country lists.
+
+Run `npm run test:integration:print-products` against a deployment containing the
+product endpoints for a read-only catalog check. This check requires only
+`RARE_API_BASE_URL`.
+
+Upload print masters with `rare.upload(file, filename, { access:
+'private' })`. Pass the returned `key` as `print.productionUploadKey` when creating
+a standalone drop. Upload supplemental display images with public access and use
+their URLs in `print.images`. Every draft requires an explicit `chainId` and
+`print` details, including a supported `print.specificationId`. Optional
+`print.sourceUniversalTokenId` attributes a creator-owned NFT and appears in
+`drop.metadata.sourceUniversalTokenId`. The SDK does not publish master download URLs.
+
+Prepare seller terms with `rare.prints.listings.prepare`, then call
+`rare.prints.listings.publish({ preparation })` to sign and publish the frozen
+terms. This helper checks the chain, configured Cart contract, seller, and Listing
+digest before requesting the wallet signature.
+
+Use `rare.prints.drops.update` for presentation edits and production-file
+replacement, including after pricing or publication. Upload a replacement
+privately and call `rare.prints.drops.update(dropId, { productionUploadKey: upload.key })`.
+Future orders use the new master; existing authorized and paid orders keep their
+original production snapshots. Specification changes still require an
+unconfigured draft or a replacement drop and SKU.
+
+Purchases use `rare.cart.checkout`. Add `delivery: { savedAddressId }` or
+`delivery: { recipientDetails }` to the usual checkout intent. The returned
+preparation includes an idempotency key and an optional price breakdown. Retain
+that preparation for retries. `purchase({ preparation })` submits the delivery
+draft through generic Cart checkout. `rare.cart.checkout.coinflow` prepares a card
+session without a separate print payment flow.
+
+Saving an address is a separate, explicit operation. Use
+`rare.shippingAddresses.list`, `save`, and `delete`. Checkout does not
+implicitly save delivery details. `save` accepts an address UUID and `makeDefault`
+to create or replace an entry and select the default.
+
+`rare.cart.orders.list` returns `{ data, nextCursor }` for account-owned
+Cart orders, including NFT-only, swap-only, print, and mixed purchases.
+`rare.cart.orders.get(cartOrderId)` returns payment and fulfillment
+status without private address data. Orders use `PENDING`, `CONFIRMED`,
+`FULFILLED`, `FAILED`, and `CANCELLED`. On-chain items are fulfilled when execution
+is indexed; mixed orders stay confirmed while physical delivery is outstanding.
+Item `fulfillmentStatus` and provider records distinguish `PENDING`, `SUBMITTED`,
+`SHIPPED`, `FULFILLED`, `FAILED`, and `CANCELLED`. `SUBMITTED` means provider
+acceptance, not delivery. These methods do not include legacy NFT purchase history.
+
+Run `npm run test:integration:prints` against a non-production feature deployment.
+The test requires `RARE_ACCOUNT_TEST_API_URL` or `RARE_API_BASE_URL`, plus a registered
+test account in `RARE_ACCOUNT_TEST_PRIVATE_KEY` or `E2E_SELLER_PRIVATE_KEYS`. It saves
+and removes a fixture address, uploads reusable images, publishes and archives a
+test Listing, and quotes delivery. It prepares an idempotent unpaid Cart order
+but does not send a payment or submit a physical order.
+
+The focused commerce OpenAPI types come from the backend source document. Regenerate
+them with `npm run generate:commerce-types -- /path/to/openapi.json`. Keep these
+types separate from the existing generated discovery types to avoid unrelated
+schema changes while the API migration is in progress.
 
 ## Development and releases
 

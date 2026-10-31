@@ -10,6 +10,7 @@ import type { RareApiClient, RareClient, RareClientConfig } from '../../src/sdk/
 import { createAccountOperations } from '../../src/sdk/account-operations.js';
 import { createMemoryAccountSessionStore } from '../../src/sdk/account-session-store.js';
 import type { RareAccountSession, RareDeviceAuthorization } from '../../src/sdk/types/account.js';
+import type { CartOrder } from '../../src/sdk/types/orders.js';
 
 // Controlled HTTP responses cover client edge cases; deployed-service coverage is separate.
 const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
@@ -198,6 +199,58 @@ describe('account authentication over HTTP', () => {
     expect(await sdk.profile.update({ profile: { bio: 'Updated bio' } })).toMatchObject({ profile: { bio: 'Updated bio' } });
   });
 
+  it.each(['bearer', 'application'])('shares address and order methods through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const sdk = mode === 'bearer' ? client(storage) : createRareClient({
+      transport: (path, init) => fetch(`${origin}${path}`, {
+        ...init, headers: { ...Object.fromEntries(new Headers(init.headers)), Cookie: 'sr-session=application-owned' },
+      }),
+    });
+    const details = { name: 'SDK fixture', email: 'sdk@example.test', phoneNumber: '+12025550100', addressLine1: '123 Test Street',
+      townOrCity: 'New York', postalOrZipCode: '10001', countryCode: 'US' };
+    const input = { id: '11111111-1111-4111-8111-111111111111', label: 'Studio', details, makeDefault: false };
+    const order = { id: 'fixture-order', status: 'CONFIRMED', paymentCurrency: null, paymentAmount: '0',
+      createdAt: '2026-10-23T00:00:00Z', updatedAt: '2026-10-23T00:00:00Z', fulfillments: [],
+      items: [{ lineIndex: 0, listingDigest: `0x${'11'.repeat(32)}`, sku: `0x${'22'.repeat(32)}`,
+        quantity: '2', fulfillmentStatus: 'SUBMITTED', title: 'Print edition', images: ['https://images.example.test/preview.png'], printDropId: 'fixture-print',
+        printProduct: { id: 'GLOBAL-FAP-8X12', paper: 'Enhanced matte art paper · 200gsm', size: '8 × 12 in',
+          widthInches: 8, heightInches: 12, sizeCategory: 'small', format: 'rectangular' } },
+      { lineIndex: 1, listingDigest: `0x${'33'.repeat(32)}`, sku: `0x${'44'.repeat(32)}`,
+        quantity: '1', fulfillmentStatus: 'SHIPPED', title: 'Historical print', images: [], printDropId: 'historical-print' }] } satisfies CartOrder;
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      expect(request.headers.cookie).toBe(mode === 'application' ? 'sr-session=application-owned' : undefined);
+      if (request.url === '/v1/account/orders?page=1&perPage=2') return reply(response, { data: [order], pagination: { page: 1, perPage: 2, totalCount: 1, totalPages: 1 } });
+      if (request.url === '/v1/account/orders/fixture-order') return reply(response, { data: order });
+      if (request.url === '/v1/account/shipping-addresses') {
+        if (request.method === 'PUT') {
+          // Match the deployed API: a JSON body without its media type is not
+          // parsed as JSON, even if JSON.parse would accept the raw bytes.
+          if (request.headers['content-type'] !== 'application/json') {
+            return reply(response, { error: { code: 'invalid_request', message: 'Check your shipping details.' } }, 400);
+          }
+          expect(JSON.parse(body)).toEqual(input);
+          return reply(response, { data: { id: input.id, label: input.label, details, isDefault: true } });
+        }
+        else expect(request.method).toBe('GET');
+        return reply(response, { data: [] });
+      }
+      expect(request.url).toBe('/v1/account/shipping-addresses/fixture');
+      expect(request.method).toBe('DELETE');
+      response.writeHead(204); response.end();
+    };
+    expect(await sdk.shippingAddresses.list()).toEqual([]);
+    expect(await sdk.shippingAddresses.save(input)).toEqual({ id: input.id, label: input.label, details, isDefault: true });
+    expect(await sdk.shippingAddresses.delete('fixture')).toBeUndefined();
+    expect((await sdk.cart.orders.list({ perPage: 2 })).data[0]?.items).toEqual(order.items);
+    const fetchedOrder = await sdk.cart.orders.get(order.id);
+    expect(fetchedOrder.items).toEqual(order.items);
+    expect(fetchedOrder.items?.[0]?.printProduct).toEqual(order.items[0]?.printProduct);
+    expect(fetchedOrder.items?.[1]).not.toHaveProperty('printProduct');
+    expect('orders' in sdk).toBe(false);
+  });
+
   it('shares unified-client refresh and session locking with Cart, keeping public reads anonymous', async () => {
     const storage = createMemoryAccountSessionStore();
     await storage.set(session(Date.now() - 1));
@@ -211,6 +264,10 @@ describe('account authentication over HTTP', () => {
       if (request.url?.startsWith('/v1/cart/listings/search')) {
         expect(request.headers.authorization).toBe(request.url.includes('eligibility=eligible') ? 'Bearer access-2' : undefined);
         return reply(response, { data: [], pagination: {} });
+      }
+      if (request.url === '/v1/account/orders?page=1&perPage=20') {
+        expect(request.headers.authorization).toBe('Bearer access-2');
+        return reply(response, { data: [], pagination: { page: 1, perPage: 20, totalCount: 0, totalPages: 0 } });
       }
       expect(request.url?.includes('/invalidate')).toBe(true);
       expect(request.headers.authorization).toBe('Bearer access-2');
@@ -226,6 +283,7 @@ describe('account authentication over HTTP', () => {
     await rare.cart.listing.search();
     await rare.cart.listing.search({ eligibility: 'eligible' });
     await Promise.all([rare.cart.listing.invalidate(`0x${'12'.repeat(32)}`), rare.cart.listing.invalidate(`0x${'13'.repeat(32)}`)]);
+    expect(await rare.cart.orders.list()).toEqual({ data: [], pagination: { page: 1, perPage: 20, totalCount: 0, totalPages: 0 } });
     expect(received).toEqual(['refresh', 'preview', 'preview']);
   });
 
@@ -278,6 +336,34 @@ describe('account authentication over HTTP', () => {
     expect(rare.cart).not.toHaveProperty('api');
     expect(await rare.cart.purchaseEligibility.claims.list({ page: 2, perPage: 10 })).toEqual({ data: [], pagination });
     await expect(rare.cart.purchaseEligibility.rules.list({ page: 0 })).rejects.toThrow();
+  });
+
+  it('authorizes saved references and delivery drafts without changing their checkout identities', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
+    const address = '0x0000000000000000000000000000000000000000';
+    const digest = `0x${'11'.repeat(32)}`;
+    const idempotencyKey = '11111111-1111-4111-8111-111111111111';
+    const wire = { schemaVersion: 1, chainId: String(sepolia.id), cartAddress: rare.contracts.cart, preparedAt: new Date().toISOString(),
+      executePurchase: { order: { orderId: digest, paymentCurrency: address, deadline: '9999999999', paymentAmount: '1',
+        orderLinesHash: digest, payoutRouteHash: digest, fulfillmentActionsHash: digest },
+        lines: [], listings: [], authorization: { listingRoots: [], listingRootSignatures: [], listingRootIndexes: [], listingProofs: [] },
+        route: { commands: '0x', inputs: [], routerValue: '0' }, actions: [], platformSignature: '0x00' } };
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      const data: unknown = JSON.parse(body);
+      if (request.headers['idempotency-key'] === undefined) expect(data).toEqual({ preparationReference: 'original-reference' });
+      else {
+        expect(request.headers['idempotency-key']).toBe(idempotencyKey);
+        expect(data).toMatchObject({ items: [{ quantity: '1' }], delivery: { savedAddressId: idempotencyKey } });
+      }
+      reply(response, { data: wire });
+    };
+    expect((await rare.cart.checkout.authorize({ preparationReference: 'original-reference' })).executePurchase.order.orderId).toBe(digest);
+    expect((await rare.cart.checkout.authorize({ idempotencyKey, paymentCurrency: '0x0000000000000000000000000000000000000000',
+      items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }], delivery: { savedAddressId: idempotencyKey } })).executePurchase.order.orderId).toBe(digest);
+    await expect(rare.cart.checkout.authorize({ preparationReference: '' })).rejects.toThrow();
   });
 
   it('defaults to the production API and rejects the removed separate auth URL', async () => {

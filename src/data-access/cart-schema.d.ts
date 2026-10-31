@@ -2565,13 +2565,13 @@ export interface paths {
                 query: {
                     chainId: string | number;
                     cartAddress: string;
+                    eligibility?: "eligible";
                     q?: string;
                     sku?: string;
                     seller?: string;
                     fulfillmentKind?: number | null;
                     settlementCurrency?: string;
                     productId?: string;
-                    eligibility?: "eligible";
                     sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "deadlineAsc";
                     page?: number;
                     perPage?: number;
@@ -4629,7 +4629,6 @@ export interface components {
                 }[];
             };
         };
-        /** @description A JSON object whose values may contain nested JSON data. */
     
         CartFeeCreate: {
             /** @enum {string} */
