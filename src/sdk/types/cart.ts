@@ -4,6 +4,7 @@ import type {
   CartCheckoutPreparation, CartListingIntent,
 } from './cart-api.js';
 import type { CartRoutingNamespace } from './cart-routing.js';
+import type { PurchaseEligibilityNamespace } from './eligibility.js';
 
 export const cartFulfillmentKinds = {
   none: 0,
@@ -113,6 +114,7 @@ export type CartValidationResult<T> = { isValid: true; value: T } | { isValid: f
 
 export type CartNamespace = {
   fees:CartApiNamespace['fees'];
+  purchaseEligibility: PurchaseEligibilityNamespace;
   catalog: {
     products: CartApiNamespace['catalog']['products'];
     variants: CartApiNamespace['catalog']['variants'];

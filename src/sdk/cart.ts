@@ -12,6 +12,7 @@ import { requireWallet } from './wallet-shell.js';
 import { createCartApiNamespace } from './cart-api.js';
 import type { CartCheckoutPreparation } from './types/cart-api.js';
 import { createCartRoutingNamespace } from './cart-routing.js';
+import { createEligibilityNamespace } from './eligibility.js';
 
 export type * from './types/cart.js';
 export type * from './types/cart-api.js';
@@ -86,6 +87,7 @@ export function createCartNamespace(
   };
 
   return {
+    purchaseEligibility: createEligibilityNamespace(config, { chainId: chainId.toString(), cartAddress: requireCart }, authenticatedFetch),
     fees:api.fees,
     catalog: { products: api.catalog.products, variants: api.catalog.variants },
     approval: {
