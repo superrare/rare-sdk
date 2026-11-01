@@ -9,7 +9,7 @@ const prepared: CartApiPreparedPurchase = {
   schemaVersion: 1, chainId: scope.chainId, cartAddress: scope.cart,
   preparedAt: '2026-10-20T00:00:00.000Z',
   executePurchase: {
-    order: { orderId, paymentCurrency: zeroAddress, deadline: 1n, paymentAmount: 100n,
+    order: { spreadRecipient: '0x0000000000000000000000000000000000001234', orderId, paymentCurrency: zeroAddress, deadline: 1n, paymentAmount: 100n,
       orderLinesHash: orderId, payoutRouteHash: orderId, fulfillmentActionsHash: orderId },
     lines: [], listings: [], actions: [],
     authorization: { listingRoots: [], listingRootSignatures: [], listingRootIndexes: [], listingProofs: [] },

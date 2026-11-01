@@ -16,7 +16,7 @@ describe('print batch authoring over HTTP', () => {
     const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
     const cart = getContractAddresses('sepolia').cart;
     if (cart === undefined) throw new Error('No Cart address configured');
-    const listing: CartListing = { listingSalt: `0x${'11'.repeat(32)}`, seller: account.address, sku: `0x${'22'.repeat(32)}`,
+    const listing: CartListing = { splits: [], listingSalt: `0x${'11'.repeat(32)}`, seller: account.address, sku: `0x${'22'.repeat(32)}`,
       fulfillmentKind: 1, tokenContract: zeroAddress, tokenId: 0n, settlementCurrency: zeroAddress,
       minimumUnitPrice: 1n, availableQuantity: 10n, paymentRecipient: account.address };
     const deadline = String(Math.floor(Date.now() / 1000) + 3600);

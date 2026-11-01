@@ -5,7 +5,7 @@ import type { paths } from '../../../src/data-access/commerce-schema.js';
 import { parsePrintListingTerms, validatePrintListingQuantityLimit } from '../../../src/sdk/prints-core.js';
 import type { ConfigurePrintOption, CreatePrintDrop, PreparePrintListing, PrintListingPreparation, PrintDrop, PublicPrintDrop } from '../../../src/sdk/types/prints.js';
 
-const listing = { listingSalt: zeroHash, seller: zeroAddress, sku: zeroHash, fulfillmentKind: 1,
+const listing = { splits: [], listingSalt: zeroHash, seller: zeroAddress, sku: zeroHash, fulfillmentKind: 1,
   tokenContract: zeroAddress, tokenId: '0', settlementCurrency: zeroAddress, minimumUnitPrice: '15000000',
   availableQuantity: '100', paymentRecipient: zeroAddress };
 const dropId = '00000000-0000-4000-8000-000000000001';
@@ -47,6 +47,13 @@ describe('frozen print Listing terms', () => {
     expectTypeOf<PrintDrop>().not.toHaveProperty('universal_token_id');
     expectTypeOf<PublicPrintDrop>().not.toHaveProperty('universalTokenId');
     expectTypeOf<paths>().not.toHaveProperty('/v1/prints/orders/{id}');
+  });
+  it('retains signed split terms and rejects old snapshots without them', () => {
+    const splits = [{recipient:'0x0000000000000000000000000000000000001234',basisPoints:10000}];
+    const result = parsePrintListingTerms(preparation({dropId,configured:{listing:{...listing,splits}},intent:{deadline:'2000000000'}}));
+    expect(result.listing.splits).toEqual(splits);
+    const {splits:_splits,...oldListing}=listing;
+    expect(() => parsePrintListingTerms(preparation({dropId,configured:{listing:oldListing},intent:{deadline:'2000000000'}}))).toThrow('explicit splits array');
   });
   it('retains zero token IDs and converts frozen amounts without changing seller economics', () => {
     const terms = parsePrintListingTerms(preparation({ dropId, configured: { listing }, intent: { deadline: '2000000000' } }));

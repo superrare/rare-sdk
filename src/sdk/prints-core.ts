@@ -50,12 +50,17 @@ export function parsePrintListingTerms(preparation: PrintListingPreparation): { 
     throw new Error('Print preparation does not identify its owned drop.');
   }
   const value = snapshot.configured.listing;
+  if (!Array.isArray(value.splits)) throw new Error('Print Listing terms require an explicit splits array.');
+  const splits = value.splits.map((split: unknown) => {
+    if (!record(split) || typeof split.basisPoints !== 'number' || !Number.isInteger(split.basisPoints)) throw new Error('Print Listing split basis points must be integers.');
+    return {recipient: address(split.recipient), basisPoints: split.basisPoints};
+  });
   const listing: CartListing = {
     listingSalt: hex(value.listingSalt), seller: address(value.seller), sku: hex(value.sku),
     fulfillmentKind: fulfillmentKind(value.fulfillmentKind), tokenContract: address(value.tokenContract),
     tokenId: integer(value.tokenId), settlementCurrency: address(value.settlementCurrency),
     minimumUnitPrice: integer(value.minimumUnitPrice), availableQuantity: integer(value.availableQuantity),
-    paymentRecipient: address(value.paymentRecipient),
+    paymentRecipient: address(value.paymentRecipient), splits,
   };
   return { dropId: snapshot.dropId, deadline: integer(snapshot.intent.deadline), listing };
 }
