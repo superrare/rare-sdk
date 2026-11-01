@@ -101,6 +101,7 @@ describe('public SDK API surface', () => {
 
   it('exposes standalone pure helpers from the utils subpath', () => {
     expect(Object.keys(utils).sort()).toEqual([
+      'allocateCartListingPayment',
       'applyCartQuoteSpread',
       'buildBatchListingArtifact',
       'buildBatchTokenTree',
