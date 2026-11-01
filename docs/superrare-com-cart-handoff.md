@@ -62,9 +62,12 @@ in Product metadata.
 After the release contract exists, add the planned NFT variant with
 `variants.add(productId, { variants: [{ metadata, plannedNft: { chainId,
 contract, tokenId } }] })`. The API verifies creator authority. This records the
-intended token identity without claiming that the NFT has minted. Use
-`variants.setVisibility(productId, variantId, { isHidden: true })` while preparing
-it. Do not manufacture NFT database records or infer identity from a display URL.
+intended token identity without claiming that the NFT has minted. Planned NFT
+variants are hidden automatically and become visible when their NFT is indexed.
+Do not call `variants.setVisibility` for this default behavior: a manual visibility
+change overrides it and cancels automatic reveal. Use that method only when the
+creator deliberately chooses to control visibility. Do not manufacture NFT database
+records or infer identity from a display URL.
 
 Create the physical draft with `rare.prints.drops.create({ productId, ... })`.
 An initial draft may contain only its private production upload key; finish its
@@ -84,7 +87,10 @@ An ERC-721 mint listing mints the next token and cannot promise a specific token
 ID before execution. Prepare the accompanying physical listing with
 `mintSource: { chainId, contract, productIds }`, naming the prepared artwork
 Products. The API validates compatible print pricing and specifications before
-accepting this mapping. During checkout, `delivery.mintSelections` contains
+accepting this mapping. Preparation snapshots each mapped production file and its
+specifications. If those files or specifications change, prepare and publish a new
+physical listing to use the changes in future checkouts. Existing signed offers
+and authorized orders retain their prepared mapping. During checkout, `delivery.mintSelections` contains
 `{ preparationId, listingDigest, unitIndexes }`, where `listingDigest` identifies
 the NFT mint item and zero-based `unitIndexes` identify its purchased units.
 `delivery.optionSelections` selects `{ preparationId, optionId }` when several
@@ -384,8 +390,11 @@ Use `rare.prints.drops.listMine/getMine` for creator management and
 production-file replacement. Upload the new master privately, then call
 `rare.prints.drops.update(dropId, { productionUploadKey: replacement.key })`.
 This works after pricing and publication without replacing the drop, SKU, or
-listing. Newly authorized orders use the updated master; existing authorized or
-paid Orders retain their original fulfillment snapshots. Specification changes
+listing. For ordinary print listings, newly authorized orders use the updated
+master; existing authorized or paid Orders retain their original fulfillment
+snapshots. Mint-linked listings prepared with `mintSource` retain their file
+mapping: prepare and publish fresh Listing terms to use replacement files in
+future checkouts. Specification changes
 still require an unconfigured draft, or a replacement drop and SKU. Price changes
 require freshly prepared and signed Listing terms.
 
