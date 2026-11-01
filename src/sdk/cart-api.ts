@@ -187,6 +187,7 @@ export function createCartApiNamespace(
             availableQuantity: item.quantity.toString(),
             ...(item.maxQuantityPerCheckout === undefined ? {} : { maxQuantityPerCheckout: item.maxQuantityPerCheckout.toString() }),
             ...(item.paymentRecipient === undefined ? {} : { paymentRecipient: item.paymentRecipient }),
+            splits: (item.splits ?? []).map(split => ({...split,recipient:getAddress(split.recipient)})),
           })),
         },
       } }),
