@@ -251,10 +251,18 @@ export type CartCheckoutIntentItem = {
   recipient?: Address;
 };
 
+export type CartPrintOptionSelection = { preparationId: string; optionId: string };
+/** Bind physical copies to the actual tokens minted by this checkout, in unit order. */
+export type CartPrintMintSelection = { preparationId: string; listingDigest: Hex; unitIndexes: number[] };
+export type CartDeliverySelection = {
+  optionSelections?: CartPrintOptionSelection[];
+  mintSelections?: CartPrintMintSelection[];
+};
+
 export type CartCheckoutIntent = {
   paymentCurrency: Address;
   items: readonly CartCheckoutIntentItem[];
-  delivery?: { recipientDetails: ShippingDetails } | { savedAddressId: string };
+  delivery?: ({ recipientDetails: ShippingDetails } | { savedAddressId: string }) & CartDeliverySelection;
 };
 export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
 export type CartCheckoutBreakdown = { displayPrice: bigint; production: bigint; shipping: bigint; networkFee: bigint; total: bigint };
@@ -379,7 +387,6 @@ export type CartApiNamespace = {
       listMine: (params?: CartProductsMineParams, options?: RareAuthRequestOptions) => Promise<CartProductSearchResult>;
       update: (id: string, input: CreateCartProduct, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
       publish: (id: string) => Promise<CartApiProduct>;
-      getMine: (id: string) => Promise<CartApiProduct>;
       archive: (id: string) => Promise<CartApiProduct>;
       search: (params?: CartProductSearchParams) => Promise<CartProductSearchResult>;
       get: (id: string) => Promise<CartApiProduct>;

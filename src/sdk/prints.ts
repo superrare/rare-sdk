@@ -4,7 +4,7 @@ import { favoritePageQuery } from './favorites-core.js';
 import { toCartListingRootArtifactWire } from './cart-api.js';
 import type { RareClientConfig } from './types/client.js';
 import type { PrintsNamespace, CreatePrintDrop, PrintDropCreation, PrintBatchItem, PrintBatchOptions, PrintBatchResult,
-  PrintOptionConfiguration, PrintOption, PreparePrintListing, PrintListingPreparation,
+  PrintOptionConfiguration, PrintOption, PrintFormatsConfiguration, PrintOptionSet, PreparePrintListing, PrintListingPreparation,
   PrintListingPublication, SignedPrintListingArtifact, PrintListingSigning, PrintPublication } from './types/prints.js';
 import { isPrintBatch } from './prints-batch-core.js';
 import { runPrintBatch } from './prints-batch-shell.js';
@@ -16,6 +16,7 @@ import { cartAbi } from '../contracts/abis/cart.js';
 import { getAddress, isAddressEqual } from 'viem';
 import { getContractAddresses } from '../contracts/addresses.js';
 import { resolveChainFromPublicClient } from './wallet-shell.js';
+import { validatePrintQuote, validatePrintFormats } from './print-configuration-core.js';
 
 export function createPrintsNamespace(config: RareClientConfig, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
   const publicClient = createApiClient(config.apiBaseUrl, config.apiFetch);
@@ -41,11 +42,20 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     if (input.some(item => !item.input.idempotencyKey?.trim())) throw new Error('Batch print creation requires a stable idempotencyKey for every item.');
     return runPrintBatch(input, options, operation);
   }
+  function configure(input: PrintFormatsConfiguration): Promise<PrintOptionSet>;
+  function configure(items: readonly PrintBatchItem<PrintFormatsConfiguration>[], options?: PrintBatchOptions<PrintOptionSet>): Promise<PrintBatchResult<PrintOptionSet>[]>;
   function configure(input: PrintOptionConfiguration): Promise<PrintOption>;
   function configure(items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
-  function configure(input: PrintOptionConfiguration | readonly PrintBatchItem<PrintOptionConfiguration>[], options: PrintBatchOptions<PrintOption> = {}) {
-    const operation = (value: PrintOptionConfiguration) => data(client.PUT('/v1/prints/drops/{id}/options/standard', { params: { path: { id: value.dropId } }, body: value.input }));
-    return isPrintBatch<PrintOptionConfiguration>(input) ? runPrintBatch(input, options, operation) : operation(input);
+  function configure(input: PrintOptionConfiguration | PrintFormatsConfiguration | readonly PrintBatchItem<PrintOptionConfiguration | PrintFormatsConfiguration>[], options: PrintBatchOptions<PrintOption | PrintOptionSet> = {}) {
+    const operation = async (value: PrintOptionConfiguration | PrintFormatsConfiguration) => {
+      if ('specificationIds' in value.input) {
+        const validation = validatePrintFormats(value.input);
+        if (!validation.success) throw new Error('Select distinct print product IDs and a valid artwork price.');
+        return data(client.PUT('/v1/prints/drops/{id}/options', { params: { path: { id: value.dropId } }, body: validation.data }));
+      }
+      return data(client.PUT('/v1/prints/drops/{id}/options/standard', { params: { path: { id: value.dropId } }, body: value.input }));
+    };
+    return isPrintBatch<PrintOptionConfiguration | PrintFormatsConfiguration>(input) ? runPrintBatch(input, options, operation) : operation(input);
   }
   function prepare(input: PreparePrintListing): Promise<PrintListingPreparation>;
   function prepare(input: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
@@ -105,6 +115,11 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     }
   };
   return {
+    async quote(input, options = {}) {
+      const validation = validatePrintQuote(input);
+      if (!validation.success) throw new Error('Provide a print product ID, positive copy count and two-letter destination country code.');
+      return data(client.POST('/v1/prints/estimates', { body: validation.data, signal: options.signal }));
+    },
     products: {
       list: (options = {}) => data(publicClient.GET('/v1/prints/products', { signal: options.signal })),
       get: (id, options = {}) => data(publicClient.GET('/v1/prints/products/{id}', { params: { path: { id } }, signal: options.signal })),
@@ -112,7 +127,7 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     drops: {
       create,
       update: (id, input) => data(client.PATCH('/v1/prints/drops/{id}', { params: { path: { id } }, body: input })),
-      listMine: (options = {}) => page(client.GET('/v1/prints/drops/mine', { params: { query: favoritePageQuery(options) } })),
+      listMine: (params = {}, options = {}) => page(client.GET('/v1/prints/drops/mine', { params: { query: { ...favoritePageQuery(params), ...(params.productId === undefined ? {} : { productId: params.productId }) } }, signal: options.signal })),
       getMine: id => data(client.GET('/v1/prints/drops/mine/{id}', { params: { path: { id } } })),
       get: id => data(publicClient.GET('/v1/prints/drops/{id}', { params: { path: { id } } })),
       archive: id => data(client.POST('/v1/prints/drops/{id}/archive', { params: { path: { id } } })),

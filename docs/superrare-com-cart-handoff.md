@@ -50,6 +50,51 @@ The claims and print interfaces require the corresponding backend migrations,
 endpoints, and pipeline workers. Their presence in SDK source does not establish
 that a particular Rare API deployment supports them.
 
+## Prepare a known-order NFT release with optional prints
+
+Use one Product per artwork. Create it with `rare.cart.catalog.products.create`
+and retain the returned ID. Store the release editor's stable draft ID and entry
+ID in Product metadata so `products.listMine({ releaseDraftId })` can resume the
+owner's work. Read and edit unpublished Products with `products.getMine` and
+`products.update`. Production upload keys belong in private print drafts, never
+in Product metadata.
+
+After the release contract exists, add the planned NFT variant with
+`variants.add(productId, { variants: [{ metadata, plannedNft: { chainId,
+contract, tokenId } }] })`. The API verifies creator authority. This records the
+intended token identity without claiming that the NFT has minted. Use
+`variants.setVisibility(productId, variantId, { isHidden: true })` while preparing
+it. Do not manufacture NFT database records or infer identity from a display URL.
+
+Create the physical draft with `rare.prints.drops.create({ productId, ... })`.
+An initial draft may contain only its private production upload key; finish its
+print details before configuration. Recover its private configuration with
+`drops.listMine({ productId })` and `drops.getMine(id)`.
+
+Use `rare.prints.quote({ specificationId, destinationCountryCode, copies })` for
+an estimated production and shipping cost. It does not publish a listing or place
+an order. Final checkout quotes remain authoritative. To offer several formats,
+pass `specificationIds` from `rare.prints.products.list()` in the existing
+`options.configure({ dropId, input: { displayPriceUsdCents, specificationIds } })`
+method. It returns `{ options, listingOptionId }`; those formats share the artwork
+listing and quantity. Without `specificationIds`, configuration returns one
+standard option as before.
+
+An ERC-721 mint listing mints the next token and cannot promise a specific token
+ID before execution. Prepare the accompanying physical listing with
+`mintSource: { chainId, contract, productIds }`, naming the prepared artwork
+Products. The API validates compatible print pricing and specifications before
+accepting this mapping. During checkout, `delivery.mintSelections` contains
+`{ preparationId, listingDigest, unitIndexes }`, where `listingDigest` identifies
+the NFT mint item and zero-based `unitIndexes` identify its purchased units.
+`delivery.optionSelections` selects `{ preparationId, optionId }` when several
+formats are offered. Keep these selections unchanged when recovering a checkout.
+
+The backend resolves the actual minted token from the verified Cart receipt,
+then uses the matching Product's private print configuration. Never select a
+production file from an assumed next token ID in the browser. An NFT and its
+optional print purchased together do not need a purchase-generated claim.
+
 ## Check the application and deployment versions
 
 Before changing the frontend, inspect its dependency pins and installed exports.
