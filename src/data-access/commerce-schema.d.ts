@@ -1543,6 +1543,7 @@ export interface paths {
                         listingSalt: string;
                         deadline: string;
                         availableQuantity: string;
+                        splits?: {recipient: string; basisPoints: number}[];
                         /** Format: uuid */
                         eligibilityRuleId?: string;
                         maxQuantityPerCheckout?: string;
