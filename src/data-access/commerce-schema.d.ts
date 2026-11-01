@@ -917,6 +917,8 @@ export interface paths {
                                     maxQuantityPerCheckout: string;
                                     /** Format: uuid */
                                     eligibilityRuleId: string | null;
+                                    specificationId?: string;
+                                    product?: paths["/v1/prints/products/{id}"]["get"]["responses"][200]["content"]["application/json"]["data"];
                                 }[];
                             };
                         };
@@ -3065,6 +3067,8 @@ export interface paths {
                                     maxQuantityPerCheckout: string;
                                     /** Format: uuid */
                                     eligibilityRuleId: string | null;
+                                    specificationId?: string;
+                                    product?: paths["/v1/prints/products/{id}"]["get"]["responses"][200]["content"]["application/json"]["data"];
                                 }[];
                             }[];
                         };
