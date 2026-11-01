@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeFunctionData, encodeFunctionData, encodeAbiParameters, encodeEventTopics, parseEventLogs, getAddress, zeroAddress } from 'viem';
+import { decodeFunctionData, encodeFunctionData, encodeAbiParameters, toEventSelector, parseEventLogs, getAddress, zeroAddress, type Hex } from 'viem';
 import vector from '../../fixtures/cart/core-split-vectors.json';
 import { cartAbi } from '../../../src/contracts/abis/cart.js';
 import { allocateCartListingPayment, buildCartListingRootArtifact, buildCartOrder, hashCartListing, hashCartPurchaseOrder, validateCartListings } from '../../../src/sdk/cart-core.js';
@@ -44,9 +44,9 @@ describe('seller-signed Cart splits', () => {
   it('decodes per-line split accounting including a rounded-zero share', () => {
     const orderId = `0x${'33'.repeat(32)}` as const;
     const listingDigest = hashCartListing(listing, 1, cart);
-    const topics = encodeEventTopics({abi:cartAbi,eventName:'ListingSplitPaid',args:{orderId,lineIndex:2n,listingDigest}});
+    const topics: [Hex, ...Hex[]] = [toEventSelector('ListingSplitPaid(bytes32,uint256,bytes32,address,address,uint256)'), orderId, encodeAbiParameters([{type:'uint256'}],[2n]), listingDigest];
     const data = encodeAbiParameters([{type:'address'},{type:'address'},{type:'uint256'}],[zeroAddress,listing.splits[1]!.recipient,0n]);
-    const logs = parseEventLogs({abi:cartAbi,eventName:'ListingSplitPaid',logs:[{address:cart,topics,data}]});
+    const logs = parseEventLogs({abi:cartAbi,eventName:'ListingSplitPaid',logs:[{address:cart,topics,data,blockHash:null,blockNumber:null,logIndex:null,transactionHash:null,transactionIndex:null,removed:false}]});
     expect(logs[0]?.args).toEqual({orderId,lineIndex:2n,listingDigest,currency:zeroAddress,recipient:listing.splits[1]!.recipient,amount:0n});
   });
   it('binds spread destination and new Listing tuples in the exact executable payload', () => {
