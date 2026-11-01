@@ -386,7 +386,7 @@ describe('account authentication over HTTP', () => {
     const digest = `0x${'11'.repeat(32)}`;
     const idempotencyKey = '11111111-1111-4111-8111-111111111111';
     const wire = { schemaVersion: 1, chainId: String(sepolia.id), cartAddress: rare.contracts.cart, preparedAt: new Date().toISOString(),
-      executePurchase: { order: { orderId: digest, paymentCurrency: address, deadline: '9999999999', paymentAmount: '1',
+      executePurchase: { order: { orderId: digest, paymentCurrency: address, deadline: '9999999999', paymentAmount: '1', spreadRecipient:'0x0000000000000000000000000000000000001234',
         orderLinesHash: digest, payoutRouteHash: digest, fulfillmentActionsHash: digest },
         lines: [], listings: [], authorization: { listingRoots: [], listingRootSignatures: [], listingRootIndexes: [], listingProofs: [] },
         route: { commands: '0x', inputs: [], routerValue: '0' }, actions: [], platformSignature: '0x00' } };
