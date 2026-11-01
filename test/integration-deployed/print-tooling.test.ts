@@ -28,6 +28,50 @@ const setup = () => {
 };
 
 describe('print tooling through deployed Rare API', () => {
+  it('prepares an unminted artwork Product and resumes its private print without a release manifest', async () => {
+    const { wallet, rare } = setup();
+    await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,
+      signMessage: message => wallet.signMessage({ message }) });
+    let productId: string | undefined;
+    let draftId: string | undefined;
+    try {
+      const catalog = await rare.prints.products.list();
+      const specification = catalog.find(product => product.id === 'GLOBAL-FAP-8X12');
+      if (specification === undefined) throw new Error('The API returned no supported print product.');
+      const collection = await rare.collection.deploy.lazyErc721({ name: 'Prepared artwork', symbol: 'PREP', maxTokens: 1n });
+      const releaseDraftId = randomUUID();
+      const product = await rare.cart.catalog.products.create({ metadata: { title: 'Prepared artwork one', releaseDraftId } }, { idempotencyKey: randomUUID() });
+      productId = product.id;
+      const configured = await rare.cart.catalog.variants.add(product.id, { variants: [{ metadata: { title: 'Planned NFT' },
+        plannedNft: { chainId: '11155111', contract: collection.contract, tokenId: '1' } }] });
+      expect(configured.variants).toHaveLength(1);
+      const preparedVariant = configured.variants[0];
+      if (preparedVariant === undefined) throw new Error('Planned NFT variant was not returned.');
+      expect(preparedVariant).toMatchObject({ universalTokenId: `11155111-${collection.contract.toLowerCase()}-1` });
+      expect((await rare.cart.catalog.products.listMine({ releaseDraftId })).data.map(candidate => candidate.id)).toContain(product.id);
+      const bytes = await downloadTestImage();
+      const production = await rare.upload(bytes, 'prepared-artwork.jpg', { access: 'private', contentType: 'image/jpeg' });
+      const preview = await rare.upload(bytes, 'prepared-artwork-preview.jpg', { contentType: 'image/jpeg' });
+      const draft = await rare.prints.drops.create({ idempotencyKey: randomUUID(), chainId: '11155111', productId: product.id,
+        name: 'Prepared artwork print', print: { productionUploadKey: production.key } });
+      draftId = draft.id;
+      expect(draft.product_id).toBe(product.id);
+      expect((await rare.prints.drops.listMine({ productId: product.id })).data.map(candidate => candidate.id)).toContain(draft.id);
+      await rare.prints.drops.update(draft.id, { specificationId: specification.id, name: 'Prepared artwork print',
+        images: [preview.url], description: 'Prepared before the NFT is minted.', tags: ['sdk-integration'] });
+      await rare.prints.options.configure({ dropId: draft.id, input: { displayPriceUsdCents: '1000' } });
+      const productBeforeArchive = await rare.cart.catalog.products.publish(product.id);
+      await rare.prints.drops.archive(draft.id);
+      draftId = undefined;
+      expect((await rare.cart.catalog.products.getMine(product.id)).status).toBe(productBeforeArchive.status);
+      expect((await rare.cart.catalog.products.getMine(product.id)).metadata.title).toBe('Prepared artwork one');
+    } finally {
+      if (draftId !== undefined) await rare.prints.drops.archive(draftId);
+      if (productId !== undefined) await rare.cart.catalog.products.archive(productId);
+      await rare.auth.logout();
+    }
+  }, 360_000);
+
   it('publishes quantity-limited and gated prints, quotes copies, and reserves an earned claim', async () => {
     const { wallet, rare } = setup();
     const addressId = randomUUID();
