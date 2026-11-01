@@ -661,6 +661,13 @@ export interface paths {
                                     /** @enum {string} */
                                     status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
                                     providerOrderId: string | null;
+                                    resolvedItems?: {
+                                        productId: string;
+                                        sku: string;
+                                        tokenId: string;
+                                        sourceLineIndex: number;
+                                        sourceUnitIndex: number;
+                                    }[];
                                     progress?: {
                                         /** Format: date-time */
                                         providerUpdatedAt: string;
@@ -787,6 +794,13 @@ export interface paths {
                                     /** @enum {string} */
                                     status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
                                     providerOrderId: string | null;
+                                    resolvedItems?: {
+                                        productId: string;
+                                        sku: string;
+                                        tokenId: string;
+                                        sourceLineIndex: number;
+                                        sourceUnitIndex: number;
+                                    }[];
                                     progress?: {
                                         /** Format: date-time */
                                         providerUpdatedAt: string;
