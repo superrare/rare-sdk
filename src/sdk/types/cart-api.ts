@@ -1,3 +1,4 @@
+import type { RareAuthRequestOptions } from './account.js';
 import type { CartSplit } from './cart.js';
 import type {CartFeesNamespace} from '../cart-fees-core.js';
 export type {CartFeeCreateParams,CartFee,CartFeeListParams,CartFeeRequestOptions} from '../cart-fees-core.js';
@@ -61,6 +62,9 @@ export type CartProductSearchParams = {
   page?: number;
   perPage?: number;
 };
+
+/** Owner-scoped preparation lookup; unpublished Products remain private. */
+export type CartProductsMineParams = { page?: number; perPage?: number; releaseDraftId?: string; releaseContract?: Address };
 
 export type CartVariantSearchParams = {
   query?: string;
@@ -342,12 +346,16 @@ export type CartApiNamespace = {
     products: {
       create: (input: CreateCartProduct, options?: { idempotencyKey?: string }) => Promise<CartApiProduct>;
       attachSku: (productId: string, input: AttachCartSku) => Promise<CartProductSku>;
+      getMine: (id: string, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
+      listMine: (params?: CartProductsMineParams, options?: RareAuthRequestOptions) => Promise<CartProductSearchResult>;
+      update: (id: string, input: CreateCartProduct, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
       publish: (id: string) => Promise<CartApiProduct>;
       search: (params?: CartProductSearchParams) => Promise<CartProductSearchResult>;
       get: (id: string) => Promise<CartApiProduct>;
     };
     variants: {
       add: (productId: string, input: AddCartVariants) => Promise<CartApiProduct>;
+      setVisibility: (productId: string, variantId: string, input: { isHidden: boolean }, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
       search: (params?: CartVariantSearchParams) => Promise<CartVariantSearchResult>;
     };
   };

@@ -1,3 +1,4 @@
+import type { RareAuthRequestOptions } from './types/account.js';
 import {createCartFeesNamespace} from './cart-fees-shell.js';
 import { cartCatalogPage } from './cart-pagination-core.js';
 import { getAddress, isAddress, isHex, type Address, type Hex } from 'viem';
@@ -27,6 +28,7 @@ import type {
   CartCheckoutReceipt,
   CartCatalogVariant,
   CartProductSearchParams,
+  CartProductsMineParams,
   CartVariantSearchParams,
   CartListingIntent,
   CartListingPreviewWire,
@@ -39,6 +41,7 @@ import type {
 
 type CartApiTransport = {
   DELETE:(path:string,options?:unknown)=>Promise<{data?:unknown}>;
+  PATCH: (path: string, options?: unknown) => Promise<{ data?: unknown }>;
   GET: (path: string, options?: unknown) => Promise<{ data?: unknown }>;
   POST: (path: string, options?: unknown) => Promise<{ data?: unknown }>;
 };
@@ -84,6 +87,18 @@ export function createCartApiNamespace(
       attachSku: async (productId: string, input: AttachCartSku): Promise<CartProductSku> => getWrappedData(
         protectedClient.POST(`/v1/cart/products/${encodeURIComponent(productId)}/skus`, { body: input }), 'Rare API did not return the Product-SKU association.',
       ),
+      getMine: async (id: string, options: RareAuthRequestOptions = {}): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
+        protectedClient.GET(`/v1/cart/products/mine/${encodeURIComponent(id)}`, { signal: options.signal }), 'Rare API did not return your Product.',
+      )),
+      listMine: async (params: CartProductsMineParams = {}, options: RareAuthRequestOptions = {}): Promise<CartApiPage<CartApiProduct>> => {
+        const page = await getData<{ data: CartApiProduct[]; hasNextPage: boolean }>(
+          protectedClient.GET('/v1/cart/products/mine', { params: { query: params }, signal: options.signal }), 'Rare API did not return your Products.',
+        );
+        return cartCatalogPage({ ...page, data: page.data.map(normalizeProduct) }, params);
+      },
+      update: async (id: string, input: CreateCartProduct, options: RareAuthRequestOptions = {}): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
+        protectedClient.PATCH(`/v1/cart/products/${encodeURIComponent(id)}`, { body: input, signal: options.signal }), 'Rare API did not return the updated Product.',
+      )),
       publish: async (id: string): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
         protectedClient.POST(`/v1/cart/products/${encodeURIComponent(id)}/publish`, {}), 'Rare API did not return the published Product.',
       )),
@@ -100,6 +115,9 @@ export function createCartApiNamespace(
     variants: {
       add: async (productId: string, input: AddCartVariants): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
         protectedClient.POST(`/v1/cart/products/${encodeURIComponent(productId)}/variants`, { body: input }), 'Rare API did not return the configured Variants.',
+      )),
+      setVisibility: async (productId: string, variantId: string, input: { isHidden: boolean }, options: RareAuthRequestOptions = {}): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
+        protectedClient.PATCH(`/v1/cart/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`, { body: input, signal: options.signal }), 'Rare API did not return the updated Product.',
       )),
       search: async (params: CartVariantSearchParams = {}): Promise<CartApiPage<CartCatalogVariant>> => cartCatalogPage(await getData<{ data: CartCatalogVariant[]; hasNextPage: boolean }>(
         client.GET('/v1/cart/variants', { params: { query: buildCartVariantSearchQuery(params, scope.chainId) } }),

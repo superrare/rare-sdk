@@ -1154,6 +1154,12 @@ export interface paths {
                 content: {
                     "application/json": {
                         variants: {
+                            /** Verified creator-owned future token; does not assert that minting occurred. */
+                            plannedNft?: {
+                                chainId: string;
+                                contract: string;
+                                tokenId: string;
+                            };
                             metadata: {
                                 [key: string]: unknown;
                             };

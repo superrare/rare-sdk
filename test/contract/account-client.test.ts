@@ -168,6 +168,46 @@ describe('account authentication over HTTP', () => {
     expect(requests).toEqual(['/v1/cart/products', '/v1/cart/products/catalog-product/skus', '/v1/cart/products/catalog-product/variants', '/v1/cart/products/catalog-product/publish']);
   });
 
+  it.each(['bearer', 'application'])('resumes Product preparation and preserves planned NFT identity through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const sdk = mode === 'bearer'
+      ? createRareClient({ apiBaseUrl: origin, publicClient, sessionStore: storage })
+      : createRareClient({ publicClient, transport: (path, init) => fetch(`${origin}${path}`, init) });
+    const product = { id: 'planned-product', userId: '42', status: 'DRAFT', slug: 'planned-artwork',
+      metadata: { releaseDraftId: 'release-draft' }, variants: [], createdAt: '2026-10-27T00:00:00Z', updatedAt: '2026-10-27T00:00:00Z' };
+    const plannedNft = { chainId: '11155111', contract: '0x1111111111111111111111111111111111111111', tokenId: '1' };
+    const requests: string[] = [];
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(`${request.method} ${request.url}`);
+      if (request.url?.startsWith('/v1/cart/products/mine?')) {
+        expect(new URL(request.url, origin).searchParams.get('releaseDraftId')).toBe('release-draft');
+        return reply(response, { data: [product], hasNextPage: false });
+      }
+      if (request.url === '/v1/cart/products/planned-product/variants') {
+        expect(JSON.parse(body)).toEqual({ variants: [{ metadata: { title: 'Artwork one' }, plannedNft }] });
+      }
+      if (request.url === '/v1/cart/products/planned-product/variants/variant-1') expect(JSON.parse(body)).toEqual({ isHidden: true });
+      if (request.url === '/v1/cart/products/planned-product') expect(JSON.parse(body)).toEqual({ metadata: { ...product.metadata, title: 'Artwork one' } });
+      return reply(response, { data: product });
+    };
+    expect((await sdk.cart.catalog.products.listMine({ releaseDraftId: 'release-draft' })).data[0]?.id).toBe(product.id);
+    expect((await sdk.cart.catalog.products.getMine(product.id)).id).toBe(product.id);
+    await sdk.cart.catalog.products.update(product.id, { metadata: { ...product.metadata, title: 'Artwork one' } });
+    await sdk.cart.catalog.variants.add(product.id, { variants: [{ metadata: { title: 'Artwork one' }, plannedNft }] });
+    await sdk.cart.catalog.variants.setVisibility(product.id, 'variant-1', { isHidden: true });
+    expect(requests).toEqual([
+      'GET /v1/cart/products/mine?releaseDraftId=release-draft',
+      'GET /v1/cart/products/mine/planned-product',
+      'PATCH /v1/cart/products/planned-product',
+      'POST /v1/cart/products/planned-product/variants',
+      'PATCH /v1/cart/products/planned-product/variants/variant-1',
+    ]);
+  });
+
   it('keeps authenticated requests internal to the unified client', () => {
     expectTypeOf<RareApiClient>().not.toHaveProperty('authenticatedFetch');
     expectTypeOf<RareClient>().not.toHaveProperty('authenticatedFetch');
