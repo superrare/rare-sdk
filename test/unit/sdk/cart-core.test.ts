@@ -52,10 +52,13 @@ const listings: CartListing[] = [
 ];
 
 describe('Cart functional core', () => {
-  it('buffers ordinary estimates without raising the 12 million gas ceiling', () => {
-    expect(planCartCheckoutGas(1_000_000n)).toEqual({ isValid: true, value: 1_200_000n });
-    expect(planCartCheckoutGas(11_000_000n)).toEqual({ isValid: true, value: 12_000_000n });
-    expect(planCartCheckoutGas(12_000_000n)).toEqual({ isValid: true, value: 12_000_000n });
+  it('admits only when the complete estimate and 25 percent buffer fit the gas ceiling', () => {
+    expect(planCartCheckoutGas(1_000_000n)).toEqual({ isValid: true, value: 1_250_000n });
+    expect(planCartCheckoutGas(1n)).toEqual({ isValid: true, value: 2n });
+    expect(planCartCheckoutGas(9_600_000n)).toEqual({ isValid: true, value: 12_000_000n });
+    expect(planCartCheckoutGas(9_600_001n).isValid).toBe(false);
+    expect(planCartCheckoutGas(11_000_000n).isValid).toBe(false);
+    expect(planCartCheckoutGas(12_000_000n).isValid).toBe(false);
     expect(planCartCheckoutGas(12_000_001n).isValid).toBe(false);
     expect(planCartCheckoutGas(0n).isValid).toBe(false);
   });

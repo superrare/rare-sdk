@@ -20,11 +20,12 @@ export const cartMaximumCheckoutItems = 64;
 export const cartMaximumCheckoutGas = 12_000_000n;
 
 export function planCartCheckoutGas(estimatedGas: bigint): CartValidationResult<bigint> {
-  if (estimatedGas <= 0n || estimatedGas > cartMaximumCheckoutGas) return { isValid: false,
-    issues: [issue('resource_limit_exceeded', 'gas', 'Cart checkout must use at most 12,000,000 gas.')] };
-  const bufferedGas = estimatedGas + estimatedGas / 5n;
-  return { isValid: true, value: bufferedGas > cartMaximumCheckoutGas ? cartMaximumCheckoutGas : bufferedGas };
+  const submittedGas = (estimatedGas * 125n + 99n) / 100n;
+  if (estimatedGas <= 0n || submittedGas > cartMaximumCheckoutGas) return { isValid: false,
+    issues: [issue('resource_limit_exceeded', 'gas', 'Cart checkout including its 25% gas buffer must fit 12,000,000 gas.')] };
+  return { isValid: true, value: submittedGas };
 }
+
 const zeroHash = `0x${'00'.repeat(32)}` as Hex;
 const lineType = 'OrderLine(bytes32 sku,bytes32 listingDigest,uint8 fulfillmentKind,uint256 quantity,address settlementCurrency,uint256 amount,address paymentRecipient)';
 const routeType = 'PayoutRoute(bytes commands,bytes[] inputs,uint256 routerValue)';

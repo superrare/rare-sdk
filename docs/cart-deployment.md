@@ -38,3 +38,10 @@ signatures together. Clear old-domain quote caches rather than relabeling them.
 The [core deployment record](https://github.com/superrare/core/blob/keegan/cart-fixed-quote-currency-swap/docs/cart-sepolia-fresh-2026-11-06.md) records all six contracts, receipts, and runtime checks.
 
 The November 6 policy upgrade preserves the proxy, EIP-712 domain, approvals, and all purchase state. The matching Lens uses the policy's Cart-aware preview entry point. The [policy upgrade record](https://github.com/superrare/core/blob/keegan/cart-fixed-quote-currency-swap/docs/cart-sepolia-policy-upgrade-2026-11-06.md) records the replacement bundle and confirmed upgrade.
+
+SDK checkout estimates the exact signed execution payload with the actual payer
+and value. The submitted gas limit includes a rounded-up 25% buffer and must
+fit the platform's 12,000,000 gas ceiling. An estimate above 9,600,000 gas is
+rejected rather than trimming its safety margin. Missing balances or approvals
+are prerequisites, not proof that a checkout fits the budget. The backend must
+independently apply admission before releasing its platform signature.
