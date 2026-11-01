@@ -10,5 +10,6 @@ export function addCartListingSalt(listing: CartListingInput): CartListing {
   return {
     ...listing,
     listingSalt: listing.listingSalt ?? generateCartListingSalt(),
+    splits: listing.splits ?? [],
   };
 }

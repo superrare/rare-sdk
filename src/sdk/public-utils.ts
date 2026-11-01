@@ -43,6 +43,7 @@ import type {
 } from './types/utils.js';
 import type { UtilsMerkleProofArtifact, UtilsMerkleProofParams } from './types/utils.js';
 import {
+  allocateCartListingPayment,
   applyCartQuoteSpread,
   buildCartListingAuthorization,
   buildCartListingRootArtifact,
@@ -68,6 +69,7 @@ import type {
   BuildCartOrderParams,
   BuildCartRouteParams,
   CartFulfillmentAction,
+  CartSplit,
   CartListing,
   CartListingAuthorizationBundle,
   CartListingRoot,
@@ -178,6 +180,7 @@ export function buildCartEip712Domain(chainId: CartChainId, cart: Address): Retu
 }
 
 export {
+  allocateCartListingPayment,
   computeCartListingMerkleRoot,
   deriveCartListingMerkleLeaf,
   hashCartFulfillmentActions,
@@ -190,6 +193,7 @@ export {
 };
 
 export type {
+  CartSplit,
   CartFulfillmentAction,
   CartListing,
   CartListingRoot,

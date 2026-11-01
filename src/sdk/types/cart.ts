@@ -20,12 +20,14 @@ export type CartSellerFulfillmentKind =
   | typeof cartFulfillmentKinds.erc721MintTo
   | typeof cartFulfillmentKinds.erc1155MintTo;
 
+export type CartSplit = { recipient: Address; basisPoints: number };
+
 export type CartListing = {
   listingSalt: Hex; seller: Address; sku: Hex; fulfillmentKind: CartFulfillmentKind;
   tokenContract: Address; tokenId: bigint; settlementCurrency: Address;
-  minimumUnitPrice: bigint; availableQuantity: bigint; paymentRecipient: Address;
+  minimumUnitPrice: bigint; availableQuantity: bigint; paymentRecipient: Address; splits: CartSplit[];
 };
-export type CartListingInput = Omit<CartListing, 'listingSalt'> & { listingSalt?: Hex };
+export type CartListingInput = Omit<CartListing, 'listingSalt' | 'splits'> & { listingSalt?: Hex; splits?: CartSplit[] };
 export type CartListingRoot = { listingsRoot: Hex; nonce: bigint; deadline: bigint };
 export type CartOrderLine = {
   sku: Hex; listingDigest: Hex; fulfillmentKind: CartFulfillmentKind; quantity: bigint;
@@ -40,7 +42,7 @@ export type CartRouteLeg =
 export type BuildCartRouteParams = { paymentCurrency: Address; legs: CartRouteLeg[]; routerValue?: bigint };
 export type CartFulfillmentAction = { lineIndex: bigint; quantity: bigint; recipient: Address };
 export type CartPurchaseOrder = {
-  orderId: Hex; paymentCurrency: Address; deadline: bigint; paymentAmount: bigint;
+  orderId: Hex; paymentCurrency: Address; deadline: bigint; paymentAmount: bigint; spreadRecipient: Address;
   orderLinesHash: Hex; payoutRouteHash: Hex; fulfillmentActionsHash: Hex;
 };
 export type CartListingRootArtifactEntry = {
@@ -79,7 +81,7 @@ export type BuildCartListingRootInput = Omit<BuildCartListingRootParams, 'listin
   listings: CartListingInput[];
 };
 export type BuildCartOrderParams = {
-  orderId: Hex; paymentCurrency: Address; deadline: bigint; paymentAmount: bigint;
+  orderId: Hex; paymentCurrency: Address; deadline: bigint; paymentAmount: bigint; spreadRecipient: Address;
   lines: CartOrderLine[]; route?: CartPayoutRoute; actions?: CartFulfillmentAction[];
 };
 export type CartCheckoutParams = CartSignedOrder & {

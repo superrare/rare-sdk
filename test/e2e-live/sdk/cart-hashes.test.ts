@@ -35,7 +35,7 @@ describeLive('SDK Cart hashing parity', () => {
       abi: cartAbi,
       functionName: 'DOMAIN_SEPARATOR',
     });
-    const listing: CartListing = {
+    const listing: CartListing = { splits: [],
       listingSalt: bytes32('1'),
       seller,
       sku: bytes32('a'),
@@ -70,7 +70,7 @@ describeLive('SDK Cart hashing parity', () => {
     };
     const route = { commands: '0x' as Hex, inputs: [] as Hex[], routerValue: 0n };
     const action = { lineIndex: 0n, quantity: 1n, recipient: seller };
-    const built = buildCartPurchaseOrder({
+    const built = buildCartPurchaseOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234',
       orderId: bytes32('c'),
       paymentCurrency: zeroAddress,
       deadline: 2_000_000_000n,

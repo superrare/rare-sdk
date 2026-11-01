@@ -38,12 +38,12 @@ const cart = '0x2000000000000000000000000000000000000000' as Address;
 const bytes32 = (character: string): Hex => `0x${character.repeat(64)}` as Hex;
 
 const listings: CartListing[] = [
-  {
+  { splits: [],
     listingSalt: bytes32('1'), seller, sku: bytes32('a'), fulfillmentKind: cartFulfillmentKinds.erc721Transfer,
     tokenContract: cart, tokenId: 1n, settlementCurrency: zeroAddress, minimumUnitPrice: 100n,
     availableQuantity: 1n, paymentRecipient: seller,
   },
-  {
+  { splits: [],
     listingSalt: bytes32('2'), seller, sku: bytes32('b'), fulfillmentKind: cartFulfillmentKinds.erc1155Transfer,
     tokenContract: cart, tokenId: 2n, settlementCurrency: zeroAddress, minimumUnitPrice: 200n,
     availableQuantity: 5n, paymentRecipient: seller,
@@ -182,10 +182,10 @@ describe('Cart functional core', () => {
 
   it('builds a portable deterministic Listing Root artifact', () => {
     const artifact = buildCartListingRootArtifact({ listings, chainId: 11_155_111, cart, nonce: 3n, deadline: 2_000_000_000n });
-    expect(artifact.root.listingsRoot).toBe('0xe7ab7ad2e552ad627517bb3634d3b3e495d80ec4de7ceb8e71a8ff62ace98407');
+    expect(artifact.root.listingsRoot).toBe('0xd96d23ea5cb1301a02f8d363f4f12062ab1c7a8606dfe987f0a58d5da196608f');
     expect(artifact.entries.map((entry) => entry.listingDigest)).toEqual([
-      '0x5b1fcc50cfdf1c82f125cdc711571ae25c2760caf4c8d4deb044bd00ecec573b',
-      '0xac69cee5bdae6f6665059d753b76c42767398ba4f023885588cb039e250d3fe2',
+      '0x6732af848d2f8857502626a1e7b701624c0c98e9d43875797db61b35695ad574',
+      '0x5bd34812f58a873c22ada0b1a9196616cca02c7f7096635a258ea2219d41bda5',
     ]);
     expect(() => JSON.stringify(artifact)).not.toThrow();
   });
@@ -194,7 +194,7 @@ describe('Cart functional core', () => {
     const artifact = buildCartListingRootArtifact({ listings: [listings[0]!], chainId: 11_155_111, cart, nonce: 3n,
       deadline: 2_000_000_000n });
     const root = { listingsRoot: artifact.root.listingsRoot, nonce: 3n, deadline: 2_000_000_000n };
-    const built = buildCartOrder({
+    const built = buildCartOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234',
       orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n, paymentAmount: 500n,
       lines: [{ sku: bytes32('a'), listingDigest: artifact.entries[0]!.listingDigest,
         fulfillmentKind: cartFulfillmentKinds.erc721Transfer, quantity: 1n, settlementCurrency: zeroAddress,
@@ -205,19 +205,19 @@ describe('Cart functional core', () => {
     expect(buildCartEip712Domain(11_155_111n, cart)).toEqual({
       name: 'SuperRare Cart', version: '1', chainId: 11_155_111n, verifyingContract: cart,
     });
-    expect(hashCartListing(listings[0]!, 11_155_111n, cart)).toBe('0x5b1fcc50cfdf1c82f125cdc711571ae25c2760caf4c8d4deb044bd00ecec573b');
-    expect(hashCartListingRoot(root, 11_155_111n, cart)).toBe('0x0356c7e93ad05e14d3bf8ca115268a3c7c76195c6222ad645f59db9a62241c1a');
-    expect(hashCartOrderLines(built.lines)).toBe('0x3fd44e1685e62ae0ef5c62474446f14e4cee25f5b644db9be4d9d9900c4c49bc');
+    expect(hashCartListing(listings[0]!, 11_155_111n, cart)).toBe('0x6732af848d2f8857502626a1e7b701624c0c98e9d43875797db61b35695ad574');
+    expect(hashCartListingRoot(root, 11_155_111n, cart)).toBe('0x6c2000b10ef68c047b3620a534fef2ec53a66c7498650714cfb9eade7ec44e04');
+    expect(hashCartOrderLines(built.lines)).toBe('0xf1be7e24814488e9a7d003c60fd799c28e53d2244b1cc8441e6bc9520a738097');
     expect(hashCartPayoutRoute(built.route)).toBe('0x04b77f7126f5c2a130c79484a3ea1355bf8fb7d35f3773078d4ddd88a6d5d46a');
     expect(hashCartFulfillmentActions(built.actions)).toBe('0xba849680009431518c33bc2af2eb9cdc70aab55365b8e33eac1c35eb3223b1ff');
-    expect(hashCartPurchaseOrder(built.order, 11_155_111n, cart)).toBe('0x73cb0031f87092f39d3bf3cc33fb713d50adc8136f724ef06ebd0ad6d2cec166');
+    expect(hashCartPurchaseOrder(built.order, 11_155_111n, cart)).toBe('0xa80423cca016c0e0c6b880f171da8ec3daf343428b819259966b40c72fa6a205');
   });
 
   it('produces identical hashes for equivalent safe number and bigint chain IDs', () => {
     const artifact = buildCartListingRootArtifact({ listings: [listings[0]!], chainId: 11_155_111, cart, nonce: 3n,
       deadline: 2_000_000_000n });
     const root = { listingsRoot: artifact.root.listingsRoot, nonce: 3n, deadline: 2_000_000_000n };
-    const built = buildCartOrder({ orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n,
+    const built = buildCartOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234', orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n,
       paymentAmount: 1n, lines: [{ sku: bytes32('a'), listingDigest: artifact.entries[0]!.listingDigest,
         fulfillmentKind: cartFulfillmentKinds.erc721Transfer, quantity: 1n, settlementCurrency: zeroAddress,
         amount: 1n, paymentRecipient: seller }] });
@@ -311,14 +311,14 @@ describe('Cart functional core', () => {
 
   it('hashes the complete immutable Purchase Order payload', () => {
     const artifact = buildCartListingRootArtifact({ listings, chainId: 11_155_111, cart, nonce: 3n, deadline: 2_000_000_000n });
-    const built = buildCartOrder({
+    const built = buildCartOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234',
       orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n, paymentAmount: 500n,
       lines: [{ sku: bytes32('a'), listingDigest: artifact.entries[0]!.listingDigest,
         fulfillmentKind: cartFulfillmentKinds.erc721Transfer, quantity: 1n, settlementCurrency: zeroAddress,
         amount: 100n, paymentRecipient: seller }],
       actions: [{ lineIndex: 0n, quantity: 1n, recipient: seller }],
     });
-    expect(built.order.orderLinesHash).toBe('0x3fd44e1685e62ae0ef5c62474446f14e4cee25f5b644db9be4d9d9900c4c49bc');
+    expect(built.order.orderLinesHash).toBe('0xf1be7e24814488e9a7d003c60fd799c28e53d2244b1cc8441e6bc9520a738097');
     expect(built.order.payoutRouteHash).toBe('0x04b77f7126f5c2a130c79484a3ea1355bf8fb7d35f3773078d4ddd88a6d5d46a');
     expect(built.order.fulfillmentActionsHash).toBe('0xba849680009431518c33bc2af2eb9cdc70aab55365b8e33eac1c35eb3223b1ff');
   });
@@ -492,7 +492,7 @@ describe('Cart functional core', () => {
 
     const line = { sku: bytes32('a'), listingDigest: bytes32('1'), fulfillmentKind: cartFulfillmentKinds.erc721Transfer,
       quantity: 1n, settlementCurrency: zeroAddress, amount: 1n, paymentRecipient: seller };
-    const build = (lines: CartOrderLine[] = [line], actions: CartFulfillmentAction[] = []) => buildCartOrder({
+    const build = (lines: CartOrderLine[] = [line], actions: CartFulfillmentAction[] = []) => buildCartOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234',
       orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n, paymentAmount: 1n, lines, actions,
     });
     expect(() => build([])).toThrow('between 1 and 20');
@@ -501,7 +501,7 @@ describe('Cart functional core', () => {
       .toThrow('more than 20');
     expect(build([{ ...line, amount: 0n }]).lines[0]?.amount).toBe(0n);
     expect(() => build([{ ...line, amount: -1n }])).toThrow('amount cannot be negative');
-    expect(buildCartOrder({
+    expect(buildCartOrder({ spreadRecipient: '0x0000000000000000000000000000000000001234',
       orderId: bytes32('c'), paymentCurrency: zeroAddress, deadline: 2_000_000_000n,
       paymentAmount: 0n, lines: [{ ...line, amount: 0n }], actions: [],
     }).order.paymentAmount).toBe(0n);

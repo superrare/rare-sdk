@@ -240,9 +240,9 @@ async function createCartScenario() {
     listing: {
       listingSalt: `0x${string}`; seller: Address; sku: `0x${string}`; fulfillmentKind: number;
       tokenContract: Address; tokenId: string; settlementCurrency: Address; minimumUnitPrice: string;
-      availableQuantity: string; paymentRecipient: Address;
+      availableQuantity: string; paymentRecipient: Address; splits: {recipient: Address; basisPoints: number}[];
     };
-  }>(apiFetch, apiBaseUrl, '/v1/cart/listings', {
+  }>(apiFetch, apiBaseUrl, '/v1/cart/listings', { splits: [],
     seller: seller.address,
     sku: input.sku,
     fulfillmentKind: 2,

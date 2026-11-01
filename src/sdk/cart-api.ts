@@ -128,6 +128,7 @@ export function createCartApiNamespace(
             availableQuantity: item.quantity.toString(),
             ...(item.maxQuantityPerCheckout === undefined ? {} : { maxQuantityPerCheckout: item.maxQuantityPerCheckout.toString() }),
             ...(item.paymentRecipient === undefined ? {} : { paymentRecipient: getAddress(item.paymentRecipient) }),
+            splits: (item.splits ?? []).map(split => ({ ...split, recipient: getAddress(split.recipient) })),
           })),
         } }),
         'Rare API did not return the Cart Listing preparation.',
@@ -277,6 +278,7 @@ function normalizePreparedPurchase(value: CartApiPreparedPurchaseWire): CartApiP
       order: {
         ...execute.order,
         paymentCurrency: getAddress(execute.order.paymentCurrency),
+        spreadRecipient: getAddress(execute.order.spreadRecipient),
         deadline: BigInt(execute.order.deadline),
         paymentAmount: BigInt(execute.order.paymentAmount),
       },

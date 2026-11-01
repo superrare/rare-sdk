@@ -16,7 +16,7 @@ describeRpc('SDK Cart integration', () => {
     const lens = getCartLensAddress('sepolia');
     if (!lens) throw new Error('Sepolia Cart Lens must be configured.');
     const block = await publicClient.getBlock();
-    const listing = {
+    const listing = { splits: [],
       listingSalt: keccak256(toBytes('free-listing-deployment-check')),
       seller: seller.address,
       sku: keccak256(toBytes('free-offchain-sku')),

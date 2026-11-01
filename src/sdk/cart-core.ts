@@ -85,6 +85,7 @@ export function validateCartListingIntent(intent: CartListingIntent): CartValida
       if (listing.nft.tokenId < 0n) issues.push(issue('negative', `listings[${index}].nft.tokenId`, 'Listing NFT token ID cannot be negative.'));
       if (listing.fulfillmentKind !== 2 && listing.fulfillmentKind !== 3 && listing.fulfillmentKind !== 5) issues.push(issue('invalid_fulfillment', `listings[${index}].fulfillmentKind`, 'NFT identity resolution requires ERC721_TRANSFER, ERC1155_TRANSFER or ERC1155_MINT_TO fulfillment.'));
     }
+    issues.push(...validateCartSplits(listing.splits ?? [], listing.paymentRecipient ?? intent.seller, `listings[${index}].splits`));
     if (!isAddress(listing.settlementCurrency)) issues.push(issue('invalid_address', `listings[${index}].settlementCurrency`, 'Settlement currency must be an address.'));
     if (listing.unitPrice < 0n) issues.push(issue('negative', `listings[${index}].unitPrice`, 'Listing unit price cannot be negative.'));
     if (listing.quantity <= 0n) issues.push(issue('non_positive', `listings[${index}].quantity`, 'Listing quantity must be positive.'));
@@ -140,7 +141,8 @@ export function hashCartListing(listing: CartListing, chainId: CartChainId, cart
     { name: 'fulfillmentKind', type: 'uint8' }, { name: 'tokenContract', type: 'address' }, { name: 'tokenId', type: 'uint256' },
     { name: 'settlementCurrency', type: 'address' }, { name: 'minimumUnitPrice', type: 'uint256' },
     { name: 'availableQuantity', type: 'uint256' }, { name: 'paymentRecipient', type: 'address' },
-  ] }, message: listing });
+    { name: 'splits', type: 'Split[]' },
+  ], Split: [{ name: 'recipient', type: 'address' }, { name: 'basisPoints', type: 'uint16' }] }, message: listing });
 }
 
 export function hashCartListingRoot(root: { listingsRoot: Hex; nonce: bigint; deadline: bigint }, chainId: CartChainId, cart: Address): Hex {
@@ -152,7 +154,7 @@ export function hashCartListingRoot(root: { listingsRoot: Hex; nonce: bigint; de
 export function hashCartPurchaseOrder(order: CartPurchaseOrder, chainId: CartChainId, cart: Address): Hex {
   return hashTypedData({ domain: cartDomain(chainId, cart), primaryType: 'PurchaseOrder', types: { PurchaseOrder: [
     { name: 'orderId', type: 'bytes32' }, { name: 'paymentCurrency', type: 'address' }, { name: 'deadline', type: 'uint256' },
-    { name: 'paymentAmount', type: 'uint256' }, { name: 'orderLinesHash', type: 'bytes32' },
+    { name: 'paymentAmount', type: 'uint256' }, { name: 'spreadRecipient', type: 'address' }, { name: 'orderLinesHash', type: 'bytes32' },
     { name: 'payoutRouteHash', type: 'bytes32' }, { name: 'fulfillmentActionsHash', type: 'bytes32' },
   ] }, message: order });
 }
@@ -208,7 +210,7 @@ export function verifyCartListingMerkleProof(leaf: Hex, proof: readonly Hex[], e
 }
 
 export function buildCartListingRootArtifact(params: BuildCartListingRootParams): CartListingRootArtifact {
-  const validation = validateCartListings(params.listings);
+  const validation = validateCartListings(params.listings, params.cart);
   if (!validation.isValid) throw new Error(validation.issues.map((issue) => issue.message).join(' '));
   if (params.deadline <= 0n) throw new Error('deadline must be positive.');
   const seller = getAddress(params.listings[0]!.seller);
@@ -311,7 +313,7 @@ export function buildCartOrder(params: BuildCartOrderParams): Omit<CartSignedOrd
   const issues = validateCartOrderInputs(params.lines, actions, params);
   if (issues.length > 0) throw new Error(issues.map((issue) => issue.message).join(' '));
   return { order: { orderId: params.orderId, paymentCurrency: getAddress(params.paymentCurrency), deadline: params.deadline,
-    paymentAmount: params.paymentAmount, orderLinesHash: hashCartOrderLines(params.lines), payoutRouteHash: hashCartPayoutRoute(route),
+    paymentAmount: params.paymentAmount, spreadRecipient: getAddress(params.spreadRecipient), orderLinesHash: hashCartOrderLines(params.lines), payoutRouteHash: hashCartPayoutRoute(route),
     fulfillmentActionsHash: hashCartFulfillmentActions(actions) }, lines: [...params.lines], route, actions: [...actions] };
 }
 
@@ -426,11 +428,12 @@ function encodeV3Path(path: readonly Address[], fees: readonly number[]): Hex {
   return encodePacked(types, values);
 }
 
-export function validateCartListings(listings: readonly CartListing[]): CartValidationResult<readonly CartListing[]> {
+export function validateCartListings(listings: readonly CartListing[], cart?: Address): CartValidationResult<readonly CartListing[]> {
   const issues: CartValidationIssue[] = [];
   if (listings.length === 0) issues.push(issue('empty', 'listings', 'listings must include at least one Listing.'));
   listings.forEach((listing, index) => {
     const prefix = `listings[${index}]`;
+    issues.push(...validateCartSplits(listing.splits, listing.paymentRecipient, `${prefix}.splits`, cart));
     for (const [field, value] of [['seller', listing.seller], ['tokenContract', listing.tokenContract], ['settlementCurrency', listing.settlementCurrency], ['paymentRecipient', listing.paymentRecipient]] as const) {
       if (!isAddress(value)) issues.push(issue('invalid_address', `${prefix}.${field}`, `${prefix}.${field} must be an address.`));
     }
@@ -457,6 +460,7 @@ function validateCartOrderInputs(lines: readonly CartOrderLine[], actions: reado
   if (lines.length === 0 || lines.length > 20) issues.push(issue('invalid_length', 'lines', 'lines must include between 1 and 20 Order Lines.'));
   if (params.orderId === zeroHash) issues.push(issue('zero', 'orderId', 'orderId must be nonzero.'));
   if (params.deadline <= 0n) issues.push(issue('non_positive', 'deadline', 'deadline must be positive.'));
+  if (!isAddress(params.spreadRecipient) || params.spreadRecipient === zeroAddress) issues.push(issue('invalid_spread_recipient', 'spreadRecipient', 'spreadRecipient must be a nonzero address.'));
   if (params.paymentAmount < 0n) issues.push(issue('negative', 'paymentAmount', 'paymentAmount cannot be negative.'));
   if (actions.length > 20) issues.push(issue('invalid_length', 'actions', 'actions cannot contain more than 20 entries.'));
   lines.forEach((line, index) => {
@@ -497,4 +501,29 @@ function buildProof(levels: readonly Hex[][], index: number): Hex[] {
   const proof: Hex[] = []; let cursor = index;
   for (const level of levels.slice(0, -1)) { const sibling = level[cursor ^ 1]; if (sibling) proof.push(sibling); cursor = Math.floor(cursor / 2); }
   return proof;
+}
+
+/** Validate seller-authorized allocations before signing a Listing Root. */
+function validateCartSplits(splits: readonly { recipient: Address; basisPoints: number }[], paymentRecipient: Address, field: string, cart?: Address): CartValidationIssue[] {
+  if (!Array.isArray(splits)) return [issue('missing_splits', field, 'Listing splits must be an array, including [] for an unsplit Listing.')];
+  if (splits.length === 0) return [];
+  const recipients = splits.map(split => split.recipient.toLowerCase());
+  const valid = splits.length <= 16
+    && splits.every(split => isAddress(split.recipient) && !isAddressEqual(split.recipient, zeroAddress)
+      && (cart === undefined || !isAddressEqual(split.recipient, cart))
+      && Number.isInteger(split.basisPoints) && split.basisPoints > 0 && split.basisPoints <= 10_000)
+    && new Set(recipients).size === splits.length
+    && splits.reduce((total, split) => total + split.basisPoints, 0) === 10_000
+    && isAddressEqual(splits[0]!.recipient, paymentRecipient);
+  return valid ? [] : [issue('invalid_splits', field, 'Listing splits require at most 16 unique nonzero recipients, positive shares totaling 10000, and paymentRecipient first; Cart cannot receive a split.')];
+}
+
+/** Round each Listing line independently. The first recipient receives the remainder. */
+export function allocateCartListingPayment(listing: CartListing, amount: bigint): Array<{ recipient: Address; amount: bigint }> {
+  if (amount < 0n || amount >= 1n << 256n) throw new Error('Listing allocation amount must fit uint256.');
+  const issues = validateCartSplits(listing.splits, listing.paymentRecipient, 'splits');
+  if (issues.length > 0) throw new Error(issues.map(value => value.message).join(' '));
+  if (listing.splits.length === 0) return [{ recipient: listing.paymentRecipient, amount }];
+  const secondary = listing.splits.slice(1).map(split => ({ recipient: split.recipient, amount: amount * BigInt(split.basisPoints) / 10_000n }));
+  return [{ recipient: listing.paymentRecipient, amount: amount - secondary.reduce((total, split) => total + split.amount, 0n) }, ...secondary];
 }

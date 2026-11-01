@@ -1,3 +1,4 @@
+import type { CartSplit } from './cart.js';
 import type {CartFeesNamespace} from '../cart-fees-core.js';
 export type {CartFeeCreateParams,CartFee,CartFeeListParams,CartFeeRequestOptions} from '../cart-fees-core.js';
 import type { Address, Hex } from 'viem';
@@ -95,6 +96,7 @@ export type CartApiListing = {
     minimumUnitPrice: string;
     availableQuantity: string;
     paymentRecipient: Address;
+    splits: CartSplit[];
   };
   displayUnitPrice: string;
   invalidatedAt: string | null;
@@ -188,6 +190,7 @@ type CartListingIntentTerms = {
   /** Maximum copies of this Listing in one checkout, separate from total supply. */
   maxQuantityPerCheckout?: bigint;
   paymentRecipient?: Address;
+  splits?: CartSplit[];
 };
 
 export type CartListingIntentItem = CartListingIntentTerms & (
@@ -213,6 +216,7 @@ export type CartListingPreviewWire = {
     minimumUnitPrice: string;
     availableQuantity: string;
     paymentRecipient: Address;
+    splits: CartSplit[];
   }>;
 };
 
@@ -277,6 +281,7 @@ export type CartApiPreparedPurchaseWire = {
       paymentCurrency: Address;
       deadline: string;
       paymentAmount: string;
+      spreadRecipient: Address;
       orderLinesHash: Hex;
       payoutRouteHash: Hex;
       fulfillmentActionsHash: Hex;
@@ -301,6 +306,7 @@ export type CartApiPreparedPurchaseWire = {
       minimumUnitPrice: string;
       availableQuantity: string;
       paymentRecipient: Address;
+      splits: CartSplit[];
     }>;
     authorization: {
       listingRoots: Array<{ listingsRoot: Hex; nonce: string; deadline: string }>;
@@ -378,6 +384,7 @@ export type CartListingRootArtifactWire = {
       minimumUnitPrice: string;
       availableQuantity: string;
       paymentRecipient: Address;
+      splits: CartSplit[];
     };
     listingDigest: Hex;
     leaf: Hex;
