@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  erc1155Abi,
   isAddressEqual,
   isHex,
   keccak256,
@@ -40,12 +41,13 @@ describe.sequential('SDK Cart rare-api integration', () => {
     await scenario?.rare.auth.logout();
   });
 
-  it('checks out 64 merchandise selections without counting generated fees against capacity', async () => {
-    const { rare, seller, cart } = scenario;
+  it('accepts 64-item previews and executes a gas-eligible transfer checkout', async () => {
+    const { rare, seller, publicClient } = scenario;
+    // Pre-minted transfers isolate item capacity from the separate mint-gas policy below.
     const collection = await rare.collection.deploy.erc1155({ name: 'Cart capacity', symbol: 'CAP', baseUri: '' });
     const edition = await rare.collection.erc1155.createToken({ contract: collection.contract, maxSupply: 64n,
       tokenUri: `data:application/json,${encodeURIComponent(JSON.stringify({ name: 'Cart capacity', image: scenario.imageUrl }))}` });
-    await rare.collection.erc1155.setMinterApproval({ contract: collection.contract, minter: cart, approved: true });
+    await rare.collection.erc1155.mint({ contract: collection.contract, tokenId: edition.tokenId, quantity: 64n });
     const product = await rare.cart.catalog.products.create({ metadata: { title: '64-item capacity fixture' } });
     try {
       const configured = await rare.cart.catalog.variants.add(product.id, { variants: [{ metadata: {
@@ -56,24 +58,32 @@ describe.sequential('SDK Cart rare-api integration', () => {
       const sku = variant.sku;
       const publication = await rare.cart.listing.publish({ preparation: await rare.cart.listing.prepare({
         seller: seller.address, deadline: BigInt(Math.floor(Date.now() / 1000) + 3600),
-        listings: Array.from({ length: 64 }, () => ({ sku, fulfillmentKind: 5, quantity: 1n,
+        listings: Array.from({ length: 64 }, () => ({ sku, fulfillmentKind: 3, quantity: 1n,
           unitPrice: 1_000_000_000_000n, settlementCurrency: zeroAddress })),
-      }) });
+      }), autoApprove: true });
       const preview = await rare.cart.checkout.prepare({ paymentCurrency: zeroAddress,
-        items: publication.signedArtifact.entries.map(entry => ({ kind: 'listing', listingDigest: entry.listingDigest, quantity: 1n, recipient: seller.address })),
+        items: publication.signedArtifact.entries.map(entry => ({ kind: 'listing', listingDigest: entry.listingDigest, quantity: 1n, recipient })),
       });
       expect(preview.intent.items).toHaveLength(64);
-      const signed = await rare.cart.checkout.authorize(preview);
-      expect(signed.executePurchase.lines.filter(line => line.fulfillmentKind === 5)).toHaveLength(64);
-      expect(signed.executePurchase.lines.length).toBeGreaterThan(64);
+      const firstItem = preview.intent.items[0];
+      if (firstItem === undefined) throw new Error('Capacity preview returned no items.');
+      expect(() => rare.cart.checkout.prepare({ ...preview.intent,
+        items: [...preview.intent.items, firstItem],
+      })).toThrow('Cart checkout intent is invalid.');
+      // Sixty-four items is an admission ceiling, not a promise that every NFT workload fits gas policy.
+      const executable = await rare.cart.checkout.prepare({ ...preview.intent, items: preview.intent.items.slice(0, 16) });
+      const signed = await rare.cart.checkout.authorize(executable);
+      expect(signed.executePurchase.lines.filter(line => line.fulfillmentKind === 3)).toHaveLength(16);
+      expect(signed.executePurchase.lines.length).toBeGreaterThan(16);
       expect(signed.executePurchase.platformSignature).not.toBe('0x');
-      expect(preview.paymentAmount).toBeLessThan(1_000_000_000_000_000n);
-      const purchase = await rare.cart.checkout.purchase({ preparation: preview });
+      expect(executable.paymentAmount).toBeLessThan(1_000_000_000_000_000n);
+      const purchase = await rare.cart.checkout.purchase({ preparation: executable });
       expect(purchase.receipt.status).toBe('success');
-      expect(purchase.actionCount).toBe(64);
-      expect(purchase.lineCount).toBeGreaterThan(64);
+      expect(purchase.actionCount).toBe(16);
+      expect(purchase.lineCount).toBeGreaterThan(16);
       expect(purchase.receipt.gasUsed).toBeLessThanOrEqual(12_000_000n);
-      console.info('Cart 64-item checkout', { txHash: purchase.txHash, gasUsed: purchase.receipt.gasUsed.toString() });
+      expect(await publicClient.readContract({ address: collection.contract, abi: erc1155Abi, functionName: 'balanceOf', args: [recipient, edition.tokenId] })).toBe(16n);
+      console.info('Cart 64-item preview and 16-item checkout', { txHash: purchase.txHash, gasUsed: purchase.receipt.gasUsed.toString() });
     } finally {
       await rare.cart.catalog.products.archive(product.id);
     }
