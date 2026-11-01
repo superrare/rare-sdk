@@ -29,7 +29,7 @@ describe('seller-signed Cart splits', () => {
       [{recipient:listing.paymentRecipient,basisPoints:8000},{recipient:zeroAddress,basisPoints:2000}],
       [{recipient,basisPoints:10000}],
       [{recipient:listing.paymentRecipient,basisPoints:8000},{recipient:cart,basisPoints:2000}],
-      Array.from({length:17},(_,i)=>({recipient:getAddress(`0x${(i+1).toString(16).padStart(40,'0')}`),basisPoints:i===0?9984:1})),
+      Array.from({length:17},(_,i)=>({recipient:i===0?listing.paymentRecipient:getAddress(`0x${i.toString(16).padStart(40,'0')}`),basisPoints:i===0?9984:1})),
     ];
     expect(validateCartListings([listing],cart).isValid).toBe(true);
     for(const splits of invalid) expect(validateCartListings([{...listing,splits}],cart).isValid).toBe(false);
