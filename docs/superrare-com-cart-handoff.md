@@ -5,6 +5,20 @@ This handoff is for implementing Cart commerce, eligibility, and print tooling i
 policy. Do not introduce new cart requests through `gql-api`, direct database
 access, or direct Typesense access.
 
+## Use the active Cart deployment
+
+Use the SDK's configured deployment addresses. Sepolia authoring, approvals and
+checkout target Cart proxy `0xB08876F9c661667Af22e85859357bB31c4e11741`.
+The previous proxy is paused; keep its historical receipts as history.
+
+The new proxy has a new EIP-712 domain and empty inventory/replay state. Sellers
+must authorize fresh Listing roots with intended remaining quantities, and
+sellers and buyers must approve the new proxy where needed. Rebuild quotes,
+proofs and signatures; do not relabel saved old-domain payloads or inventory.
+Every canonical Listing includes `splits`, including `[]` when unsplit, and the
+platform signs each Order's `spreadRecipient`. See [Cart deployment and signed
+payloads](cart-deployment.md) for the matching Lens/Hashes addresses and rules.
+
 ## Author and publish one or many prints
 
 Scalar operations take the same object as a batch item's `input`: `options.configure({ dropId, input })`, `listings.publish({ preparation, signedArtifact })`, and `listings.submitSigned({ preparationId, artifact })`. Omit `signedArtifact` for a fresh signature; retain it after a failed publication to retry without another wallet request.
