@@ -1,9 +1,17 @@
+import type { RareAuthRequestOptions } from './account.js';
 import type { paths } from '../../data-access/commerce-schema.js';
 import type { CartListingRootArtifact } from './cart.js';
 import type { Hex } from 'viem';
 import type { SearchPageResponse } from '../api.js';
 
-/** Every draft requires a chain and private production file. NFT source attribution is optional. */
+export type PrintQuoteInput = paths['/v1/prints/estimates']['post']['requestBody']['content']['application/json'];
+/** Estimated provider production and shipping totals; excludes artwork, tax and checkout fees. */
+export type PrintQuote = paths['/v1/prints/estimates']['post']['responses'][200]['content']['application/json']['data'];
+export type ConfigurePrintFormats = paths['/v1/prints/drops/{id}/options']['put']['requestBody']['content']['application/json'];
+export type PrintOptionSet = paths['/v1/prints/drops/{id}/options']['put']['responses'][200]['content']['application/json']['data'];
+export type PrintFormatsConfiguration = { dropId: string; input: ConfigurePrintFormats };
+
+/** Drafts need a private production file; specifications may be completed before configuring a sale. */
 export type CreatePrintDrop = paths['/v1/prints/drops']['post']['requestBody']['content']['application/json'];
 export type PrintDrop = paths['/v1/prints/drops/mine/{id}']['get']['responses'][200]['content']['application/json']['data'];
 export type PublicPrintDrop = paths['/v1/prints/drops/{id}']['get']['responses'][200]['content']['application/json']['data'];
@@ -35,6 +43,8 @@ export type PrintCreateOperation = {
   (items: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
 };
 export type PrintConfigureOperation = {
+  (input: PrintFormatsConfiguration): Promise<PrintOptionSet>;
+  (items: readonly PrintBatchItem<PrintFormatsConfiguration>[], options?: PrintBatchOptions<PrintOptionSet>): Promise<PrintBatchResult<PrintOptionSet>[]>;
   (input: PrintOptionConfiguration): Promise<PrintOption>;
   (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
 };
@@ -53,6 +63,7 @@ export type PrintPublishOperation = {
 
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
+  quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
   products: {
     list: (options?: PrintProductRequestOptions) => Promise<PrintProduct[]>;
     get: (id: string, options?: PrintProductRequestOptions) => Promise<PrintProduct>;
@@ -60,7 +71,7 @@ export type PrintsNamespace = {
   drops: {
     create: PrintCreateOperation;
     update: (id: string, input: UpdatePrintDrop) => Promise<Omit<PrintDrop, 'options'>>;
-    listMine: (options?: { page?: number; perPage?: number }) => Promise<SearchPageResponse<PrintDrop>>;
+    listMine: (params?: { page?: number; perPage?: number; productId?: string }, options?: RareAuthRequestOptions) => Promise<SearchPageResponse<PrintDrop>>;
     getMine: (id: string) => Promise<PrintDrop>;
     get: (id: string) => Promise<PublicPrintDrop>;
     archive: (id: string) => Promise<Omit<PrintDrop, 'options'>>;

@@ -4,6 +4,286 @@
  */
 
 export interface paths {
+    "/v1/prints/drops/{id}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Configure collector formats sharing one artwork listing and quantity */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        displayPriceUsdCents: string;
+                        specificationIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Approved immutable format set */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                listingOptionId: string;
+                                options: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    drop_id: string;
+                                    option_key: string;
+                                    sku: string;
+                                    metadata: components["schemas"]["CartJsonObject"];
+                                    /** Format: date-time */
+                                    created_at: string;
+                                    /** Format: date-time */
+                                    updated_at: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid print request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print configuration or availability changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print cannot be purchased or published */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Please retry later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print operation failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print dependency unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/estimates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Estimate production and Standard shipping for a reference country */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        specificationId: string;
+                        /** @default 1 */
+                        copies?: number;
+                        destinationCountryCode: string;
+                        /**
+                         * @default Standard
+                         * @enum {string}
+                         */
+                        shippingMethod?: "Standard";
+                    };
+                };
+            };
+            responses: {
+                /** @description Creator estimate; final checkout costs may differ */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                currency: "USD";
+                                productionCostUsdCents: string;
+                                shippingCostUsdCents: string;
+                                /** Format: date-time */
+                                quotedAt: string;
+                                /** Format: date-time */
+                                expiresAt: string;
+                                assumptions: {
+                                    specificationId: string;
+                                    /** @default 1 */
+                                    copies: number;
+                                    destinationCountryCode: string;
+                                    /**
+                                     * @default Standard
+                                     * @enum {string}
+                                     */
+                                    shippingMethod: "Standard";
+                                };
+                                warnings: ("estimate_only" | "artwork_price_taxes_and_checkout_fees_excluded" | "destinationCountryCode.UsSalesTaxWarning")[];
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid print request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print configuration or availability changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print cannot be purchased or published */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Please retry later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print operation failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print dependency unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/account/shipping-addresses": {
         parameters: {
             query?: never;
@@ -854,16 +1134,17 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         idempotencyKey: string;
+                        productId?: string;
                         /** @enum {string} */
                         chainId: "11155111";
                         print: {
                             sourceUniversalTokenId?: components["schemas"]["UniversalTokenId"];
-                            name: string;
-                            description: string;
-                            tags: string[];
+                            name?: string;
+                            description?: string;
+                            tags?: string[];
                             productionUploadKey: string;
-                            images: string[];
-                            specificationId: string;
+                            images?: string[];
+                            specificationId?: string;
                         };
                         name: string;
                         /** @default  */
@@ -989,6 +1270,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    productId?: string;
                     page?: number;
                     perPage?: number;
                 };
@@ -1539,6 +1821,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         optionId: string;
+                        mintSource?: { chainId: string; contract: string; productIds: string[] };
                         seller: string;
                         listingSalt: string;
                         deadline: string;

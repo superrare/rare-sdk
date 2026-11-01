@@ -107,9 +107,6 @@ export function createCartApiNamespace(
       publish: async (id: string): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
         protectedClient.POST(`/v1/cart/products/${encodeURIComponent(id)}/publish`, {}), 'Rare API did not return the published Product.',
       )),
-      getMine: async (id: string): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
-        protectedClient.GET(`/v1/cart/products/mine/${encodeURIComponent(id)}`, {}), 'Rare API did not return your Product.',
-      )),
       archive: async (id: string): Promise<CartApiProduct> => normalizeProduct(await getWrappedData(
         protectedClient.POST(`/v1/cart/products/${encodeURIComponent(id)}/archive`, {}), 'Rare API did not return the archived Product.',
       )),

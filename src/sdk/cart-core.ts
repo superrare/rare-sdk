@@ -3,6 +3,7 @@ import {
   concatHex, encodeAbiParameters, encodePacked, getAddress, hashTypedData, isAddress, isAddressEqual, isHex, keccak256,
   toBytes, zeroAddress, type Address, type Hex,
 } from 'viem';
+import { validateCartPrintSelections } from './cart-print-selections-core.js';
 import { toInteger } from './amounts-core.js';
 import type {
   BuildCartListingRootParams, BuildCartOrderParams, CartFulfillmentAction, CartListing,
@@ -53,7 +54,7 @@ export function buildCartVariantSearchQuery(params: CartVariantSearchParams, cha
 }
 
 export function validateCartCheckoutIntent(intent: CartCheckoutIntent): CartValidationResult<CartCheckoutIntent> {
-  const issues: CartValidationIssue[] = [];
+  const issues: CartValidationIssue[] = validateCartPrintSelections(intent);
   if (!isAddress(intent.paymentCurrency)) issues.push(issue('invalid_address', 'paymentCurrency', 'Checkout payment currency must be an address.'));
   if (intent.items.length === 0 || intent.items.length > 20) issues.push(issue('invalid_length', 'items', 'Checkout must contain between 1 and 20 items.'));
   intent.items.forEach((item, index) => {
