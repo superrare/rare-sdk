@@ -260,6 +260,8 @@ export function createCartApiNamespace(
       return recovery;
     },
     coinflow: async (input: CartDeliveryCheckout): Promise<CartCardCheckout> => {
+      const validation = validateCartCheckoutIntent(input);
+      if (!validation.isValid) throw new Error(`Invalid Cart checkout intent: ${validation.issues.map(issue => issue.message).join(' ')}`);
       const wire = await getWrappedData<Omit<CartCardCheckout, 'preparedPurchase'> & { preparedPurchase: CartApiPreparedPurchaseWire }>(
         protectedClient.POST('/v1/cart/checkout/coinflow', {
           params: { query: { chainId, cartAddress: cartAddress() } },
