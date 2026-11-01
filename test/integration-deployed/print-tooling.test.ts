@@ -72,6 +72,34 @@ describe('print tooling through deployed Rare API', () => {
     }
   }, 360_000);
 
+  it('quotes selected products and configures a new draft with shared format inventory', async () => {
+    const { wallet, rare } = setup();
+    await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,
+      signMessage: message => wallet.signMessage({ message }) });
+    let draftId: string | undefined;
+    try {
+      const specificationIds = ['GLOBAL-FAP-8X12', 'GLOBAL-FAP-8X8'];
+      const quote = await rare.prints.quote({ specificationId: 'GLOBAL-FAP-8X12', destinationCountryCode: 'US', copies: 1 });
+      expect(quote.currency).toBe('USD');
+      expect(BigInt(quote.productionCostUsdCents)).toBeGreaterThan(0n);
+      const bytes = await downloadTestImage();
+      const production = await rare.upload(bytes, 'formats-production.jpg', { access: 'private', contentType: 'image/jpeg' });
+      const preview = await rare.upload(bytes, 'formats-preview.jpg', { contentType: 'image/jpeg' });
+      const draft = await rare.prints.drops.create({ idempotencyKey: randomUUID(), chainId: '11155111', name: 'SDK selected format fixture',
+        print: { productionUploadKey: production.key, name: 'SDK selected format fixture', images: [preview.url],
+          description: 'Unpaid format configuration.', tags: [], specificationId: 'GLOBAL-FAP-8X12' } });
+      draftId = draft.id;
+      const configured = await rare.prints.options.configure({ dropId: draft.id,
+        input: { displayPriceUsdCents: '2500', specificationIds } });
+      expect(configured.options.map(option => option.option_key).sort()).toEqual([...specificationIds].sort());
+      expect(new Set(configured.options.map(option => option.sku)).size).toBe(1);
+      expect(configured.options.some(option => option.id === configured.listingOptionId)).toBe(true);
+    } finally {
+      if (draftId !== undefined) await rare.prints.drops.archive(draftId);
+      await rare.auth.logout();
+    }
+  }, 180_000);
+
   it('publishes quantity-limited and gated prints, quotes copies, and reserves an earned claim', async () => {
     const { wallet, rare } = setup();
     const addressId = randomUUID();
