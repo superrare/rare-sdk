@@ -2476,6 +2476,7 @@ export interface paths {
                                     minimumUnitPrice: string;
                                     availableQuantity: string;
                                     paymentRecipient: string;
+                                    splits: { recipient: string; basisPoints: number }[];
                                 }[];
                             };
                         };
@@ -3357,6 +3358,7 @@ export interface paths {
                                             paymentCurrency: string;
                                             deadline: string;
                                             paymentAmount: string;
+                                            spreadRecipient: string;
                                             orderLinesHash: string;
                                             payoutRouteHash: string;
                                             fulfillmentActionsHash: string;
@@ -3381,6 +3383,7 @@ export interface paths {
                                             minimumUnitPrice: string;
                                             availableQuantity: string;
                                             paymentRecipient: string;
+                                            splits: { recipient: string; basisPoints: number }[];
                                         }[];
                                         authorization: {
                                             listingRoots: {
@@ -4214,6 +4217,7 @@ export interface components {
                 minimumUnitPrice: string;
                 availableQuantity: string;
                 paymentRecipient: string;
+                splits: { recipient: string; basisPoints: number }[];
             };
             displayUnitPrice: string;
             /** Format: date-time */
@@ -4255,6 +4259,7 @@ export interface components {
                         minimumUnitPrice: string;
                         availableQuantity: string;
                         paymentRecipient: string;
+                        splits: { recipient: string; basisPoints: number }[];
                     };
                     listingDigest: string;
                     leaf: string;
@@ -4340,6 +4345,7 @@ export interface components {
                         paymentCurrency: string;
                         deadline: string;
                         paymentAmount: string;
+                        spreadRecipient: string;
                         orderLinesHash: string;
                         payoutRouteHash: string;
                         fulfillmentActionsHash: string;
@@ -4364,6 +4370,7 @@ export interface components {
                         minimumUnitPrice: string;
                         availableQuantity: string;
                         paymentRecipient: string;
+                        splits: { recipient: string; basisPoints: number }[];
                     }[];
                     authorization: {
                         listingRoots: {
@@ -4457,6 +4464,7 @@ export interface components {
                             paymentCurrency: string;
                             deadline: string;
                             paymentAmount: string;
+                            spreadRecipient: string;
                             orderLinesHash: string;
                             payoutRouteHash: string;
                             fulfillmentActionsHash: string;
@@ -4481,6 +4489,7 @@ export interface components {
                             minimumUnitPrice: string;
                             availableQuantity: string;
                             paymentRecipient: string;
+                            splits: { recipient: string; basisPoints: number }[];
                         }[];
                         authorization: {
                             listingRoots: {
@@ -4559,6 +4568,7 @@ export interface components {
             payer: string | null;
             paymentCurrency: string | null;
             paymentAmount: string | null;
+            splitAllocations: { logId: string; lineIndex: string; listingDigest: string; currency: string; recipient: string; amount: string }[];
             lines: {
                 lineIndex: string;
                 sku: string;
