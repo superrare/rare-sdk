@@ -1,16 +1,16 @@
 import { downloadTestImage } from '../helpers/test-image.js';
 import { randomUUID } from 'node:crypto';
-import { createPublicClient, createWalletClient, getAddress, http, isAddressEqual, isHex, keccak256, toHex, zeroAddress } from 'viem';
+import { createPublicClient, createWalletClient, erc721Abi, getAddress, http, isAddressEqual, isHex, keccak256, toHex, zeroAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
-import { createRareClient } from '../../dist/sdk/index.js';
+import { createRareClient, RareApiError } from '../../dist/sdk/index.js';
 import type { CreatePrintDrop, PreparePrintListing } from '../../dist/sdk/index.js';
 import { loadDotEnv } from '../helpers/env.js';
 import { findCartOrderInHistory } from '../helpers/cart-order-history.js';
 import { createCreatorCartScenario } from '../helpers/cart-creator-fixture.js';
 import { getTestRpcUrl } from '../helpers/liveViem.js';
-import { resolveCurrency } from '../../src/contracts/addresses.js';
+import { getCartAddress, resolveCurrency } from '../../src/contracts/addresses.js';
 
 loadDotEnv();
 
@@ -24,12 +24,12 @@ const setup = () => {
   const publicClient = createPublicClient({ chain: sepolia, transport: http(process.env.TEST_RPC_URL) });
   const walletClient = createWalletClient({ account: wallet, chain: sepolia, transport: http(process.env.TEST_RPC_URL) });
   const rare = createRareClient({ apiBaseUrl, publicClient, walletClient });
-  return { wallet, rare, apiBaseUrl };
+  return { wallet, rare, apiBaseUrl, publicClient };
 };
 
 describe('print tooling through deployed Rare API', () => {
   it('prepares an unminted artwork Product and resumes its private print without a release manifest', async () => {
-    const { wallet, rare } = setup();
+    const { wallet, rare, publicClient } = setup();
     await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,
       signMessage: message => wallet.signMessage({ message }) });
     let productId: string | undefined;
@@ -39,6 +39,19 @@ describe('print tooling through deployed Rare API', () => {
       const specification = catalog.find(product => product.id === 'GLOBAL-FAP-8X12');
       if (specification === undefined) throw new Error('The API returned no supported print product.');
       const collection = await rare.collection.deploy.lazyErc721({ name: 'Prepared artwork', symbol: 'PREP', maxTokens: 1n });
+      // Same immutable numbered metadata fixture as CLI blind-release coverage.
+      await rare.collection.prepareLazyMint({ contract: collection.contract,
+        baseUri: 'ipfs://bafybeifveb3j4ajfqefjrcsyn5q3zdznbf45szryidgwqlqvipidw5foh4/lazy',
+        amount: 1n, minter: getCartAddress('sepolia') });
+      const sourceUniversalTokenId = `11155111-${collection.contract.toLowerCase()}-1`;
+      // Factory registration can create lazy NFT records before ownership exists.
+      await expect.poll(async () => {
+        try { return (await rare.nft.get({ contract: collection.contract, tokenId: '1' })).universalTokenId; }
+        catch (error) { if (error instanceof RareApiError && error.status === 404) return undefined; throw error; }
+      }, { timeout: 180_000, interval: 2_000 }).toBe(sourceUniversalTokenId);
+      const unmintedOwner = () => publicClient.readContract({ address: collection.contract,
+        abi: erc721Abi, functionName: 'ownerOf', args: [1n] });
+      await expect(unmintedOwner()).rejects.toThrow(/nonexistent|invalid|reverted/iu);
       const releaseDraftId = randomUUID();
       const product = await rare.cart.catalog.products.create({ metadata: { title: 'Prepared artwork one', releaseDraftId } }, { idempotencyKey: randomUUID() });
       productId = product.id;
@@ -47,7 +60,7 @@ describe('print tooling through deployed Rare API', () => {
       expect(configured.variants).toHaveLength(1);
       const preparedVariant = configured.variants[0];
       if (preparedVariant === undefined) throw new Error('Planned NFT variant was not returned.');
-      expect(preparedVariant).toMatchObject({ universalTokenId: `11155111-${collection.contract.toLowerCase()}-1` });
+      expect(preparedVariant).toMatchObject({ universalTokenId: sourceUniversalTokenId, isHidden: true });
       expect((await rare.cart.catalog.products.listMine({ releaseDraftId })).data.map(candidate => candidate.id)).toContain(product.id);
       const bytes = await downloadTestImage();
       const production = await rare.upload(bytes, 'prepared-artwork.jpg', { access: 'private', contentType: 'image/jpeg' });
@@ -61,6 +74,9 @@ describe('print tooling through deployed Rare API', () => {
         images: [preview.url], description: 'Prepared before the NFT is minted.', tags: ['sdk-integration'] });
       await rare.prints.options.configure({ dropId: draft.id, input: { displayPriceUsdCents: '1000' } });
       const productBeforeArchive = await rare.cart.catalog.products.publish(product.id);
+      const publicProduct = await rare.cart.catalog.products.get(product.id);
+      expect(publicProduct.variants.find(variant => variant.sku === preparedVariant.sku)).toMatchObject({ isHidden: true });
+      await expect(unmintedOwner()).rejects.toThrow(/nonexistent|invalid|reverted/iu);
       await rare.prints.drops.archive(draft.id);
       draftId = undefined;
       expect((await rare.cart.catalog.products.getMine(product.id)).status).toBe(productBeforeArchive.status);
