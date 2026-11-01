@@ -4138,6 +4138,7 @@ export interface components {
             availableQuantity: string;
             maxQuantityPerCheckout?: string;
             paymentRecipient?: string;
+            splits?: {recipient: string; basisPoints: number}[];
             displayUnitPrice: string;
         };
         CartListingSearchResponse: {
