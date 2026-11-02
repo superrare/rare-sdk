@@ -76,12 +76,10 @@ print details before configuration. Recover its private configuration with
 
 Use `rare.prints.quote({ specificationId, destinationCountryCode, copies })` for
 an estimated production and shipping cost. It does not publish a listing or place
-an order. Final checkout quotes remain authoritative. To offer several formats,
-pass `specificationIds` from `rare.prints.products.list()` in the existing
-`options.configure({ dropId, input: { displayPriceUsdCents, specificationIds } })`
-method. It returns `{ options, listingOptionId }`; those formats share the artwork
-listing and quantity. Without `specificationIds`, configuration returns one
-standard option as before.
+an order. Final checkout quotes remain authoritative. To offer several sizes,
+create a print draft for each size with its own specification, configure each
+with `options.configure({ dropId, input: { displayPriceUsdCents } })`, and attach
+their variant SKUs to the same Product. Each listing has its own price and quantity.
 
 An ERC-721 mint listing mints the next token and cannot promise a specific token
 ID before execution. Prepare the accompanying physical listing with
@@ -93,8 +91,8 @@ physical listing to use the changes in future checkouts. Existing signed offers
 and authorized orders retain their prepared mapping. During checkout, `delivery.mintSelections` contains
 `{ preparationId, listingDigest, unitIndexes }`, where `listingDigest` identifies
 the NFT mint item and zero-based `unitIndexes` identify its purchased units.
-`delivery.optionSelections` selects `{ preparationId, optionId }` when several
-formats are offered. Keep these selections unchanged when recovering a checkout.
+Keep these mint selections unchanged when recovering a checkout; the selected
+print listing itself identifies the size variant.
 
 The backend resolves the actual minted token from the verified Cart receipt,
 then uses the matching Product's private print configuration. Never select a
@@ -479,8 +477,10 @@ Do not generate a new key because a request timed out or the buyer retries.
 If the finalized total increases, the SDK rejects execution and requires a fresh
 review rather than silently raising the spending cap.
 
-For cards, call `rare.cart.checkout.coinflow` with the delivery draft and an
-idempotency key. It returns the provider session and prepared Cart Order for the
+For cards, call `rare.cart.checkout.payment({ method: 'card', preparation, email })`
+with the original preparation. Use `rare.cart.checkout.paymentMethods()` to read
+server-owned availability and amount limits. Digital and physical purchases use
+the same method. It returns the provider session and prepared Cart Order for the
 card UI. Card checkout requires USDC as its payment currency. Keep card setup
 and crypto execution under one checkout UI, and do not expose provider session
 credentials in logs.

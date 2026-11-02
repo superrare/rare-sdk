@@ -10,7 +10,7 @@ const optionId = '22222222-2222-4222-8222-222222222222';
 const specificationIds = ['GLOBAL-FAP-8X12', 'GLOBAL-FAP-16X24'];
 
 describe('ordinary print preparation through the SDK', () => {
-  it('quotes without creating records, configures selected formats, and retains Product and mint associations', async () => {
+  it('quotes without creating orders, prices size variants independently, and retains Product and mint associations', async () => {
     const calls: { path: string; method: string; body: unknown }[] = [];
     const quote = { currency: 'USD', productionCostUsdCents: '500', shippingCostUsdCents: '350',
       quotedAt: '2026-11-01T00:00:00Z', expiresAt: '2026-11-01T01:00:00Z',
@@ -23,7 +23,7 @@ describe('ordinary print preparation through the SDK', () => {
       calls.push({ path: request.url ?? '', method: request.method ?? '', body });
       response.setHeader('Content-Type', 'application/json');
       if (request.url === '/v1/prints/estimates') response.end(JSON.stringify({ data: quote }));
-      else if (request.url?.endsWith('/options')) response.end(JSON.stringify({ data: { listingOptionId: optionId, options: [{ id: optionId }] } }));
+      else if (request.url?.endsWith('/options/standard')) response.end(JSON.stringify({ data: { id: optionId } }));
       else if (request.url?.startsWith('/v1/prints/drops/mine?')) response.end(JSON.stringify({ data: [], hasNextPage: false }));
       else response.end(JSON.stringify({ data: { id: dropId } }));
     });
@@ -40,9 +40,15 @@ describe('ordinary print preparation through the SDK', () => {
       expect(calls).toEqual([{ path: '/v1/prints/estimates', method: 'POST', body: quoteInput }]);
       expect(rare.prints).not.toHaveProperty('releaseManifests');
       expect(rare.prints).not.toHaveProperty('estimates');
-      const configured = await rare.prints.options.configure({ dropId, input: { displayPriceUsdCents: '1000', specificationIds } });
-      expect(configured.listingOptionId).toBe(optionId);
-      expect(calls.at(-1)?.body).toEqual({ displayPriceUsdCents: '1000', specificationIds });
+      for (const [index, specificationId] of specificationIds.entries()) {
+        const variantDropId = index === 0 ? dropId : '33333333-3333-4333-8333-333333333333';
+        await rare.prints.drops.create({ chainId: '11155111', productId: '17', name: `Artwork ${specificationId}`, print: { productionUploadKey: 'a'.repeat(64), specificationId } });
+        expect(calls.at(-1)?.body).toMatchObject({ productId: '17', print: { specificationId } });
+        const input = { displayPriceUsdCents: index === 0 ? '1000' : '2000' };
+        const configured = await rare.prints.options.configure({ dropId: variantDropId, input });
+        expect(configured.id).toBe(optionId);
+        expect(calls.at(-1)).toEqual({ path: `/v1/prints/drops/${variantDropId}/options/standard`, method: 'PUT', body: input });
+      }
       // Explicit scalar input keeps production files on private drafts, not Product metadata.
       await rare.prints.drops.create({ idempotencyKey: dropId, chainId: '11155111', productId: '17', name: 'Artwork one', print: { productionUploadKey: 'a'.repeat(64) } });
       expect(calls.at(-1)?.body).toMatchObject({ productId: '17', print: { productionUploadKey: 'a'.repeat(64) } });
@@ -53,7 +59,6 @@ describe('ordinary print preparation through the SDK', () => {
       expect(calls.at(-1)?.body).toMatchObject({ mintSource });
       const previousCount = calls.length;
       await expect(rare.prints.quote({ ...quoteInput, copies: 0 })).rejects.toThrow();
-      await expect(rare.prints.options.configure({ dropId, input: { displayPriceUsdCents: '1000', specificationIds: ['same', 'same'] } })).rejects.toThrow();
       expect(calls).toHaveLength(previousCount);
     } finally {
       server.closeAllConnections();

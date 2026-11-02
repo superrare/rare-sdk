@@ -985,8 +985,9 @@ Purchases use `rare.cart.checkout`. Add `delivery: { savedAddressId }` or
 `delivery: { recipientDetails }` to the usual checkout intent. The returned
 preparation includes an idempotency key and an optional price breakdown. Retain
 that preparation for retries. `purchase({ preparation })` submits the delivery
-draft through generic Cart checkout. `rare.cart.checkout.coinflow` prepares a card
-session without a separate print payment flow.
+draft through generic Cart checkout. `rare.cart.checkout.payment({ method: 'card', preparation, email })`
+prepares a card session for digital, physical, or mixed merchandise. Read card
+availability with `rare.cart.checkout.paymentMethods()`.
 
 Saving an address is a separate, explicit operation. Use
 `rare.shippingAddresses.list`, `save`, and `delete`. Checkout does not

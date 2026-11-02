@@ -12,6 +12,7 @@ import type {
 } from './types/cart.js';
 import { buildCartVariantSearchQuery, validateCartCheckoutIntent, type CartChainId } from './cart-core.js';
 import { generateCartListingSalt } from './cart-listing-shell.js';
+import { planCartPayment } from './cart-payment-core.js';
 import { validateCartCheckoutRecovery } from './cart-checkout-recovery-core.js';
 import type {
   CartCheckoutIntentItem,
@@ -42,6 +43,8 @@ import type {
   CartDeliveryCheckout,
   CartCardCheckout,
   CartCheckoutRecovery,
+  CartPaymentRequest,
+  CartPaymentMethods,
 } from './types/cart-api.js';
 
 type CartApiTransport = {
@@ -254,14 +257,17 @@ export function createCartApiNamespace(
       if (!validation.isValid) throw new Error(validation.message);
       return recovery;
     },
-    coinflow: async (input: CartDeliveryCheckout): Promise<CartCardCheckout> => {
-      const validation = validateCartCheckoutIntent(input);
-      if (!validation.isValid) throw new Error(`Invalid Cart checkout intent: ${validation.issues.map(issue => issue.message).join(' ')}`);
+    paymentMethods: () => getWrappedData<CartPaymentMethods>(
+      client.GET('/v1/cart/checkout/coinflow/config', { params: { query: { chainId } } }),
+      'Rare API did not return card payment availability.',
+    ),
+    payment: async (input: CartPaymentRequest): Promise<CartCardCheckout> => {
+      const plan = planCartPayment(input, { chainId, cartAddress: cartAddress() });
       const wire = await getWrappedData<Omit<CartCardCheckout, 'preparedPurchase'> & { preparedPurchase: CartApiPreparedPurchaseWire }>(
         protectedClient.POST('/v1/cart/checkout/coinflow', {
           params: { query: { chainId, cartAddress: cartAddress() } },
-          headers: { 'idempotency-key': input.idempotencyKey },
-          body: toWireCheckoutIntent(input),
+          headers: { 'idempotency-key': plan.idempotencyKey },
+          body: plan.delivery === undefined ? { preparationReference: plan.preparationReference, email: plan.email } : toWireCheckoutIntent(plan.delivery),
         }), 'Rare API did not return the card checkout session.',
       );
       return { ...wire, preparedPurchase: normalizePreparedPurchase(wire.preparedPurchase) };
@@ -298,12 +304,11 @@ export function toCartListingRootArtifactWire(
 }
 
 function toWireCheckoutIntent(intent: CartCheckoutIntent) {
-  const { optionSelections, ...delivery } = intent.delivery ?? {};
+  const delivery = intent.delivery;
   return {
     paymentCurrency: intent.paymentCurrency,
     items: intent.items.map(toWireDraftItem),
     ...(intent.delivery === undefined ? {} : { delivery }),
-    ...(optionSelections === undefined ? {} : { optionSelections }),
   };
 }
 

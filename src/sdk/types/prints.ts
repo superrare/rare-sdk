@@ -7,9 +7,6 @@ import type { SearchPageResponse } from '../api.js';
 export type PrintQuoteInput = paths['/v1/prints/estimates']['post']['requestBody']['content']['application/json'];
 /** Estimated provider production and shipping totals; excludes artwork, tax and checkout fees. */
 export type PrintQuote = paths['/v1/prints/estimates']['post']['responses'][200]['content']['application/json']['data'];
-export type ConfigurePrintFormats = paths['/v1/prints/drops/{id}/options']['put']['requestBody']['content']['application/json'];
-export type PrintOptionSet = paths['/v1/prints/drops/{id}/options']['put']['responses'][200]['content']['application/json']['data'];
-export type PrintFormatsConfiguration = { dropId: string; input: ConfigurePrintFormats };
 
 /** Drafts need a private production file; specifications may be completed before configuring a sale. */
 export type CreatePrintDrop = paths['/v1/prints/drops']['post']['requestBody']['content']['application/json'];
@@ -48,8 +45,6 @@ export type PrintCreateOperation = {
   (items: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
 };
 export type PrintConfigureOperation = {
-  (input: PrintFormatsConfiguration): Promise<PrintOptionSet>;
-  (items: readonly PrintBatchItem<PrintFormatsConfiguration>[], options?: PrintBatchOptions<PrintOptionSet>): Promise<PrintBatchResult<PrintOptionSet>[]>;
   (input: PrintOptionConfiguration): Promise<PrintOption>;
   (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
 };
