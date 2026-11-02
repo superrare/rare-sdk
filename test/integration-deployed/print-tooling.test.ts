@@ -88,30 +88,37 @@ describe('print tooling through deployed Rare API', () => {
     }
   }, 360_000);
 
-  it('quotes selected products and configures a new draft with shared format inventory', async () => {
+  it('quotes products and configures independently priced print size variants on one Product', async () => {
     const { wallet, rare } = setup();
     await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,
       signMessage: message => wallet.signMessage({ message }) });
-    let draftId: string | undefined;
+    let draftIds: string[] = [];
+    let productId: string | undefined;
     try {
-      const specificationIds = ['GLOBAL-FAP-8X12', 'GLOBAL-FAP-8X8'];
+      const product = await rare.cart.catalog.products.create({ metadata: { title: 'SDK print size variants' } });
+      productId = product.id;
       const quote = await rare.prints.quote({ specificationId: 'GLOBAL-FAP-8X12', destinationCountryCode: 'US', copies: 1 });
       expect(quote.currency).toBe('USD');
       expect(BigInt(quote.productionCostUsdCents)).toBeGreaterThan(0n);
       const bytes = await downloadTestImage();
-      const production = await rare.upload(bytes, 'formats-production.jpg', { access: 'private', contentType: 'image/jpeg' });
-      const preview = await rare.upload(bytes, 'formats-preview.jpg', { contentType: 'image/jpeg' });
-      const draft = await rare.prints.drops.create({ idempotencyKey: randomUUID(), chainId: '11155111', name: 'SDK selected format fixture',
-        print: { productionUploadKey: production.key, name: 'SDK selected format fixture', images: [preview.url],
-          description: 'Unpaid format configuration.', tags: [], specificationId: 'GLOBAL-FAP-8X12' } });
-      draftId = draft.id;
-      const configured = await rare.prints.options.configure({ dropId: draft.id,
-        input: { displayPriceUsdCents: '2500', specificationIds } });
-      expect(configured.options.map(option => option.option_key).sort()).toEqual([...specificationIds].sort());
-      expect(new Set(configured.options.map(option => option.sku)).size).toBe(1);
-      expect(configured.options.some(option => option.id === configured.listingOptionId)).toBe(true);
+      const production = await rare.upload(bytes, 'variants-production.jpg', { access: 'private', contentType: 'image/jpeg' });
+      const preview = await rare.upload(bytes, 'variants-preview.jpg', { contentType: 'image/jpeg' });
+      const specifications = [{ id: 'GLOBAL-FAP-8X12', price: '2500' }, { id: 'GLOBAL-FAP-16X24', price: '4000' }];
+      const skus: string[] = [];
+      for (const specification of specifications) {
+        const draft = await rare.prints.drops.create({ idempotencyKey: randomUUID(), productId, chainId: '11155111', name: 'SDK print variant fixture',
+          print: { productionUploadKey: production.key, name: 'SDK print variant fixture', images: [preview.url],
+            description: 'Unpaid variant configuration.', tags: [], specificationId: specification.id } });
+        draftIds = [...draftIds, draft.id];
+        const option = await rare.prints.options.configure({ dropId: draft.id, input: { displayPriceUsdCents: specification.price } });
+        expect(option.metadata).toMatchObject({ displayPriceUsdCents: specification.price });
+        skus.push(option.sku);
+        expect((await rare.prints.drops.getMine(draft.id)).product_id).toBe(productId);
+      }
+      expect(new Set(skus).size).toBe(specifications.length);
     } finally {
-      if (draftId !== undefined) await rare.prints.drops.archive(draftId);
+      for (const draftId of draftIds) await rare.prints.drops.archive(draftId);
+      if (productId !== undefined) await rare.cart.catalog.products.archive(productId);
       await rare.auth.logout();
     }
   }, 180_000);
