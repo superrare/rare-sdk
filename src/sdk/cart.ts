@@ -3,12 +3,13 @@ import { cartAbi } from '../contracts/abis/cart.js';
 import { cartLensAbi } from '../contracts/abis/cart-lens.js';
 import { ETH_ADDRESS, type SupportedChain } from '../contracts/addresses.js';
 import { approvalAbi, NftApprovalRequiredError, runWithApprovalSideEffectAlert, waitForApprovalState } from './approvals-shell.js';
-import { buildCartListingRootArtifact, cartDomain, hashCartListing, hashCartListingRoot, hashCartOrder, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartListingRootArtifact, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
+import { buildCartListingRootArtifact, cartDomain, hashCartListing, hashCartListingRoot, hashCartOrder, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
 import { cartFulfillmentKinds, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
 import { requireWallet } from './wallet-shell.js';
+import { validateCartListingPublication } from './cart-listing-publication-core.js';
 import { createCartApiNamespace } from './cart-api.js';
 import type { CartCheckoutPreparation } from './types/cart-api.js';
 
@@ -109,9 +110,11 @@ export function createCartNamespace(
         return { intent, artifact, requiredApprovals: requiredCartApprovals(listings) };
       },
       async publish(params) {
-        validateCartListingRootArtifact(params.preparation.artifact);
+        const preparation = structuredClone(params.preparation);
+        const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
         const { walletClient, account, accountAddress } = requireWallet(config);
-        const artifact = params.preparation.artifact;
+        validateCartListingPublication(preparation, retainedArtifact, { chainId, cart: requireCart(), seller: accountAddress });
+        const artifact = preparation.artifact;
         if (!isAddressEqual(artifact.seller, accountAddress)) throw new Error('Listing Root signer does not match the connected seller.');
         const requiredApprovals = requiredCartApprovals(artifact.entries.map((entry) => ({
           ...entry.listing,
@@ -136,12 +139,13 @@ export function createCartNamespace(
             : [...previous, { txHash: approval.txHash, receipt: approval.receipt }];
         }, Promise.resolve([] as Array<{ txHash: Hash; receipt: TransactionReceipt }>));
         const root = { listingsRoot: artifact.root.listingsRoot, nonce: BigInt(artifact.root.nonce), deadline: BigInt(artifact.root.deadline) };
-        const signature = await walletClient.signTypedData({ account, domain: cartDomain(artifact.chainId, artifact.cart), primaryType: 'ListingRoot', types: { ListingRoot: [
+        const signature = retainedArtifact?.signature ?? await walletClient.signTypedData({ account, domain: cartDomain(artifact.chainId, artifact.cart), primaryType: 'ListingRoot', types: { ListingRoot: [
           { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
         ] }, message: root });
         const signedArtifact = { ...artifact, signature };
+        await params.onSigned?.(structuredClone(signedArtifact));
         const publishedRoot = await api.listing.publish(signedArtifact);
-        return { preparation: params.preparation, signedArtifact, publishedRoot,
+        return { preparation, signedArtifact, publishedRoot,
           approvalTxHashes: approvals.map(({ txHash }) => txHash),
           approvalReceipts: approvals.map(({ receipt }) => receipt) };
       },

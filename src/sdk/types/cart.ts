@@ -101,7 +101,13 @@ export type CartListingPreparation = {
   artifact: CartListingRootArtifact;
   requiredApprovals: Address[];
 };
-export type CartListingPublishParams = { preparation: CartListingPreparation; autoApprove?: boolean };
+export type CartListingPublishParams = {
+  preparation: CartListingPreparation;
+  autoApprove?: boolean;
+  signedArtifact?: CartListingRootArtifact & { signature: Hex };
+  /** Persist the exact authorization before publication; rejection prevents submission. */
+  onSigned?: (artifact: CartListingRootArtifact & { signature: Hex }) => void | Promise<void>;
+};
 export type CartListingPublishResult = {
   preparation: CartListingPreparation;
   signedArtifact: CartListingRootArtifact & { signature: Hex };
