@@ -8,9 +8,4 @@ const printQuoteSchema = z.object({
   destinationCountryCode: z.string().regex(/^[A-Z]{2}$/),
   shippingMethod: z.literal('Standard').optional(),
 }).strict();
-const printFormatsSchema = z.object({
-  displayPriceUsdCents: z.string().regex(/^(0|[1-9][0-9]*)$/).max(18),
-  specificationIds: z.array(productId).min(1).max(100).refine(values => new Set(values).size === values.length, 'Select each print product once.'),
-}).strict();
 export const validatePrintQuote = (input: unknown) => printQuoteSchema.safeParse(input);
-export const validatePrintFormats = (input: unknown) => printFormatsSchema.safeParse(input);

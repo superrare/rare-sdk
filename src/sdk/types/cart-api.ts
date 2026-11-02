@@ -251,11 +251,9 @@ export type CartCheckoutIntentItem = {
   recipient?: Address;
 };
 
-export type CartPrintOptionSelection = { preparationId: string; optionId: string };
 /** Bind physical copies to the actual tokens minted by this checkout, in unit order. */
 export type CartPrintMintSelection = { preparationId: string; listingDigest: Hex; unitIndexes: number[] };
 export type CartDeliverySelection = {
-  optionSelections?: CartPrintOptionSelection[];
   mintSelections?: CartPrintMintSelection[];
 };
 
@@ -271,6 +269,17 @@ export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' |
   preparedPurchase?: CartApiPreparedPurchase;
 };
 
+export type CartPaymentRequest = {
+  method: 'card';
+  preparation: CartCheckoutPreparation;
+  email: string;
+};
+export type CartPaymentMethods = {
+  enabled: boolean;
+  paymentCurrency: Address | null;
+  minimumCents: number;
+  maximumCentsExclusive: number;
+};
 export type CartCardCheckout = {
   checkoutJwtToken: string;
   sessionKey: string;
@@ -410,7 +419,8 @@ export type CartApiNamespace = {
     prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
     /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
     recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
-    coinflow: (input: CartDeliveryCheckout) => Promise<CartCardCheckout>;
+    payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
+    paymentMethods: () => Promise<CartPaymentMethods>;
   };
 };
 

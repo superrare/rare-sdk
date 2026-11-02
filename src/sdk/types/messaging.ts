@@ -1,3 +1,5 @@
+import type { MessagingPrintOrderDestination, MessagingPrintOrderCard } from '../messaging-order-core.js';
+export type { MessagingPrintOrderReference, MessagingPrintOrderDestination, MessagingPrintOrderCard } from '../messaging-order-core.js';
 import type { RareAuthRequestOptions } from './account.js';
 import type { MessagingSession, MessagingInbox, MessagingSearchPerson, MessagingCreateDirect, MessagingCreatedDirect, MessagingCreateRoom, MessagingConversation, MessagingPage, MessagingChanges, MessagingParticipants, MessagingSend, MessagingMessage, MessagingCommand, MessagingMessageCommand, MessagingUser, MessagingDraftPreview, MessagingAttachment, MessagingPublicResolveContext, MessagingPublicRoom, MessagingPublicPage, MessagingPublicSend, MessagingPublicMessage } from '../messaging-core.js';
 export type * from '../messaging-core.js';
@@ -8,6 +10,9 @@ export type PublicMessagingClient = {
   history: (roomId: string, input?: { before?: string; after?: string; limit?: number }, options?: RareAuthRequestOptions) => Promise<MessagingPublicPage>;
 };
 export type RareMessagingClient = {
+  /** Read backend-created purchase receipts; clients cannot insert system messages. */
+  orderConversations: (orderId: string, options?: RareAuthRequestOptions) => Promise<MessagingPrintOrderDestination[]>;
+  orderCard: (conversationId: string, orderId: string, options?: RareAuthRequestOptions) => Promise<MessagingPrintOrderCard>;
   public: {
     history: (roomId: string, input?: { before?: string; after?: string; limit?: number }, options?: RareAuthRequestOptions & { authenticated?: boolean }) => Promise<MessagingPublicPage>;
     send: (roomId: string, input: MessagingPublicSend, options?: RareAuthRequestOptions) => Promise<MessagingPublicMessage>;

@@ -23,10 +23,4 @@ describe('physical selections paired with mint results', () => {
       { preparationId: '22222222-2222-4222-8222-222222222222', listingDigest, unitIndexes: [0] },
     ]))[0]?.code).toBe('duplicate_mint_unit');
   });
-  it('rejects repeated print format selections', () => {
-    const base = intent([]);
-    expect(validateCartPrintSelections({ ...base, delivery: { savedAddressId: preparationId, optionSelections: [
-      { preparationId, optionId: preparationId }, { preparationId, optionId: preparationId },
-    ] } })[0]?.code).toBe('invalid_print_options');
-  });
 });
