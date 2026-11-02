@@ -406,6 +406,35 @@ describe('account authentication over HTTP', () => {
     await expect(rare.cart.checkout.authorize({ preparationReference: '' })).rejects.toThrow();
   });
 
+  it('serializes print format choices consistently for preview, authorization and card checkout', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
+    const preparationId = '11111111-1111-4111-8111-111111111111';
+    const optionSelections = [{ preparationId, optionId: '22222222-2222-4222-8222-222222222222' }];
+    const listingDigest = `0x${'11'.repeat(32)}` as const;
+    const mintSelections = [{ preparationId, listingDigest, unitIndexes: [0] }];
+    const intent = { paymentCurrency: '0x0000000000000000000000000000000000000000',
+      items: [{ kind: 'listing', listingDigest, quantity: 1n }],
+      delivery: { savedAddressId: preparationId, optionSelections, mintSelections } } satisfies import('../../src/sdk/types/cart-api.js').CartCheckoutIntent;
+    const requests: unknown[] = [];
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      // eslint-disable-next-line functional/immutable-data -- Capture requests sent through the real HTTP client.
+      requests.push(JSON.parse(body));
+      reply(response, { error: 'checkout_captured' }, 409);
+    };
+    await expect(rare.cart.checkout.prepare(intent)).rejects.toMatchObject({ status: 409 });
+    await expect(rare.cart.checkout.authorize({ ...intent, idempotencyKey: preparationId })).rejects.toMatchObject({ status: 409 });
+    await expect(rare.cart.checkout.coinflow({ ...intent, idempotencyKey: preparationId })).rejects.toMatchObject({ status: 409 });
+    expect(requests).toHaveLength(3);
+    for (const request of requests) expect(request).toEqual({
+      paymentCurrency: intent.paymentCurrency,
+      items: [{ kind: 'listing', listingDigest, quantity: '1' }],
+      delivery: { savedAddressId: preparationId, mintSelections }, optionSelections,
+    });
+  });
+
   it('defaults to the production API and rejects the removed separate auth URL', async () => {
     const storage = createMemoryAccountSessionStore();
     await createRareClient({ sessionStore: storage }).auth.clearSession();

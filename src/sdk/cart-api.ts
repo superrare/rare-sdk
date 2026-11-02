@@ -214,11 +214,7 @@ export function createCartApiNamespace(
       const wire = await getWrappedData<CartCheckoutPreviewWire>(
         (intent.delivery === undefined ? client : protectedClient).POST('/v1/cart/checkout/preview', {
           params: { query: { chainId, cartAddress: cartAddress() } },
-          body: {
-            paymentCurrency: intent.paymentCurrency,
-            items: intent.items.map(toWireDraftItem),
-            ...(intent.delivery === undefined ? {} : { delivery: intent.delivery }),
-          },
+          body: toWireCheckoutIntent(intent),
         }),
         'Rare API did not return the Cart checkout preparation.',
       );
@@ -240,9 +236,7 @@ export function createCartApiNamespace(
         protectedClient.POST('/v1/cart/checkout/prepare', {
           params: { query: { chainId, cartAddress: cartAddress() } },
           ...(typeof input === 'string' ? {} : { headers: { 'idempotency-key': input.idempotencyKey } }),
-          body: typeof input === 'string' ? { preparationReference: input } : {
-            paymentCurrency: input.paymentCurrency, items: input.items.map(toWireDraftItem), delivery: input.delivery,
-          },
+          body: typeof input === 'string' ? { preparationReference: input } : toWireCheckoutIntent(input),
         }),
         'Rare API did not return the signed Cart Purchase.',
       );
@@ -267,7 +261,7 @@ export function createCartApiNamespace(
         protectedClient.POST('/v1/cart/checkout/coinflow', {
           params: { query: { chainId, cartAddress: cartAddress() } },
           headers: { 'idempotency-key': input.idempotencyKey },
-          body: { paymentCurrency: input.paymentCurrency, items: input.items.map(toWireDraftItem), delivery: input.delivery },
+          body: toWireCheckoutIntent(input),
         }), 'Rare API did not return the card checkout session.',
       );
       return { ...wire, preparedPurchase: normalizePreparedPurchase(wire.preparedPurchase) };
@@ -300,6 +294,16 @@ export function toCartListingRootArtifactWire(
       proof: entry.proof,
     })),
     signature: artifact.signature,
+  };
+}
+
+function toWireCheckoutIntent(intent: CartCheckoutIntent) {
+  const { optionSelections, ...delivery } = intent.delivery ?? {};
+  return {
+    paymentCurrency: intent.paymentCurrency,
+    items: intent.items.map(toWireDraftItem),
+    ...(intent.delivery === undefined ? {} : { delivery }),
+    ...(optionSelections === undefined ? {} : { optionSelections }),
   };
 }
 
