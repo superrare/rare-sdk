@@ -42,7 +42,7 @@ describe('ordinary print preparation through the SDK', () => {
       expect(rare.prints).not.toHaveProperty('estimates');
       for (const [index, specificationId] of specificationIds.entries()) {
         const variantDropId = index === 0 ? dropId : '33333333-3333-4333-8333-333333333333';
-        await rare.prints.drops.create({ chainId: '11155111', productId: '17', name: `Artwork ${specificationId}`, print: { productionUploadKey: 'a'.repeat(64), specificationId } });
+        await rare.prints.drops.create({ idempotencyKey: variantDropId, chainId: '11155111', productId: '17', name: `Artwork ${specificationId}`, print: { productionUploadKey: 'a'.repeat(64), specificationId } });
         expect(calls.at(-1)?.body).toMatchObject({ productId: '17', print: { specificationId } });
         const input = { displayPriceUsdCents: index === 0 ? '1000' : '2000' };
         const configured = await rare.prints.options.configure({ dropId: variantDropId, input });
