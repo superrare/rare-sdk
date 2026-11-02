@@ -6,7 +6,7 @@ import { createPublicClient, createWalletClient, http, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { createRareClient } from '../../src/sdk/client.js';
-import type { CreatePrintDrop, PrintListingPreparation } from '../../src/sdk/types/prints.js';
+import type { CreatePrintDrop, PrintListingPreparation, SignedPrintListingArtifact } from '../../src/sdk/types/prints.js';
 import { getContractAddresses } from '../../src/contracts/addresses.js';
 import { hashCartListing } from '../../src/sdk/cart-core.js';
 import type { CartListing } from '../../src/sdk/types/cart.js';
@@ -55,20 +55,41 @@ describe('print batch authoring over HTTP', () => {
       walletClient: createWalletClient({ account, chain: sepolia, transport: http(`${apiBaseUrl}/rpc`) }),
       transport: (path, init) => fetch(`${apiBaseUrl}${path}`, init) });
     try {
-      const results = await rare.prints.listings.publish([{ key: 'print', input: { preparation } }]);
+      await expect(rare.prints.listings.publish({ preparation, onSigned: async () => {
+        await Promise.resolve();
+        throw new Error('initial journal unavailable');
+      } })).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'initial journal unavailable' }) });
+      expect(requests.some(path => path.endsWith('/publish'))).toBe(false);
+      const checkpoints: SignedPrintListingArtifact[] = [];
+      const results = await rare.prints.listings.publish([{ key: 'print', input: { preparation, onSigned: async artifact => {
+        expect(requests.some(path => path.endsWith('/publish'))).toBe(false);
+        await Promise.resolve();
+        checkpoints.push(artifact);
+      } } }]);
       const failed = results[0];
       expect(failed?.status).toBe('rejected');
       if (failed?.status !== 'rejected' || failed.signedArtifact === undefined) throw new Error('Signed artifact was lost');
+      expect(checkpoints).toEqual([failed.signedArtifact]);
       const previousRequestCount = requests.length;
+      await expect(rare.prints.listings.publish({ preparation, signedArtifact: failed.signedArtifact, onSigned: async () => {
+        await Promise.resolve();
+        throw new Error('journal unavailable');
+      } })).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'journal unavailable' }) });
+      expect(requests).toHaveLength(previousRequestCount);
+      const checkpoint = async (artifact: SignedPrintListingArtifact): Promise<void> => {
+        expect(requests).toHaveLength(previousRequestCount);
+        await Promise.resolve();
+        artifact.root.nonce = '99';
+      };
       const changedPreparation = { ...preparation, listing_digest: `0x${'33'.repeat(32)}` };
       const mismatched = await rare.prints.listings.publish([{ key: 'print', input: { preparation: changedPreparation, signedArtifact: failed.signedArtifact } }]);
       expect(mismatched[0]).toMatchObject({ status: 'rejected', error: expect.objectContaining({ message: expect.stringContaining('does not match') }) });
       expect(requests).toHaveLength(previousRequestCount);
       if (mode === 'scalar') {
-        const retried = await rare.prints.listings.publish({ preparation, signedArtifact: failed.signedArtifact });
+        const retried = await rare.prints.listings.publish({ preparation, signedArtifact: failed.signedArtifact, onSigned: checkpoint });
         expect(retried.signedArtifact).toEqual(failed.signedArtifact);
       } else {
-        const retried = await rare.prints.listings.publish([{ key: 'print', input: { preparation, signedArtifact: failed.signedArtifact } }], { previousResults: results });
+        const retried = await rare.prints.listings.publish([{ key: 'print', input: { preparation, signedArtifact: failed.signedArtifact, onSigned: checkpoint } }], { previousResults: results });
         expect(retried[0]).toMatchObject({ key: 'print', status: 'fulfilled', value: { signedArtifact: failed.signedArtifact } });
       }
       expect(requests.slice(previousRequestCount)).toEqual([`/v1/prints/listings/${preparation.id}/publish`]);

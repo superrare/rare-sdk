@@ -36,7 +36,12 @@ export type PrintDropCreation = Omit<PrintDrop, 'options'>;
 export type PrintPublication = { preparation: PrintListingPreparation; signedArtifact: SignedPrintListingArtifact };
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
 export type PrintListingPublication = { preparationId: string; artifact: SignedPrintListingArtifact };
-export type PrintListingSigning = { preparation: PrintListingPreparation; signedArtifact?: SignedPrintListingArtifact };
+export type PrintListingSigning = {
+  preparation: PrintListingPreparation;
+  signedArtifact?: SignedPrintListingArtifact;
+  /** Persist authorization before publication; rejection prevents submission. */
+  onSigned?: (artifact: SignedPrintListingArtifact) => void | Promise<void>;
+};
 
 export type PrintCreateOperation = {
   (input: CreatePrintDrop): Promise<PrintDropCreation>;
