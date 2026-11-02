@@ -77,17 +77,20 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
   function publish(items: readonly PrintBatchItem<PrintListingSigning>[], options?: PrintBatchOptions<PrintPublication>): Promise<PrintBatchResult<PrintPublication>[]>;
   function publish(input: PrintListingSigning | readonly PrintBatchItem<PrintListingSigning>[], options: PrintBatchOptions<PrintPublication> = {}) {
     const operation = async (item: PrintListingSigning): Promise<PrintPublication> => {
-      if (item.signedArtifact === undefined) return signOne(item.preparation);
-      validatePrintPublicationArtifact(item.preparation, item.signedArtifact);
+      const preparation = structuredClone(item.preparation);
+      if (item.signedArtifact === undefined) return signOne(preparation, item.onSigned);
+      const signedArtifact = structuredClone(item.signedArtifact);
+      validatePrintPublicationArtifact(preparation, signedArtifact);
       try {
-        return { preparation: await publishOne(item.preparation.id, item.signedArtifact), signedArtifact: item.signedArtifact };
+        await item.onSigned?.(structuredClone(signedArtifact));
+        return { preparation: await publishOne(preparation.id, signedArtifact), signedArtifact };
       } catch (cause) {
-        throw new PrintPublicationError(item.preparation.id, item.signedArtifact, cause);
+        throw new PrintPublicationError(preparation.id, signedArtifact, cause);
       }
     };
     return isPrintBatch<PrintListingSigning>(input) ? runPrintBatch(input, options, operation, item => item.preparation) : operation(input);
   }
-  const signOne = async (preparation: PrintListingPreparation): Promise<PrintPublication> => {
+  const signOne = async (preparation: PrintListingPreparation, onSigned?: PrintListingSigning['onSigned']): Promise<PrintPublication> => {
     const { listing, deadline, dropId } = parsePrintListingTerms(preparation);
     const { walletClient, account, accountAddress } = requireWallet(config);
     const chainId = config.publicClient.chain?.id;
@@ -109,6 +112,7 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     });
     const signedArtifact = { ...artifact, signature };
     try {
+      await onSigned?.(structuredClone(signedArtifact));
       return { preparation: await publishOne(preparation.id, signedArtifact), signedArtifact };
     } catch (cause) {
       throw new PrintPublicationError(preparation.id, signedArtifact, cause);

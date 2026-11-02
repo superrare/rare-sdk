@@ -21,7 +21,7 @@ payloads](cart-deployment.md) for the matching Lens/Hashes addresses and rules.
 
 ## Author and publish one or many prints
 
-Scalar operations take the same object as a batch item's `input`: `options.configure({ dropId, input })`, `listings.publish({ preparation, signedArtifact })`, and `listings.submitSigned({ preparationId, artifact })`. Omit `signedArtifact` for a fresh signature; retain it after a failed publication to retry without another wallet request.
+Scalar operations take the same object as a batch item's `input`: `options.configure({ dropId, input })`, `listings.publish({ preparation, signedArtifact })`, and `listings.submitSigned({ preparationId, artifact })`. Omit `signedArtifact` for a fresh signature; retain it after a failed publication to retry without another wallet request. Both `rare.cart.listing.publish` and `rare.prints.listings.publish` accept `onSigned: async artifact => { ... }`. Save that artifact durably in the callback: the SDK awaits it before submission, and a rejected callback prevents publication. Pass the saved `signedArtifact` with the original `preparation` to resume without requesting another signature. Callbacks receive a separate snapshot; changing it cannot modify the submitted authorization.
 
 Print authoring supports the same methods for one item or a batch. Pass an array
 of `{ key, input }` items to `rare.prints.drops.create`, `options.configure`,
