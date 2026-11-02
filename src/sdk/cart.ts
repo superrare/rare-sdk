@@ -85,7 +85,7 @@ export function createCartNamespace(
   };
 
   return {
-    fees:api.fees,
+    adjustments:api.adjustments,
     catalog: { products: api.catalog.products, variants: api.catalog.variants },
     approval: {
       status({ contract: tokenContract, owner }) {

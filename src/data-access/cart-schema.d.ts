@@ -3640,14 +3640,14 @@ export interface paths {
         trace?: never;
     };
 
-    "/v1/cart/fees": {
+    "/v1/cart/adjustments": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List platform fee assignments */
+        /** List reusable platform adjustment definitions */
         get: {
             parameters: {
                 query?: {
@@ -3661,7 +3661,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Fee assignments */
+                /** @description Adjustment definitions */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -3669,6 +3669,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             data: {
+                                /** @enum {string} */
+                                effect: "CHARGE";
                                 /** @enum {string} */
                                 phase: "LISTING_CONFIGURATION" | "CHECKOUT";
                                 code: string;
@@ -3699,33 +3701,7 @@ export interface paths {
                                     /** @enum {string} */
                                     type: "TOKEN_CREATOR";
                                 };
-                                /** @default {} */
-                                scope: {
-                                    chainIds?: string[];
-                                    sellerAddresses?: string[];
-                                    nfts?: {
-                                        chainId: string;
-                                        contract: string;
-                                        tokenId: string;
-                                    }[];
-                                    collections?: {
-                                        chainId: string;
-                                        contract: string;
-                                    }[];
-                                    skus?: string[];
-                                    fulfillmentKinds?: number[];
-                                    settlementCurrencies?: string[];
-                                    paymentCurrencies?: string[];
-                                    productIds?: string[];
-                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
-                                };
-                                priority: number;
-                                /** Format: date-time */
-                                validFrom?: string | null;
-                                /** Format: date-time */
-                                validUntil?: string | null;
                                 id: string;
-                                ruleId: string;
                                 chargeSku: string;
                             }[];
                             hasNextPage: boolean;
@@ -3750,7 +3726,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee administrator user ID required */
+                /** @description Fee administrator access required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3759,7 +3735,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee assignment not found */
+                /** @description Adjustment definition or assignment not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3771,7 +3747,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a platform fee rule and scoped assignment */
+        /**
+         * Create a reusable platform adjustment definition
+         * @description Creates an inactive adjustment definition. Assign it to SKUs or collections before preparing and signing seller listings.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -3781,11 +3760,11 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["CartFeeCreate"];
+                    "application/json": components["schemas"]["CartAdjustmentCreate"];
                 };
             };
             responses: {
-                /** @description Fee configured */
+                /** @description Adjustment definition created */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -3793,6 +3772,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             data: {
+                                /** @enum {string} */
+                                effect: "CHARGE";
                                 /** @enum {string} */
                                 phase: "LISTING_CONFIGURATION" | "CHECKOUT";
                                 code: string;
@@ -3823,6 +3804,87 @@ export interface paths {
                                     /** @enum {string} */
                                     type: "TOKEN_CREATOR";
                                 };
+                                id: string;
+                                chargeSku: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cart/adjustments/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active platform adjustment assignments */
+        get: {
+            parameters: {
+                query?: {
+                    phase?: "LISTING_CONFIGURATION" | "CHECKOUT";
+                    page?: number;
+                    perPage?: number;
+                    adjustmentId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Adjustment assignments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                adjustmentId: string;
                                 /** @default {} */
                                 scope: {
                                     chainIds?: string[];
@@ -3849,8 +3911,102 @@ export interface paths {
                                 /** Format: date-time */
                                 validUntil?: string | null;
                                 id: string;
-                                ruleId: string;
-                                chargeSku: string;
+                            }[];
+                            hasNextPage: boolean;
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Apply an existing platform adjustment
+         * @description Assigns an existing fee without duplicating its definition or charge SKU. Higher priority replaces lower priority for the same adjustment code. Equal highest priorities are rejected when resolving a listing. Existing signed terms remain unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CartAdjustmentAssignmentCreate"];
+                };
+            };
+            responses: {
+                /** @description Fee assigned */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                adjustmentId: string;
+                                /** @default {} */
+                                scope: {
+                                    chainIds?: string[];
+                                    sellerAddresses?: string[];
+                                    nfts?: {
+                                        chainId: string;
+                                        contract: string;
+                                        tokenId: string;
+                                    }[];
+                                    collections?: {
+                                        chainId: string;
+                                        contract: string;
+                                    }[];
+                                    skus?: string[];
+                                    fulfillmentKinds?: number[];
+                                    settlementCurrencies?: string[];
+                                    paymentCurrencies?: string[];
+                                    productIds?: string[];
+                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
+                                };
+                                priority: number;
+                                /** Format: date-time */
+                                validFrom?: string | null;
+                                /** Format: date-time */
+                                validUntil?: string | null;
+                                id: string;
                             };
                         };
                     };
@@ -3873,7 +4029,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee administrator user ID required */
+                /** @description Fee administrator access required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3882,7 +4038,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee assignment not found */
+                /** @description Adjustment definition or assignment not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3899,7 +4055,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/cart/fees/{id}": {
+    "/v1/cart/adjustments/assignments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3909,7 +4065,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Disable a platform fee assignment */
+        /** Disable a platform adjustment assignment */
         delete: {
             parameters: {
                 query?: never;
@@ -3921,7 +4077,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Fee assignment disabled */
+                /** @description Adjustment assignment disabled */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -3953,7 +4109,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee administrator user ID required */
+                /** @description Fee administrator access required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3962,7 +4118,7 @@ export interface paths {
                         "application/json": components["schemas"]["CartErrorResponse"];
                     };
                 };
-                /** @description Fee assignment not found */
+                /** @description Adjustment definition or assignment not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -4647,7 +4803,9 @@ export interface components {
         };
         /** @description A JSON object whose values may contain nested JSON data. */
     
-        CartFeeCreate: {
+        CartAdjustmentCreate: {
+            /** @enum {string} */
+            effect: "CHARGE";
             /** @enum {string} */
             phase: "LISTING_CONFIGURATION" | "CHECKOUT";
             code: string;
@@ -4678,6 +4836,9 @@ export interface components {
                 /** @enum {string} */
                 type: "TOKEN_CREATOR";
             };
+        };
+        CartAdjustmentAssignmentCreate: {
+            adjustmentId: string;
             /** @default {} */
             scope: {
                 chainIds?: string[];
