@@ -435,6 +435,20 @@ describe('account authentication over HTTP', () => {
     });
   });
 
+  it.each(['cartOrderConfirmed', 'cartSaleReceived'] as const)('reads %s notifications with saved print product details', async category => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const printProduct = { id: 'GLOBAL-FAP-8X8', paper: 'Enhanced matte art paper', size: '8 × 8 in',
+      widthInches: 8, heightInches: 8, sizeCategory: 'small', format: 'square' };
+    const notification = { id: '1', notificationId: 'cart-print-test', category, readAt: null, createdAt: '2026-11-02T12:00:00.000Z',
+      payload: { orderId: `0x${'11'.repeat(32)}`, chainId: 11155111,
+        items: [{ sku: `0x${'22'.repeat(32)}`, quantity: '1', title: 'Print', printProduct }], amounts: [] } };
+    handler = async (_request, response) => {
+      reply(response, { data: [notification], pagination: { page: 1, perPage: 20, totalCount: 1, totalPages: 1 } });
+    };
+    expect((await client(storage).notifications.list()).data).toEqual([notification]);
+  });
+
   it('defaults to the production API and rejects the removed separate auth URL', async () => {
     const storage = createMemoryAccountSessionStore();
     await createRareClient({ sessionStore: storage }).auth.clearSession();
