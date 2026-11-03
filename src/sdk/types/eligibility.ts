@@ -51,6 +51,7 @@ export type PurchaseEligibilityNamespace = {
   rules: {
     create: (input: CreateEligibilityRule) => Promise<EligibilityRule>;
     list: (options?: EligibilityListOptions) => Promise<SearchPageResponse<EligibilityRule>>;
+    backfill: (ruleId: string) => Promise<{ queued: true }>;
     disable: (ruleId: string) => Promise<void>;
   };
   claims: { list: (options?: EligibilityClaimListOptions) => Promise<SearchPageResponse<EligibilityClaim>> };
