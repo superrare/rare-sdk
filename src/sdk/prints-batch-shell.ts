@@ -1,4 +1,4 @@
-import { findPrintPublicationError, previousPrintSuccess, printBatchInputDigest, validatePrintBatch } from './prints-batch-core.js';
+import { previousPrintSuccess, printBatchInputDigest, validatePrintBatch } from './prints-batch-core.js';
 import type { PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './types/prints.js';
 
 export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], options: PrintBatchOptions<R>, operation: (input: T) => Promise<R>, identity: (input: T) => unknown = input => input): Promise<PrintBatchResult<R>[]> {
@@ -12,9 +12,7 @@ export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], o
     try {
       return [...results, { key: item.key, inputDigest, status: 'fulfilled', value: await operation(item.input) }];
     } catch (error) {
-      const recovery = findPrintPublicationError(error);
-      return [...results, { key: item.key, inputDigest, status: 'rejected', error,
-        ...(recovery === undefined ? {} : { signedArtifact: recovery.signedArtifact }) }];
+      return [...results, { key: item.key, inputDigest, status: 'rejected', error }];
     }
   }, Promise.resolve([]));
 }
