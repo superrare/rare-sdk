@@ -1,12 +1,13 @@
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { describe, expect, it } from 'vitest';
-import { createPublicClient, createWalletClient, http, zeroAddress, type Hex } from 'viem';
+import { describe, expect, it, vi } from 'vitest';
+import { createPublicClient, createWalletClient, custom, http, zeroAddress, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { createRareClient } from '../../src/sdk/client.js';
-import { buildCartListingRootArtifact } from '../../src/sdk/cart-core.js';
+import { buildCartListingRootArtifact, hashCartListing } from '../../src/sdk/cart-core.js';
 import { getContractAddresses } from '../../src/contracts/addresses.js';
+import type { PrintListingPreparation } from '../../src/sdk/types/prints.js';
 import type { CartListing, CartListingPreparation, CartListingRootArtifact } from '../../src/sdk/types/cart.js';
 
 const seller = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
@@ -22,6 +23,45 @@ const preparation: CartListingPreparation = {
 };
 
 describe('durable Cart publication over HTTP', () => {
+  it('signs one root for multiple print preparations and retries that root without signing', async () => {
+    const submissions: unknown[] = [];
+    const walletClient = createWalletClient({ chain: sepolia, account: seller, transport: http('http://localhost') });
+    const prompts = vi.spyOn(walletClient, 'signTypedData');
+    const client = createRareClient({
+      publicClient: createPublicClient({ chain: sepolia, transport: custom({
+        request: async () => `0x${'0'.repeat(64)}`,
+      }) }),
+      walletClient,
+      transport: async (path: string, init?: RequestInit) => {
+        expect(path).toBe('/v1/cart/listing-roots');
+        submissions.push(JSON.parse(await new Response(init?.body).text()));
+        return Response.json({ data: { listingCount: 2 } });
+      },
+    });
+    const preparations = ['1', '2'].map((suffix): PrintListingPreparation => {
+      const terms = { ...listing, listingSalt: `0x${suffix.repeat(64)}` as const };
+      const id = `00000000-0000-4000-8000-00000000000${suffix}`;
+      return {
+        id, user_id: '1', chain_id: String(sepolia.id), cart_address: cart,
+        listing_digest: hashCartListing(terms, sepolia.id, cart),
+        option_id: id, fulfillment_kind: 'PRODIGI_PRINT', listing_id: null, created_at: '',
+        snapshot: { dropId: id, configured: { listing: { ...terms, tokenId: '0', minimumUnitPrice: '100', availableQuantity: '2' } },
+          intent: { deadline: '2000000000' } },
+      };
+    });
+    const result = await client.cart.listing.publish({ printPreparations: preparations, onSigned: () => {
+      expect(submissions).toHaveLength(0);
+    } });
+    expect(prompts).toHaveBeenCalledTimes(1);
+    expect(result.signedArtifact.entries).toHaveLength(2);
+    expect(result.signedArtifact.entries.every(({ proof }) => proof.length === 1)).toBe(true);
+    await client.cart.listing.publish({ printPreparations: preparations, signedArtifact: result.signedArtifact });
+    expect(prompts).toHaveBeenCalledTimes(1);
+    expect(submissions).toHaveLength(2);
+    expect(submissions[0]).toEqual(submissions[1]);
+    expect(submissions[0]).toMatchObject({ preparationIds: preparations.map(({ id }) => id) });
+  });
+
   it('awaits durable signing, aborts on persistence failure, and resumes the exact authorization without signing', async () => {
     const publications: unknown[] = [];
     const saved: (CartListingRootArtifact & { signature: Hex })[] = [];
