@@ -31,19 +31,11 @@ export type PrintProductRequestOptions = { signal?: AbortSignal };
 export type SignedPrintListingArtifact = CartListingRootArtifact & { signature: Hex };
 export type PrintBatchItem<T> = { key: string; input: T };
 export type PrintBatchResult<T> = { key: string; inputDigest: string; status: 'fulfilled'; value: T } |
-  { key: string; inputDigest: string; status: 'rejected'; error: unknown; signedArtifact?: SignedPrintListingArtifact };
+  { key: string; inputDigest: string; status: 'rejected'; error: unknown };
 /** Keep keys and operation inputs unchanged when reusing previous results. */
 export type PrintBatchOptions<T> = { previousResults?: readonly PrintBatchResult<T>[] };
 export type PrintDropCreation = Omit<PrintDrop, 'options'>;
-export type PrintPublication = { preparation: PrintListingPreparation; signedArtifact: SignedPrintListingArtifact };
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
-export type PrintListingPublication = { preparationId: string; artifact: SignedPrintListingArtifact };
-export type PrintListingSigning = {
-  preparation: PrintListingPreparation;
-  signedArtifact?: SignedPrintListingArtifact;
-  /** Persist authorization before publication; rejection prevents submission. */
-  onSigned?: (artifact: SignedPrintListingArtifact) => void | Promise<void>;
-};
 
 export type PrintCreateOperation = {
   (input: CreatePrintDrop): Promise<PrintDropCreation>;
@@ -57,15 +49,6 @@ export type PrintPrepareOperation = {
   (input: PreparePrintListing): Promise<PrintListingPreparation>;
   (items: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
 };
-export type PrintSubmitSignedOperation = {
-  (input: PrintListingPublication): Promise<PrintListingPreparation>;
-  (items: readonly PrintBatchItem<PrintListingPublication>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
-};
-export type PrintPublishOperation = {
-  (input: PrintListingSigning): Promise<PrintPublication>;
-  (items: readonly PrintBatchItem<PrintListingSigning>[], options?: PrintBatchOptions<PrintPublication>): Promise<PrintBatchResult<PrintPublication>[]>;
-};
-
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
   quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
@@ -93,7 +76,5 @@ export type PrintsNamespace = {
   options: { configure: PrintConfigureOperation };
   listings: {
     prepare: PrintPrepareOperation;
-    submitSigned: PrintSubmitSignedOperation;
-    publish: PrintPublishOperation;
   };
 };

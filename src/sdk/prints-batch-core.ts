@@ -1,5 +1,4 @@
 import type { PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './types/prints.js';
-import { PrintPublicationError } from './prints-errors.js';
 import { keccak256, toHex } from 'viem';
 
 const canonicalInput = (input: unknown): unknown => {
@@ -13,18 +12,10 @@ const canonicalInput = (input: unknown): unknown => {
 
 export const printBatchInputDigest = (input: unknown): string => keccak256(toHex(JSON.stringify(canonicalInput(input))));
 
-export function findPrintPublicationError(error: unknown, seen: readonly unknown[] = []): PrintPublicationError | undefined {
-  if (error instanceof PrintPublicationError) return error;
-  if (seen.includes(error)) return undefined;
-  return error instanceof Error && error.cause !== undefined
-    ? findPrintPublicationError(error.cause, [...seen, error]) : undefined;
-}
-
 export function isPrintBatch<T>(input: unknown): input is readonly PrintBatchItem<T>[] {
   return Array.isArray(input);
 }
 
-/** Validate the whole batch before any item can create durable state. */
 export function validatePrintBatch<T, R>(items: readonly PrintBatchItem<T>[], options: PrintBatchOptions<R>, identity: (input: T) => unknown = input => input): void {
   const keys = items.map(item => item.key);
   if (keys.some(key => key.trim().length === 0) || new Set(keys).size !== keys.length) {
