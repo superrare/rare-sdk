@@ -13,6 +13,7 @@ import { validateCartListingPublication } from './cart-listing-publication-core.
 import { createCartApiNamespace } from './cart-api.js';
 import type { CartCheckoutPreparation } from './types/cart-api.js';
 import { createCartRoutingNamespace } from './cart-routing.js';
+import { createEligibilityNamespace } from './eligibility.js';
 
 export type * from './types/cart.js';
 export type * from './types/cart-api.js';
@@ -87,7 +88,8 @@ export function createCartNamespace(
   };
 
   return {
-    adjustments:api.adjustments,
+    adjustments: api.adjustments,
+    purchaseEligibility: createEligibilityNamespace(config, { chainId: chainId.toString(), cartAddress: requireCart }, authenticatedFetch),
     catalog: { products: api.catalog.products, variants: api.catalog.variants },
     approval: {
       status({ contract: tokenContract, owner }) {
