@@ -6,6 +6,7 @@ import {
   type Address,
   type Hex,
 } from 'viem';
+import { appendCartNativeRefund } from './cart-router-program-core.js';
 import { ETH_ADDRESS } from '../contracts/addresses.js';
 import { buildV4SwapStep } from '../swap/build-route.js';
 import {
@@ -139,7 +140,11 @@ export function buildKnownPoolCartRoutingResult(
   compiled: LocalCompiledObligation[],
   quotedAtMs: number,
 ): CartRoutingQuoteResult {
-  const inputs = compiled.flatMap((item) => item.inputs);
+  const program = appendCartNativeRefund({
+    commands: encodePacked(compiled.map(() => 'bytes'), compiled.map(item => item.commands)),
+    inputs: compiled.flatMap(item => item.inputs),
+  }, plan.paymentCurrency);
+  const inputs = program.inputs;
   if (inputs.length > cartRoutingMaxCommands) throw new CartRoutingCoreError('cart_incompatible_route', `Cart route cannot exceed ${cartRoutingMaxCommands} commands.`);
   const routedExpected = compiled.reduce((sum, item) => sum + item.expectedInput, 0n);
   const routedMaximum = compiled.reduce((sum, item) => sum + item.maximumInput, 0n);
@@ -153,7 +158,7 @@ export function buildKnownPoolCartRoutingResult(
     expectedPaymentInput: expected, maximumPaymentInput: maximum, directPaymentInput: plan.directPaymentInput,
     settlements: plan.settlements,
     route: {
-      commands: (`0x${compiled.map((item) => item.commands.slice(2)).join('')}`) as Hex,
+      commands: program.commands,
       inputs,
       routerValue: compiled.reduce((sum, item) => sum + item.routerValue, 0n),
     },

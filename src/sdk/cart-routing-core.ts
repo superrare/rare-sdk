@@ -9,6 +9,7 @@ import {
 } from 'viem';
 import { ETH_ADDRESS, chainIds, type SupportedChain } from '../contracts/addresses.js';
 import type { UniswapQuoteResponse, UniswapSwapResponse } from '../swap/uniswap-api.js';
+import { appendCartNativeRefund, normalizeCartRouterProgram } from './cart-router-program-core.js';
 import { applyCartQuoteSpread } from './cart-core.js';
 import type {
   CartRoutingErrorCode,
@@ -187,8 +188,11 @@ export function buildCartRoutingQuoteResult(
     descriptions.push(execution.description);
   }
 
-  const commands = (`0x${programs.map(({ commands: value }) => value.slice(2)).join('')}`) as Hex;
-  const inputs = programs.flatMap(({ inputs: value }) => value);
+  const program = appendCartNativeRefund({
+    commands: (`0x${programs.map(({ commands: value }) => value.slice(2)).join('')}`) as Hex,
+    inputs: programs.flatMap(({ inputs: value }) => value),
+  }, plan.paymentCurrency);
+  const { commands, inputs } = program;
   if (size(commands) !== inputs.length || inputs.length > cartRoutingMaxCommands) {
     throw new CartRoutingCoreError('cart_incompatible_route', `Cart route must contain matching commands and inputs and cannot exceed ${cartRoutingMaxCommands} commands.`);
   }
@@ -337,7 +341,7 @@ function decodeAndValidateRouterProgram(
     }
   }
   const routerValue = nonNegativeInteger(transaction.value, 'swap.value');
-  return { commands, inputs, routerValue };
+  return { ...normalizeCartRouterProgram({ commands, inputs }, plan.cart, universalRouter, plan.paymentCurrency), routerValue };
 }
 
 function positiveInteger(value: string | undefined, field: string, settlementCurrency?: Address): bigint {

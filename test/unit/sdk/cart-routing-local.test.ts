@@ -4,6 +4,7 @@ import { getCartAddress } from '../../../src/contracts/addresses.js';
 import { planCartRoutingQuote } from '../../../src/sdk/cart-routing-core.js';
 import {
   compileKnownCartRoute,
+  buildKnownPoolCartRoutingResult,
   exactInputPathKeys,
   exactOutputPathKeys,
   resolveKnownCartRoute,
@@ -107,4 +108,23 @@ describe('Cart known-pool routing core', () => {
       expect(actions).toBe(expectedActions);
     }
   });
+  it.each(['exact-input', 'exact-output'] as const)('refunds native surplus once after every %s obligation', mode => {
+    const plan = planCartRoutingQuote(chain, cart, {
+      paymentCurrency: eth,
+      obligations: [{ settlementCurrency: usdc, amount: 5n }, { settlementCurrency: rare, amount: 7n }],
+      mode,
+    });
+    const compiled = plan.foreignObligations.map(obligation =>
+      compileKnownCartRoute(plan, resolveKnownCartRoute(plan, obligation.settlementCurrency)!, 9n, 10n, obligation.amount));
+    const quote = buildKnownPoolCartRoutingResult(plan, compiled, 1_800_000_000_000);
+    expect(quote.route.commands).toBe('0x101004');
+    expect(quote.route.inputs).toHaveLength(3);
+    expect(quote.route.inputs.slice(0, 2)).toEqual(compiled.flatMap(item => item.inputs));
+    expect(decodeAbiParameters(parseAbiParameters('address,address,uint256'), quote.route.inputs[2]!))
+      .toEqual([zeroAddress, '0x0000000000000000000000000000000000000001', 0n]);
+    expect(quote.route.routerValue).toBe(20n);
+    expect(quote.maximumPaymentInput).toBe(20n);
+    expect(quote.expectedPaymentInput).toBe(18n);
+  });
+
 });
