@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { encodeFunctionData, zeroAddress, type Address, type Hex } from 'viem';
+import { decodeAbiParameters, encodeAbiParameters, parseAbiParameters, encodeFunctionData, zeroAddress, type Address, type Hex } from 'viem';
 import { getCartAddress } from '../../../src/contracts/addresses.js';
 import {
   assertCartRoutingQuoteFresh,
@@ -54,7 +54,7 @@ describe('Cart routing functional core', () => {
     expect(() => refineCartInputQuoteOutput(1n, 1n, 2n)).toThrow('too small');
     expect(() => refineCartInputQuoteOutput(promised, 1n, 1n)).toThrow('exceeded');
   });
-  it('packages opaque compiled routes for every supported Sepolia currency direction', () => {
+  it('normalizes supported compiled routes for every supported Sepolia currency direction', () => {
     for (const paymentCurrency of currencies) {
       for (const settlementCurrency of currencies) {
         if (paymentCurrency === settlementCurrency) continue;
@@ -63,11 +63,12 @@ describe('Cart routing functional core', () => {
           obligations: [{ settlementCurrency, amount: 500n }],
         });
         const result = buildCartRoutingQuoteResult(plan, router, [quoted(plan, plan.foreignObligations[0]!)], 1_800_000_000_000);
-        expect(result.route).toEqual({
-          commands: '0x1004',
-          inputs: ['0x1234', '0xabcd'],
-          routerValue: paymentCurrency === eth ? 1100n : 0n,
-        });
+        expect(result.route.commands).toBe('0x1004');
+        expect(result.route.routerValue).toBe(paymentCurrency === eth ? 1100n : 0n);
+        const [token, recipient, minimum] = decodeAbiParameters(parseAbiParameters('address,address,uint256'), result.route.inputs[1]!);
+        expect(token).toBe(paymentCurrency);
+        expect(recipient).toBe('0x0000000000000000000000000000000000000001');
+        expect(minimum).toBe(0n);
         expect(result.expectedPaymentInput).toBe(1000n);
         expect(result.maximumPaymentInput).toBe(1100n);
         expect(result.evidence.compilerRequestIds).toHaveLength(1);
@@ -156,7 +157,7 @@ describe('Cart routing functional core', () => {
       ...obligation,
       exactOutputResponse: baseline,
       executionResponse: execution,
-      swapResponse: swap(plan, '0x08'),
+      swapResponse: swap(plan, '0x10', compiledInputs(plan, obligation).slice(0, 1)),
     }], 1_800_000_000_000);
     expect(result.mode).toBe('exact-input');
     expect(result.expectedPaymentInput).toBe(1100n);
@@ -164,7 +165,7 @@ describe('Cart routing functional core', () => {
 
     execution.quote.output.minimumAmount = '499';
     expect(() => buildCartRoutingQuoteResult(plan, router, [{
-      ...obligation, exactOutputResponse: baseline, executionResponse: execution, swapResponse: swap(plan, '0x08'),
+      ...obligation, exactOutputResponse: baseline, executionResponse: execution, swapResponse: swap(plan, '0x10', compiledInputs(plan, obligation).slice(0, 1)),
     }], 1_800_000_000_000)).toThrow('does not guarantee');
   });
 
@@ -181,20 +182,32 @@ describe('Cart routing functional core', () => {
     expect(protectCartRoutingExactInput(1005n)).toBe(1011n);
   });
 
-  it('accepts only the Cart command families without interpreting their inputs', () => {
+  it('rejects unsupported commands and malformed command inputs', () => {
     const plan = planCartRoutingQuote(chain, cart, {
       paymentCurrency: usdc,
       obligations: [{ settlementCurrency: rare, amount: 500n }],
     });
     const obligation = plan.foreignObligations[0]!;
     const item = quoted(plan, obligation, '0x0001020408090b0c10', Array.from({ length: 9 }, () => '0xdead'));
-    expect(buildCartRoutingQuoteResult(plan, router, [item], 1_800_000_000_000).route.inputs).toHaveLength(9);
+    expect(() => buildCartRoutingQuoteResult(plan, router, [item], 1_800_000_000_000)).toThrow('Invalid Cart router command');
 
     for (const commands of ['0x11', '0x80'] as Hex[]) {
       const invalid = quoted(plan, obligation, commands, ['0x']);
       expect(() => buildCartRoutingQuoteResult(plan, router, [invalid], 1_800_000_000_000))
         .toThrow('not allowed');
     }
+  });
+
+  it('defers provider native refunds until every obligation has executed', () => {
+    const plan = planCartRoutingQuote(chain, cart, { paymentCurrency: eth,
+      obligations: [{ settlementCurrency: usdc, amount: 500n }, { settlementCurrency: rare, amount: 600n }] });
+    const result = buildCartRoutingQuoteResult(plan, router, plan.foreignObligations.map(item => quoted(plan, item)), 1_800_000_000_000);
+    expect(result.route.commands).toBe('0x101004');
+    expect(result.route.inputs).toHaveLength(3);
+    expect(result.route.routerValue).toBe(2200n);
+    expect(result.maximumPaymentInput).toBe(2200n);
+    expect(decodeAbiParameters(parseAbiParameters('address,address,uint256'), result.route.inputs[2]!))
+      .toEqual([eth, '0x0000000000000000000000000000000000000001', 0n]);
   });
 
   it('accepts arbitrary settlement currencies while failing closed on malformed addresses and compiler envelopes', () => {
@@ -227,7 +240,7 @@ function quoted(
   plan: CartRoutingPlan,
   obligation: CartRoutingForeignObligation,
   commands: Hex = '0x1004',
-  inputs: Hex[] = ['0x1234', '0xabcd'],
+  inputs: Hex[] = compiledInputs(plan, obligation),
 ) {
   const response = quote(plan, obligation, 'EXACT_OUTPUT');
   return {
@@ -280,4 +293,20 @@ function swap(
       data: encodeFunctionData({ abi: executeAbi, functionName: 'execute', args: [commands, inputs, 1_800_000_060n] }),
     },
   };
+}
+
+function compiledInputs(plan: CartRoutingPlan, obligation: CartRoutingForeignObligation): Hex[] {
+  const input = plan.paymentCurrency;
+  const output = obligation.settlementCurrency;
+  const zeroForOne = BigInt(input) < BigInt(output);
+  const pool = zeroForOne ? [input, output] as const : [output, input] as const;
+  const swap = encodeAbiParameters(parseAbiParameters('((address,address,uint24,int24,address),bool,uint128,uint128,bytes)'),
+    [[[pool[0], pool[1], 3000, 60, zeroAddress], zeroForOne, obligation.amount, 1100n, '0x']]);
+  return [
+    encodeAbiParameters(parseAbiParameters('bytes,bytes[]'), ['0x080c0f', [swap,
+      encodeAbiParameters(parseAbiParameters('address,uint256'), [input, 1100n]),
+      encodeAbiParameters(parseAbiParameters('address,uint256'), [output, obligation.amount]),
+    ]]),
+    encodeAbiParameters(parseAbiParameters('address,address,uint256'), [input, plan.cart, 0n]),
+  ];
 }
