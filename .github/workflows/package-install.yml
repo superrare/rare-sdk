@@ -1,0 +1,34 @@
+name: Package install compatibility
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-install:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24.22.1']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      # Do not skip lifecycle scripts: Git dependency installs run prepare.
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run test/package-exports.test.ts
+      - run: npm run test:install:git
