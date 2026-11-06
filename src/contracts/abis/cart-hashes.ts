@@ -1,4 +1,4 @@
-// Generated from superrare/core 5ef61a2dbf8f81c635d04b9734a635a269929bf9.
+// Generated from superrare/core 042bcd74143986629eaf7f45d683e4df3af23b3e.
 export const cartHashesAbi = [
   {
     "type": "function",

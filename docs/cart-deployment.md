@@ -2,10 +2,10 @@
 
 New Sepolia authoring and checkout use the November 6 Cart proxy
 `0xACfF2622f53f360274df3014DC135EfDC058786B`. Approvals target this proxy.
-The matching Lens is `0x6eED643D5016575952e7F424Dfc708bf8DcC29ab` and
-Hashes helper is `0x0377835fbD6050d6CA17cfD154b93E8307205803`.
+The matching Lens is `0xD9f2ED84317D517fc8e393227D76c63227e3f823` and
+Hashes helper is `0xD0e7aeE76485Bb3D6af3aBa187014DC636afF12A`.
 Bindings are generated from core revision
-`5ef61a2dbf8f81c635d04b9734a635a269929bf9`.
+`042bcd74143986629eaf7f45d683e4df3af23b3e`.
 
 Every canonical Listing includes `splits`, including `[]` for a sole recipient.
 Creator Listing inputs may omit splits; new authoring supplies the empty array.
@@ -36,3 +36,5 @@ are empty. Rebuild roots, proofs, seller signatures, orders and platform
 signatures together. Clear old-domain quote caches rather than relabeling them.
 
 The [core deployment record](https://github.com/superrare/core/blob/keegan/cart-fixed-quote-currency-swap/docs/cart-sepolia-fresh-2026-11-06.md) records all six contracts, receipts, and runtime checks.
+
+The November 6 policy upgrade preserves the proxy, EIP-712 domain, approvals, and all purchase state. The matching Lens uses the policy's Cart-aware preview entry point. The [policy upgrade record](https://github.com/superrare/core/blob/keegan/cart-fixed-quote-currency-swap/docs/cart-sepolia-policy-upgrade-2026-11-06.md) records the replacement bundle and confirmed upgrade.
