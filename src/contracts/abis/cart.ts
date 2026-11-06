@@ -1,4 +1,4 @@
-// Generated from superrare/core 593f13bf465b43c2ace4f37fe246b704c16d30a4.
+// Generated from superrare/core 5ef61a2dbf8f81c635d04b9734a635a269929bf9.
 export const cartAbi = [
   {
     "type": "constructor",
@@ -1245,6 +1245,27 @@ export const cartAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidFulfillmentCoverage",
+    "inputs": [
+      {
+        "name": "lineIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expected",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actual",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidFulfillmentResult",
     "inputs": [
       {
@@ -1330,6 +1351,11 @@ export const cartAbi = [
   {
     "type": "error",
     "name": "InvalidOrderLinesHash",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidOwner",
     "inputs": []
   },
   {

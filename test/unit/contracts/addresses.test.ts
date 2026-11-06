@@ -55,16 +55,16 @@ describe('chain and currency helpers', () => {
       liquidFactory: getAddress('0xb1777091C953fa2aC1fD67f2b3e2f61343F5Ce5e'),
       swapRouter: getAddress('0x429c3Ee66E7f6CDA12C5BadE4104aF3277aA2305'),
       v4Quoter: getAddress('0x61B3f2011A92d183C7dbaDBdA940a7555Ccf9227'),
-      cart: getAddress('0xB08876F9c661667Af22e85859357bB31c4e11741'),
-      cartLens: getAddress('0xb6812159892B48363b6B3ec4e8f0c34944D8E4Ab'),
-      cartHashes: getAddress('0x78554E14fb196De79a8e4ce49C1fCa4e6D46b8bd'),
+      cart: getAddress('0xACfF2622f53f360274df3014DC135EfDC058786B'),
+      cartLens: getAddress('0x6eED643D5016575952e7F424Dfc708bf8DcC29ab'),
+      cartHashes: getAddress('0x0377835fbD6050d6CA17cfD154b93E8307205803'),
     });
     expect(getRareMinterAddress('sepolia')).toBe('0xd28Dc0B89104d7BBd902F338a0193fF063617ccE');
     expect(getRareBridgeAddress('sepolia')).toBe('0xdC168291658f6C5F1D0b33E573c4d289DCA9dD08');
     expect(getCcipChainSelector('sepolia')).toBe(16015286601757825753n);
-    expect(getCartAddress('sepolia')).toBe(getAddress('0xB08876F9c661667Af22e85859357bB31c4e11741'));
-    expect(getCartLensAddress('sepolia')).toBe(getAddress('0xb6812159892B48363b6B3ec4e8f0c34944D8E4Ab'));
-    expect(getCartHashesAddress('sepolia')).toBe(getAddress('0x78554E14fb196De79a8e4ce49C1fCa4e6D46b8bd'));
+    expect(getCartAddress('sepolia')).toBe(getAddress('0xACfF2622f53f360274df3014DC135EfDC058786B'));
+    expect(getCartLensAddress('sepolia')).toBe(getAddress('0x6eED643D5016575952e7F424Dfc708bf8DcC29ab'));
+    expect(getCartHashesAddress('sepolia')).toBe(getAddress('0x0377835fbD6050d6CA17cfD154b93E8307205803'));
     expect(() => getCartAddress('mainnet')).toThrow('cart contract is not configured');
     expect(getContractAddresses('mainnet').liquidFactory).toBe('0x25f993C222fE5e891128a782A5168f1C78629540');
     expect(getContractAddresses('mainnet').erc1155Marketplace).toBe(

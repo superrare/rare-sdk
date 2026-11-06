@@ -91,9 +91,9 @@ export const contractAddresses: Partial<Record<SupportedChain, ContractAddresses
     liquidFactory: getAddress('0xb1777091C953fa2aC1fD67f2b3e2f61343F5Ce5e'),
     swapRouter: getAddress('0x429c3Ee66E7f6CDA12C5BadE4104aF3277aA2305'),
     v4Quoter: getAddress('0x61B3f2011A92d183C7dbaDBdA940a7555Ccf9227'),
-    cart: getAddress('0xB08876F9c661667Af22e85859357bB31c4e11741'),
-    cartLens: getAddress('0xb6812159892B48363b6B3ec4e8f0c34944D8E4Ab'),
-    cartHashes: getAddress('0x78554E14fb196De79a8E4ce49C1fCa4e6D46b8bd'),
+    cart: getAddress('0xACfF2622f53f360274df3014DC135EfDC058786B'),
+    cartLens: getAddress('0x6eED643D5016575952e7F424Dfc708bf8DcC29ab'),
+    cartHashes: getAddress('0x0377835fbD6050d6CA17cfD154b93E8307205803'),
   },
   mainnet: {
     factory: getAddress('0xAe8E375a268Ed6442bEaC66C6254d6De5AeD4aB1'),
