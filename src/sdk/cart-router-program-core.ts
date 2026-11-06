@@ -8,6 +8,7 @@ type Program = { commands: Hex; inputs: Hex[] };
 
 /** Translate provider endpoints to equivalent router aliases before signing. */
 export function normalizeCartRouterProgram(program: Program, cart: Address, router: Address, paymentCurrency: Address): Program {
+  if (size(program.commands) !== program.inputs.length) throw new CartRoutingCoreError('cart_incompatible_route', 'Cart command and input counts must match.');
   const recipient = (address: Address, allowRouter = false): Address => {
     if (isAddressEqual(address, sender) || isAddressEqual(address, cart)) return sender;
     if (allowRouter && (isAddressEqual(address, routerAlias) || isAddressEqual(address, router))) return routerAlias;
@@ -21,13 +22,13 @@ export function normalizeCartRouterProgram(program: Program, cart: Address, rout
         const parameters = parseAbiParameters('address,uint256,uint256,bytes,bool');
         const [target, first, second, path, payer] = decodeAbiParameters(parameters, input);
         if (size(path) < 43 || (size(path) - 20) % 23 !== 0) throw new Error('Invalid V3 path.');
-        return [{ commands, inputs: [encodeAbiParameters(parameters, [recipient(target), first, second, path, payer])] }];
+        return [{ commands, inputs: [encodeAbiParameters(parameters, [recipient(target, true), first, second, path, payer])] }];
       }
       if (command === '08' || command === '09') {
         const parameters = parseAbiParameters('address,uint256,uint256,address[],bool');
         const [target, first, second, path, payer] = decodeAbiParameters(parameters, input);
         if (path.length < 2) throw new Error('Invalid V2 path.');
-        return [{ commands, inputs: [encodeAbiParameters(parameters, [recipient(target), first, second, path, payer])] }];
+        return [{ commands, inputs: [encodeAbiParameters(parameters, [recipient(target, true), first, second, path, payer])] }];
       }
       if (command === '02') {
         const parameters = parseAbiParameters('address,address,uint160');
@@ -54,10 +55,20 @@ export function normalizeCartRouterProgram(program: Program, cart: Address, rout
       }
       if (command === '10') {
         const [actions, parameters] = decodeAbiParameters(parseAbiParameters('bytes,bytes[]'), input);
-        if (!/^0x0[6-9]0c0f$/u.test(actions) || parameters.length !== 3) throw new Error('Unsupported V4 action sequence.');
-        decodeAbiParameters(parseAbiParameters('address,uint256'), parameters[1]!);
-        decodeAbiParameters(parseAbiParameters('address,uint256'), parameters[2]!);
-        return [{ commands, inputs: [input] }];
+        if (!/^0x0[6-9]0[bc]0[ef]$/u.test(actions) || parameters.length !== 3) throw new Error('Unsupported V4 action sequence.');
+        // Preserve settlement amounts, sentinels and payer flags. Only map equivalent recipients.
+        decodeAbiParameters(parseAbiParameters(actions.slice(4, 6) === '0b' ? 'address,uint256,bool' : 'address,uint256'), parameters[1]!);
+        const normalized = parameters.map((parameter, position) => {
+          if (position !== 2) return parameter;
+          if (actions.slice(6, 8) === '0f') {
+            decodeAbiParameters(parseAbiParameters('address,uint256'), parameter);
+            return parameter;
+          }
+          const takeParameters = parseAbiParameters('address,address,uint256');
+          const [currency, target, amount] = decodeAbiParameters(takeParameters, parameter);
+          return encodeAbiParameters(takeParameters, [currency, recipient(target), amount]);
+        });
+        return [{ commands, inputs: [encodeAbiParameters(parseAbiParameters('bytes,bytes[]'), [actions, normalized])] }];
       }
       throw new Error('Unsupported router command.');
     } catch (error) {
