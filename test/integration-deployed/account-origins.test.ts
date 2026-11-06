@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { privateKeyToAccount } from 'viem/accounts';
-import { parseSiweMessage } from 'viem/siwe';
 import { describe, expect, it } from 'vitest';
 import { createRareClient } from '../../src/sdk/client.js';
 
@@ -18,34 +17,16 @@ const browserOriginFetch = (origin: string): typeof fetch => (input, init = {}) 
 });
 
 describe('deployed third-party wallet authentication', () => {
-  it('admits unregistered origins and keeps their bearer sessions independent', async () => {
+  it('rejects matching browser and signing origins when the domain is unapproved', async () => {
     const { apiBaseUrl, wallet } = configuration();
-    const clients = [1, 2].map(index => {
-      const origin = `https://sdk-${index}-${randomUUID()}.example`;
-      return { origin, client: createRareClient({ apiBaseUrl, apiFetch: browserOriginFetch(origin) }) };
-    });
-    try {
-      for (const { origin, client } of clients) {
-        await client.auth.loginWithWallet({ address: wallet.address, chainId: 1, signingOrigin: origin,
-          signMessage: message => {
-            const parsed = parseSiweMessage(message);
-            expect(parsed.domain).toBe(new URL(origin).host);
-            expect(parsed.uri).toBe(origin);
-            expect(parsed.statement).toMatch(/SuperRare.*account|account.*SuperRare/iu);
-            return wallet.signMessage({ message });
-          },
-        });
-        expect((await client.profile.get()).address.toLowerCase()).toBe(wallet.address.toLowerCase());
-      }
-      const [first, second] = clients;
-      if (!first || !second) throw new Error('Missing origin clients');
-      await first.client.auth.logout();
-      await expect(first.client.profile.get()).rejects.toMatchObject({ code: 'authentication_required' });
-      await second.client.auth.refresh();
-      expect((await second.client.profile.get()).address.toLowerCase()).toBe(wallet.address.toLowerCase());
-    } finally {
-      await Promise.all(clients.map(({ client }) => client.auth.logout()));
-    }
+    const origin = `https://sdk-${randomUUID()}.example`;
+    const client = createRareClient({ apiBaseUrl, apiFetch: browserOriginFetch(origin) });
+    await expect(client.auth.loginWithWallet({
+      address: wallet.address, chainId: 1, signingOrigin: origin,
+      signMessage: async () => { throw new Error('An unapproved origin must be rejected before wallet signing'); },
+    })).rejects.toMatchObject({ code: 'access_denied', status: 403 });
+    expect(await client.auth.getSession()).toBeNull();
+    await expect(client.profile.get()).rejects.toMatchObject({ code: 'authentication_required' });
   }, 120_000);
 
   it('rejects a browser requesting a challenge for a different signing origin', async () => {

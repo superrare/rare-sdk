@@ -119,7 +119,8 @@ describe('uploads through deployed API and real GCS', () => {
       const bytes = randomBytes(1024);
       track(bytes);
       const privateAsset = await client.upload(bytes, 'document.bin', { access: 'private' });
-      expect(privateAsset).toEqual({ access: 'private', key: objectKey(bytes), contentType: 'application/octet-stream', size: bytes.length });
+      expect(privateAsset).toMatchObject({ access: 'private', key: objectKey(bytes), contentType: 'application/octet-stream', size: bytes.length, uploadId: expect.any(String) });
+      expect(privateAsset).not.toHaveProperty('url');
       const privateUrl = `https://storage.googleapis.com/rare-api-private-upload-dev/${privateAsset.key}`;
       const denied = await fetch(privateUrl, { signal: AbortSignal.timeout(30_000) });
       expect(denied.status).toBe(403);
@@ -130,7 +131,11 @@ describe('uploads through deployed API and real GCS', () => {
       expect(publicAsset.url).toBe(publicUrl);
       expect(Buffer.from(await (await fetch(publicAsset.url)).arrayBuffer())).toEqual(bytes);
       expect((await fetch(privateUrl)).status).toBe(403);
-      expect(await client.upload(bytes, 'duplicate.bin', { access: 'private' })).toEqual(privateAsset);
+      const duplicate = await client.upload(bytes, 'duplicate.bin', { access: 'private' });
+      expect(duplicate).toMatchObject({ access: 'private', key: privateAsset.key, contentType: privateAsset.contentType, size: privateAsset.size, uploadId: expect.any(String) });
+      if (privateAsset.access !== 'private' || duplicate.access !== 'private') throw new Error('Expected private upload receipts');
+      expect(duplicate.uploadId).not.toBe(privateAsset.uploadId);
+      expect(duplicate).not.toHaveProperty('url');
       const metadata: unknown = JSON.parse(execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'objects', 'describe', `gs://rare-api-private-upload-dev/${privateAsset.key}`, '--format=json'], { encoding: 'utf8' }));
       if (metadata === null || typeof metadata !== 'object' || !('cache_control' in metadata)) throw new Error('Missing private storage cache metadata');
       expect(metadata.cache_control).toBe('private, no-store');
