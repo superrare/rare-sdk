@@ -19,6 +19,11 @@ export type UpdatePrintDrop = paths['/v1/prints/drops/{id}']['patch']['requestBo
 export type PreparePrintListing = paths['/v1/prints/listings/prepare']['post']['requestBody']['content']['application/json'];
 export type PrintListingPreparation = paths['/v1/prints/listings/prepare']['post']['responses'][201]['content']['application/json']['data'];
 export type PrintActivity = paths['/v1/prints/drops/{id}/activity']['get']['responses'][200]['content']['application/json']['data'];
+/** Validate an owned, completed private upload for a curated print specification. */
+export type PrintFileInput = paths['/v1/prints/files/validate']['post']['requestBody']['content']['application/json'];
+export type PrintFileValidation = paths['/v1/prints/files/validate']['post']['responses'][200]['content']['application/json']['data'];
+/** A private preview job; its ID belongs to Rare API rather than the print provider. */
+export type PrintMockup = paths['/v1/prints/mockups/{id}']['get']['responses'][200]['content']['application/json']['data'];
 export type PrintProduct = paths['/v1/prints/products/{id}']['get']['responses'][200]['content']['application/json']['data'];
 /** Request cancellation is separate from the product identifier and response. */
 export type PrintProductRequestOptions = { signal?: AbortSignal };
@@ -64,6 +69,13 @@ export type PrintPublishOperation = {
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
   quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
+  files: {
+    validate: (input: PrintFileInput, options?: RareAuthRequestOptions) => Promise<PrintFileValidation>;
+  };
+  mockups: {
+    create: (input: PrintFileInput, options?: RareAuthRequestOptions) => Promise<PrintMockup>;
+    get: (id: string, options?: RareAuthRequestOptions) => Promise<PrintMockup>;
+  };
   products: {
     list: (options?: PrintProductRequestOptions) => Promise<PrintProduct[]>;
     get: (id: string, options?: PrintProductRequestOptions) => Promise<PrintProduct>;

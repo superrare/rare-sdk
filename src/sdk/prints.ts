@@ -16,7 +16,7 @@ import { cartAbi } from '../contracts/abis/cart.js';
 import { getAddress, isAddressEqual } from 'viem';
 import { getContractAddresses } from '../contracts/addresses.js';
 import { resolveChainFromPublicClient } from './wallet-shell.js';
-import { validatePrintQuote } from './print-configuration-core.js';
+import { validatePrintQuote, validatePrintFileInput, validatePrintMockupId } from './print-configuration-core.js';
 
 export function createPrintsNamespace(config: RareClientConfig, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
   const publicClient = createApiClient(config.apiBaseUrl, config.apiFetch);
@@ -114,6 +114,25 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
       const validation = validatePrintQuote(input);
       if (!validation.success) throw new Error('Provide a print product ID, positive copy count and two-letter destination country code.');
       return data(client.POST('/v1/prints/estimates', { body: validation.data, signal: options.signal }));
+    },
+    files: {
+      async validate(input, options = {}) {
+        const validation = validatePrintFileInput(input);
+        if (!validation.success) throw new Error('Provide a private production upload key and print specification ID.');
+        return data(client.POST('/v1/prints/files/validate', { body: validation.data, signal: options.signal }));
+      },
+    },
+    mockups: {
+      async create(input, options = {}) {
+        const validation = validatePrintFileInput(input);
+        if (!validation.success) throw new Error('Provide a private production upload key and print specification ID.');
+        return data(client.POST('/v1/prints/mockups', { body: validation.data, signal: options.signal }));
+      },
+      async get(id, options = {}) {
+        const validation = validatePrintMockupId(id);
+        if (!validation.success) throw new Error('Provide a valid Rare print mockup ID.');
+        return data(client.GET('/v1/prints/mockups/{id}', { params: { path: { id: validation.data } }, signal: options.signal }));
+      },
     },
     products: {
       list: (options = {}) => data(publicClient.GET('/v1/prints/products', { signal: options.signal })),
