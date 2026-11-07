@@ -1,3 +1,4 @@
+import { messagingOrderId, parseMessagingOrderDestinations, parseMessagingOrderCard } from './messaging-order-core.js';
 import { featureError, featureResponse } from './feature-error.js';
 import { messagingAccountId, messagingId, messagingSequence, messagingQuery, parseMessagingAttachment, parseMessagingChanges, parseMessagingConversation, parseMessagingCreatedDirect, parseMessagingInbox, parseMessagingMessage, parseMessagingPage, parseMessagingParticipants, parseMessagingPeople, parseMessagingPreview, parseMessagingSession, parseMessagingSuccess, parseMessagingUsers, parseMessagingPublicMessage, parseMessagingPublicPage, messagingPublicHistoryQuery } from './messaging-core.js';
 import type { RareAuthRequestOptions } from './types/account.js';
@@ -13,6 +14,8 @@ export function createMessagingClient(request: MessagingTransport): RareMessagin
   const conversation = (id: string) => `conversations/${messagingId(id)}`;
   const changeBlock = async (id: string, blocked: boolean, options?: RareAuthRequestOptions) => parseMessagingSuccess(await call('POST', `blocks/${messagingAccountId(id)}`, { blocked }, options));
   return {
+    async orderConversations(orderId, options) { return parseMessagingOrderDestinations(await call('GET', `orders/${messagingOrderId(orderId)}/conversations`, undefined, options)); },
+    async orderCard(conversationId, orderId, options) { return parseMessagingOrderCard(await call('GET', `${conversation(conversationId)}/orders/${messagingOrderId(orderId)}`, undefined, options)); },
     public: {
     async history(roomId, input = {}, options) { return parseMessagingPublicPage(await call('GET', `public/rooms/${messagingId(roomId)}/messages?${messagingQuery(messagingPublicHistoryQuery(input))}`, undefined, options)); },
     async send(roomId, input, options) { return parseMessagingPublicMessage(await call('POST', `public/rooms/${messagingId(roomId)}/messages`, input, options)); },

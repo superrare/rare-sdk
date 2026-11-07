@@ -6,12 +6,18 @@ import ts from 'typescript';
 // JSON serialization changes BigInt amounts to decimal strings.
 const root = process.argv[2];
 if (root === undefined) throw new Error('Pass the superrare-monorepo directory.');
+const productSource = await readFile(resolve(root, 'libraries/types/src/prints/print-product-summary.ts'), 'utf8');
+const productFile = ts.createSourceFile('print-product-summary.ts', productSource, ts.ScriptTarget.Latest, true);
+const productDeclaration = productFile.statements.find(statement => ts.isVariableStatement(statement)
+  && statement.declarationList.declarations.some(declaration => ts.isIdentifier(declaration.name)
+    && declaration.name.text === 'printProductSummarySchema'));
+if (productDeclaration === undefined) throw new Error('Canonical print product summary schema was not found.');
 const source = await readFile(resolve(root, 'libraries/notifications/src/payloads.ts'), 'utf8');
 const file = ts.createSourceFile('payloads.ts', source, ts.ScriptTarget.Latest, true);
 const declarations = file.statements.filter(statement => ts.isVariableStatement(statement)
   && statement.declarationList.declarations.every(declaration => ts.isIdentifier(declaration.name)
     && !['notificationPayloadByCategorySchemas', 'serializePersistedPayloadForJson', 'parseSerializedJson'].includes(declaration.name.text)));
-const code = declarations.map(statement => statement.getText(file)).join('\n\n')
+const code = [productDeclaration.getText(productFile), ...declarations.map(statement => statement.getText(file))].join('\n\n')
   .replace(/export /g, '')
   .replace(/BigIntish\.bigIntishSchema/g, "z.string().regex(/^-?[0-9]+$/)")
   .replace(/Blockchain\.evmAddressSchema/g, "z.string().regex(/^0x[0-9a-fA-F]{40}$/)")

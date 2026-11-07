@@ -1,11 +1,12 @@
+import { parseMessagingPrintOrder, type MessagingPrintOrderReference } from './messaging-order-core.js';
 import type { components, operations } from '../data-access/schema.js';
 import { isRecord } from './account-auth-core.js';
 import { featureError } from './feature-error.js';
 
 export type MessagingConversation = components['schemas']['MessagingConversation'];
-export type MessagingMessage = components['schemas']['MessagingMessage'];
-export type MessagingPage = components['schemas']['MessagingPage'];
-export type MessagingChanges = components['schemas']['MessagingChanges'];
+export type MessagingMessage = components['schemas']['MessagingMessage'] & { printOrder?: MessagingPrintOrderReference };
+export type MessagingPage = Omit<components['schemas']['MessagingPage'], 'messages'> & { messages: MessagingMessage[] };
+export type MessagingChanges = Omit<components['schemas']['MessagingChanges'], 'messages'> & { messages: MessagingMessage[] };
 export type MessagingInbox = components['schemas']['MessagingInbox'];
 export type MessagingParticipant = components['schemas']['MessagingParticipant'];
 export type MessagingUser = components['schemas']['MessagingUser'];
@@ -73,6 +74,7 @@ function preview(value: unknown): NonNullable<MessagingMessage['linkPreview']> {
 export function parseMessagingMessage(value: unknown): MessagingMessage {
   const row = record(value);
   return {
+    ...(row.printOrder === undefined || row.deleted === true ? {} : { printOrder: parseMessagingPrintOrder(row.printOrder) }),
     id: messagingId(text(row.id)), conversationId: messagingId(text(row.conversationId)), sequence: messagingSequence(text(row.sequence)), clientMessageId: messagingId(text(row.clientMessageId)), author: parseMessagingUser(row.author), body: text(row.body), createdAt: text(row.createdAt), editedAt: nullable(row.editedAt), deleted: boolean(row.deleted), version: number(row.version), replyToId: row.replyToId === null ? null : messagingId(text(row.replyToId)),
     reference: row.reference == null ? null : reference(row.reference), linkPreview: row.linkPreview == null ? null : preview(row.linkPreview), attachments: list(row.attachments, parseMessagingAttachment),
     reactions: list(row.reactions, value => { const reaction = record(value); return { emoji: text(reaction.emoji), count: number(reaction.count), reacted: boolean(reaction.reacted) }; }),
