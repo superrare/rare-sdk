@@ -76,7 +76,16 @@ describe('uploads through deployed API and real GCS', () => {
         track(bytes);
         const uploaded = await external.upload(bytes, 'artwork.bin', { access });
         expect(uploaded).toMatchObject({ access, key: objectKey(bytes), size: bytes.length });
-        expect(await client.upload(bytes, 'same-artwork.bin', { access })).toEqual(uploaded);
+        const repeated = await client.upload(bytes, 'same-artwork.bin', { access });
+        expect(repeated).toMatchObject({ access, key: uploaded.key, contentType: uploaded.contentType, size: uploaded.size });
+        if (uploaded.access === 'private' && repeated.access === 'private') {
+          expect(uploaded.uploadId).toEqual(expect.any(String));
+          expect(repeated.uploadId).toEqual(expect.any(String));
+          expect(repeated.uploadId).not.toBe(uploaded.uploadId);
+          expect(repeated).not.toHaveProperty('url');
+        } else {
+          expect(repeated).toEqual(uploaded);
+        }
       }
     });
   }, 180_000);
