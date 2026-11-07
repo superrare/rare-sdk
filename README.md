@@ -957,6 +957,22 @@ is automatic. `fileRequirements` reports accepted content types and maximum byte
 Use the selected product `id` in the existing draft `specificationId`
 field. Product responses omit prices, shipping and destination country lists.
 
+Validate an owned private upload before configuring a print:
+
+```ts
+const input = { productionUploadKey: upload.key, specificationId: "GLOBAL-FAP-8X12" };
+const validation = await rare.prints.files.validate(input, { signal });
+const preview = await rare.prints.mockups.create(input, { signal });
+const current = await rare.prints.mockups.get(preview.id, { signal });
+```
+
+Validation returns `valid`, `status`, and issues with codes, messages, and severity.
+Mockup creation starts an asynchronous job. Read its status until `completed` or
+`failed`; a completed job includes `result.url`, `widthPx`, and `heightPx`.
+These methods use your account session and require no signing wallet. They accept
+an owned upload key and curated specification, never a production URL or provider
+asset ID. A mockup ID belongs to your Rare account.
+
 Run `npm run test:integration:print-products` against a deployment containing the
 product endpoints for a read-only catalog check. This check requires only
 `RARE_API_BASE_URL`.

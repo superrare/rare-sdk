@@ -3130,6 +3130,277 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prints/files/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate an owned private production file for a print size */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        productionUploadKey: string;
+                        specificationId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Provider file assessment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                valid: boolean;
+                                /** @enum {string} */
+                                status: "valid" | "warning" | "error";
+                                issues: {
+                                    code: string;
+                                    field?: string;
+                                    message: string;
+                                    /** @enum {string} */
+                                    severity: "warning" | "error";
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Account session required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Owned print file or preview not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description File processing or preview creation in progress; retry */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print provider unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/mockups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a private print preview job for an owned production file */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        productionUploadKey: string;
+                        specificationId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Preview job created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                status: "pending" | "processing" | "completed" | "failed";
+                                result?: {
+                                    /** Format: uri */
+                                    url: string;
+                                    widthPx: number;
+                                    heightPx: number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Account session required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Owned print file or preview not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description File processing or preview creation in progress; retry */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print provider unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prints/mockups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an account-owned private preview job */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Preview job status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                status: "pending" | "processing" | "completed" | "failed";
+                                result?: {
+                                    /** Format: uri */
+                                    url: string;
+                                    widthPx: number;
+                                    heightPx: number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Account session required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Owned print file or preview not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description File processing or preview creation in progress; retry */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Print provider unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

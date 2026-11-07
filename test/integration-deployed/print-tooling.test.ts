@@ -28,6 +28,40 @@ const setup = () => {
 };
 
 describe('print tooling through deployed Rare API', () => {
+  it('validates an owned private master and generates a usable asynchronous preview', async () => {
+    const { wallet, rare } = setup();
+    await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,
+      signMessage: message => wallet.signMessage({ message }) });
+    const bytes = await downloadTestImage();
+    const production = await rare.upload(bytes, 'mockup-artwork.jpg', { access: 'private', contentType: 'image/jpeg' });
+    const input = { productionUploadKey: production.key, specificationId: 'GLOBAL-FAP-8X12' };
+    await expect.poll(async () => {
+      try { return (await rare.prints.files.validate(input)).status; }
+      catch (error) { if (error instanceof RareApiError && error.status === 409) return undefined; throw error; }
+    }, { timeout: 60_000, interval: 2_000 }).toMatch(/^(valid|warning|error)$/u);
+    const validation = await rare.prints.files.validate(input);
+    expect(validation).toEqual({ valid: expect.any(Boolean), status: expect.stringMatching(/^(valid|warning|error)$/u), issues: expect.any(Array) });
+    for (const issue of validation.issues) expect(issue).toEqual(expect.objectContaining({
+      code: expect.any(String), message: expect.any(String), severity: expect.stringMatching(/^(warning|error)$/u),
+    }));
+    const created = await rare.prints.mockups.create(input);
+    expect(created.id).toMatch(/^[0-9a-f-]{36}$/u);
+    await expect.poll(async () => {
+      const current = await rare.prints.mockups.get(created.id);
+      if (current.status === 'failed') throw new Error(`Print mockup ${created.id} failed at the provider.`);
+      return current.status;
+    }, { timeout: 120_000, interval: 2_000 }).toBe('completed');
+    const completed = await rare.prints.mockups.get(created.id);
+    if (completed.result === undefined) throw new Error('Completed print mockup did not return a preview.');
+    expect(new URL(completed.result.url).protocol).toBe('https:');
+    expect(completed.result.widthPx).toBeGreaterThan(0);
+    expect(completed.result.heightPx).toBeGreaterThan(0);
+    const image = await fetch(completed.result.url);
+    expect(image.ok).toBe(true);
+    expect(image.headers.get('content-type')).toMatch(/^image\//u);
+    expect((await image.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  }, 180_000);
+
   it('prepares an unminted artwork Product and resumes its private print without a release manifest', async () => {
     const { wallet, rare, publicClient } = setup();
     await rare.auth.loginWithWallet({ address: wallet.address, chainId: sepolia.id,

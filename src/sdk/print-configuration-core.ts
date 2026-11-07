@@ -9,3 +9,10 @@ const printQuoteSchema = z.object({
   shippingMethod: z.literal('Standard').optional(),
 }).strict();
 export const validatePrintQuote = (input: unknown) => printQuoteSchema.safeParse(input);
+
+const printFileInputSchema = z.object({
+  productionUploadKey: z.string().regex(/^[0-9a-f]{64}$/u),
+  specificationId: productId,
+}).strict();
+export const validatePrintFileInput = (input: unknown) => printFileInputSchema.safeParse(input);
+export const validatePrintMockupId = (input: unknown) => z.uuid().safeParse(input);
