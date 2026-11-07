@@ -1,3 +1,4 @@
+import type { PrintListingPreparation } from './prints.js';
 import type { CartOrdersNamespace } from './orders.js';
 import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
@@ -113,6 +114,9 @@ export type CartListingPublishParams = {
   /** Persist the exact authorization before publication; rejection prevents submission. */
   onSigned?: (artifact: CartListingRootArtifact & { signature: Hex }) => void | Promise<void>;
 };
+export type CartPrintListingPublishParams = Omit<CartListingPublishParams, 'preparation'> & {
+  printPreparations: PrintListingPreparation | readonly PrintListingPreparation[];
+};
 export type CartListingPublishResult = {
   preparation: CartListingPreparation;
   signedArtifact: CartListingRootArtifact & { signature: Hex };
@@ -139,7 +143,10 @@ export type CartNamespace = {
   routing: CartRoutingNamespace;
   listing: {
     prepare: (intent: CartListingIntent) => Promise<CartListingPreparation>;
-    publish: (params: CartListingPublishParams) => Promise<CartListingPublishResult>;
+    publish: {
+      (params: CartListingPublishParams): Promise<CartListingPublishResult>;
+      (params: CartPrintListingPublishParams): Promise<Omit<CartListingPublishResult, 'preparation'>>;
+    };
     search: CartApiNamespace['listing']['search'];
     get: CartApiNamespace['listing']['get'];
     invalidate: CartApiNamespace['listing']['invalidate'];

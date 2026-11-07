@@ -4,7 +4,7 @@ import type { CartListingPreparation, CartListingRootArtifact } from './types/ca
 
 /** Bind recovery to the original order of listings, seller and deployment. */
 export function validateCartListingPublication(
-  preparation: CartListingPreparation,
+  preparation: { artifact: CartListingRootArtifact; intent: Pick<CartListingPreparation['intent'], 'seller' | 'deadline'> },
   retained: (CartListingRootArtifact & { signature: Hex }) | undefined,
   scope: { chainId: number; cart: Address; seller: Address },
 ): void {

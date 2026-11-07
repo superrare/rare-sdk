@@ -21,26 +21,15 @@ payloads](cart-deployment.md) for the matching Lens/Hashes addresses and rules.
 
 ## Author and publish one or many prints
 
-Scalar operations take the same object as a batch item's `input`: `options.configure({ dropId, input })`, `listings.publish({ preparation, signedArtifact })`, and `listings.submitSigned({ preparationId, artifact })`. Omit `signedArtifact` for a fresh signature; retain it after a failed publication to retry without another wallet request. Both `rare.cart.listing.publish` and `rare.prints.listings.publish` accept `onSigned: async artifact => { ... }`. Save that artifact durably in the callback: the SDK awaits it before submission, and a rejected callback prevents publication. Pass the saved `signedArtifact` with the original `preparation` to resume without requesting another signature. Callbacks receive a separate snapshot; changing it cannot modify the submitted authorization.
+Use `rare.prints.listings.prepare` for each print offer. Pass one preparation
+or an array of up to 100 to `rare.cart.listing.publish({ printPreparations })`.
+The seller signs one Cart Listing Root per call. Save the signed artifact in
+`onSigned` before submission. To retry, pass the same preparations in the same
+order with the saved `signedArtifact`.
 
-Print authoring supports the same methods for one item or a batch. Pass an array
-of `{ key, input }` items to `rare.prints.drops.create`, `options.configure`,
-`listings.prepare`, `listings.publish`, or `listings.submitSigned`. Configuration
-inputs contain `{ dropId, input }`; signed-submission inputs contain
-`{ preparationId, artifact }`; publication inputs contain `{ preparation, signedArtifact? }`.
-
-Batch results retain input order and include an `inputDigest` binding the saved
-result to its inputs. Results use `{ key, inputDigest, status: 'fulfilled', value }` or
-`{ key, inputDigest, status: 'rejected', error, signedArtifact? }`. Preserve these results and
-pass `{ previousResults }` when retrying the same batch. The SDK skips successful
-items and processes the rest sequentially. Do not change the input associated
-with a saved key. Generate and retain each draft's `idempotencyKey` and each
-Listing's `listingSalt` before making requests. The SDK never replaces them.
-
-If publication fails after signing, retain the rejected result's `signedArtifact`
-and supply it with that item's `preparation` on retry. This retries publication
-without another signature. Single-item callers can catch `PrintPublicationError`
-and retry `listings.publish({ preparation, signedArtifact: error.signedArtifact })`.
+Print draft creation, option configuration, and listing preparation still
+accept arrays of `{ key, input }`. Save their results and pass
+`{ previousResults }` to skip completed operations on retry.
 
 Use `rare.cart.listing.search({ eligibility: 'eligible' })` for an authenticated
 catalog of open Listings and gated Listings the account can purchase. The server
@@ -207,6 +196,21 @@ Reuse SDK approval, simulation, execution, and receipt verification. Do not
 rebuild Cart calldata, Merkle proofs, or transaction verification in React.
 `autoApprove` defaults to false. Choose approval behavior deliberately.
 
+## Handle checkout capacity
+
+A cart supports at most 64 listing or swap selections. Quantities do not multiply
+the item count. Generated fee lines do not count toward this limit.
+
+Rare API simulates the complete transaction before returning a signed checkout
+and rejects transactions that exceed the 12,000,000 gas budget or cannot be
+simulated. The SDK checks the same budget before wallet submission. These limits
+are platform policy, not caller options. A cart with fewer than 64 selections can
+still exceed the gas budget, particularly when minting many tokens.
+
+Simulation uses server-controlled funding and allowance overrides so users can
+prepare checkout before funding or approving a wallet. These overrides change no
+on-chain state. Actual payment still requires the user's funds and approval.
+
 ## Keep checkout economics on the backend
 
 Use Rare API results for production costs, shipping, commissions, checkout fees,
@@ -372,7 +376,7 @@ configuration out of creator controls.
    the artwork price. This does not call Prodigi. Current print Listings settle in USDC;
    This does not restrict the buyer's supported payment currencies.
 6. Prepare the frozen terms with `rare.prints.listings.prepare`, then call
-   `rare.prints.listings.publish(preparation)`.
+   `rare.cart.listing.publish({ printPreparations: preparation })`.
    Set `eligibilityRuleId` here to publish a claim-gated Listing atomically.
    The rule must belong to the creator and target this print option's SKU.
    Set `maxQuantityPerCheckout` to the maximum copies in one purchase.

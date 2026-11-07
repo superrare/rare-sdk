@@ -1,19 +1,6 @@
-import { getAddress, isAddress, isAddressEqual, isHex } from 'viem';
+import { getAddress, isAddress, isHex } from 'viem';
 import type { CartListing } from './types/cart.js';
-import type { PreparePrintListing, PrintListingPreparation, SignedPrintListingArtifact } from './types/prints.js';
-import { hashCartListing, validateCartListingRootArtifact } from './cart-core.js';
-
-export function validatePrintPublicationArtifact(preparation: PrintListingPreparation, artifact: SignedPrintListingArtifact): void {
-  validateCartListingRootArtifact(artifact);
-  const { listing, deadline } = parsePrintListingTerms(preparation);
-  if (String(artifact.chainId) !== preparation.chain_id || !isAddressEqual(artifact.cart, getAddress(preparation.cart_address)) ||
-    !isAddressEqual(artifact.seller, listing.seller) || artifact.root.deadline !== deadline.toString() ||
-    hashCartListing(listing, artifact.chainId, artifact.cart) !== preparation.listing_digest ||
-    artifact.entries.length !== 1 || artifact.entries[0]?.listingDigest !== preparation.listing_digest) {
-    throw new Error('Signed print artifact does not match the frozen preparation.');
-  }
-}
-
+import type { PreparePrintListing, PrintListingPreparation } from './types/prints.js';
 export function validatePrintListingQuantityLimit(input: PreparePrintListing): { valid: true } | { valid: false; message: string } {
   const quantity = input.maxQuantityPerCheckout ?? '1';
   if (typeof quantity !== 'string' || !/^[1-9][0-9]*$/u.test(quantity) || quantity.length > 4 || BigInt(quantity) > 1000n) {

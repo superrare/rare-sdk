@@ -3408,7 +3408,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["CartListingRootIngestionRequest"];
+                    "application/json": components["schemas"]["CartListingPublicationRequest"];
                 };
             };
             responses: {
@@ -4511,6 +4511,10 @@ export interface components {
         CartListingInvalidationRequest: {
             /** Format: date-time */
             invalidatedAt?: string | null;
+        };
+        CartListingPublicationRequest: components["schemas"]["CartListingRootIngestionRequest"] | {
+            artifact: components["schemas"]["CartListingRootIngestionRequest"]["artifact"];
+            preparationIds: string[];
         };
         CartListingRootIngestionRequest: {
             /** Format: uuid */

@@ -414,6 +414,7 @@ export type CartApiNamespace = {
     search: (params?: CartApiListingSearchParams) => Promise<CartApiListingSearchResult>;
     get: (listingDigest: Hex) => Promise<CartApiListing>;
     invalidate: (listingDigest: Hex, invalidatedAt?: string | null) => Promise<CartApiListing>;
+    publishPrintPreparations: (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;
     publish: (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;
   };
   checkout: {

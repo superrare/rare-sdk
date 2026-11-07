@@ -2,103 +2,12 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { createPublicClient, createWalletClient, http, zeroAddress } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http } from 'viem';
 import { sepolia } from 'viem/chains';
 import { createRareClient } from '../../src/sdk/client.js';
-import type { CreatePrintDrop, PrintListingPreparation, SignedPrintListingArtifact } from '../../src/sdk/types/prints.js';
-import { getContractAddresses } from '../../src/contracts/addresses.js';
-import { hashCartListing } from '../../src/sdk/cart-core.js';
-import type { CartListing } from '../../src/sdk/types/cart.js';
+import type { CreatePrintDrop } from '../../src/sdk/types/prints.js';
 
 describe('print batch authoring over HTTP', () => {
-  it.each(['scalar', 'batch'])('retains a signed authorization and recovers through %s without another wallet signature or RPC read', async (mode) => {
-    const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
-    const cart = getContractAddresses('sepolia').cart;
-    if (cart === undefined) throw new Error('No Cart address configured');
-    const listing: CartListing = { splits: [], listingSalt: `0x${'11'.repeat(32)}`, seller: account.address, sku: `0x${'22'.repeat(32)}`,
-      fulfillmentKind: 1, tokenContract: zeroAddress, tokenId: 0n, settlementCurrency: zeroAddress,
-      minimumUnitPrice: 1n, availableQuantity: 10n, paymentRecipient: account.address };
-    const deadline = String(Math.floor(Date.now() / 1000) + 3600);
-    const preparation: PrintListingPreparation = { id: randomUUID(), user_id: 'test', option_id: randomUUID(),
-      fulfillment_kind: 'PRODIGI_PRINT', chain_id: '11155111', cart_address: cart,
-      listing_digest: hashCartListing(listing, sepolia.id, cart), listing_id: null, created_at: new Date().toISOString(),
-      snapshot: { dropId: randomUUID(), intent: { deadline }, configured: { listing: { ...listing,
-        tokenId: '0', minimumUnitPrice: '1', availableQuantity: '10' } } } };
-    const requests: string[] = [];
-    const server = createServer(async (request, response) => {
-      const chunks: Buffer[] = [];
-      for await (const chunk of request) {
-        chunks.push(Buffer.from(chunk));
-      }
-      requests.push(request.url ?? '');
-      response.setHeader('Content-Type', 'application/json');
-      if (request.url === '/rpc') {
-        const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
-        if (typeof body !== 'object' || body === null || !('id' in body)) throw new Error('Invalid JSON RPC');
-        response.end(JSON.stringify({ jsonrpc: '2.0', id: body.id, result: `0x${'0'.repeat(64)}` }));
-      } else if (request.url?.endsWith('/publish')) {
-        const publications = requests.filter(path => path.endsWith('/publish'));
-        if (publications.length === 1) {
-          response.writeHead(503);
-          response.end(JSON.stringify({ error: 'upstream_unavailable' }));
-        } else response.end(JSON.stringify({ data: preparation }));
-      } else response.end(JSON.stringify({ data: { status: 'DRAFT' } }));
-    });
-    server.listen(0, '127.0.0.1');
-    await once(server, 'listening');
-    const address = server.address();
-    if (address === null || typeof address === 'string') throw new Error('Missing HTTP address');
-    const apiBaseUrl = `http://127.0.0.1:${address.port}`;
-    const rare = createRareClient({ apiBaseUrl,
-      publicClient: createPublicClient({ chain: sepolia, transport: http(`${apiBaseUrl}/rpc`) }),
-      walletClient: createWalletClient({ account, chain: sepolia, transport: http(`${apiBaseUrl}/rpc`) }),
-      transport: (path, init) => fetch(`${apiBaseUrl}${path}`, init) });
-    try {
-      await expect(rare.prints.listings.publish({ preparation, onSigned: async () => {
-        await Promise.resolve();
-        throw new Error('initial journal unavailable');
-      } })).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'initial journal unavailable' }) });
-      expect(requests.some(path => path.endsWith('/publish'))).toBe(false);
-      const checkpoints: SignedPrintListingArtifact[] = [];
-      const results = await rare.prints.listings.publish([{ key: 'print', input: { preparation, onSigned: async artifact => {
-        expect(requests.some(path => path.endsWith('/publish'))).toBe(false);
-        await Promise.resolve();
-        checkpoints.push(artifact);
-      } } }]);
-      const failed = results[0];
-      expect(failed?.status).toBe('rejected');
-      if (failed?.status !== 'rejected' || failed.signedArtifact === undefined) throw new Error('Signed artifact was lost');
-      expect(checkpoints).toEqual([failed.signedArtifact]);
-      const previousRequestCount = requests.length;
-      await expect(rare.prints.listings.publish({ preparation, signedArtifact: failed.signedArtifact, onSigned: async () => {
-        await Promise.resolve();
-        throw new Error('journal unavailable');
-      } })).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'journal unavailable' }) });
-      expect(requests).toHaveLength(previousRequestCount);
-      const checkpoint = async (artifact: SignedPrintListingArtifact): Promise<void> => {
-        expect(requests).toHaveLength(previousRequestCount);
-        await Promise.resolve();
-        artifact.root.nonce = '99';
-      };
-      const changedPreparation = { ...preparation, listing_digest: `0x${'33'.repeat(32)}` };
-      const mismatched = await rare.prints.listings.publish([{ key: 'print', input: { preparation: changedPreparation, signedArtifact: failed.signedArtifact } }]);
-      expect(mismatched[0]).toMatchObject({ status: 'rejected', error: expect.objectContaining({ message: expect.stringContaining('does not match') }) });
-      expect(requests).toHaveLength(previousRequestCount);
-      if (mode === 'scalar') {
-        const retried = await rare.prints.listings.publish({ preparation, signedArtifact: failed.signedArtifact, onSigned: checkpoint });
-        expect(retried.signedArtifact).toEqual(failed.signedArtifact);
-      } else {
-        const retried = await rare.prints.listings.publish([{ key: 'print', input: { preparation, signedArtifact: failed.signedArtifact, onSigned: checkpoint } }], { previousResults: results });
-        expect(retried[0]).toMatchObject({ key: 'print', status: 'fulfilled', value: { signedArtifact: failed.signedArtifact } });
-      }
-      expect(requests.slice(previousRequestCount)).toEqual([`/v1/prints/listings/${preparation.id}/publish`]);
-    } finally {
-      server.closeAllConnections();
-      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-    }
-  });
-
   it('continues after a failed item, skips completed results, and reuses request keys on retry', async () => {
     const requests: string[] = [];
     const server = createServer(async (request, response) => {
