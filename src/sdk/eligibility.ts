@@ -19,6 +19,11 @@ export function createEligibilityNamespace(config: RareClientConfig, scope: { ch
         if (result.data === undefined) throw new Error('Rare API did not return purchase eligibility rules.');
         return result.data;
       },
+      async backfill(ruleId) {
+        const result = await client.POST('/v1/eligibility/rules/{ruleId}/backfill', { params: { path: { ruleId } } });
+        if (result.data === undefined) throw new Error('Rare API did not confirm the eligibility backfill.');
+        return result.data.data;
+      },
       async disable(ruleId) {
         const result = await client.POST('/v1/eligibility/rules/{ruleId}/disable', { params: { path: { ruleId } } });
         if (result.data === undefined) throw new Error('Rare API did not confirm the disabled purchase eligibility rule.');
