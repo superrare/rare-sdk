@@ -18,9 +18,11 @@ describe('physical selections paired with mint results', () => {
       expect(validateCartPrintSelections(intent([{ preparationId, listingDigest, unitIndexes }])).length).toBeGreaterThan(0);
     }
     expect(validateCartPrintSelections(intent([{ preparationId, listingDigest: `0x${'cd'.repeat(32)}`, unitIndexes: [0] }]))[0]?.code).toBe('invalid_mint_source');
+  });
+  it('allows the same minted unit in different print preparations', () => {
     expect(validateCartPrintSelections(intent([
       { preparationId, listingDigest, unitIndexes: [0] },
       { preparationId: '22222222-2222-4222-8222-222222222222', listingDigest, unitIndexes: [0] },
-    ]))[0]?.code).toBe('duplicate_mint_unit');
+    ]))).toEqual([]);
   });
 });

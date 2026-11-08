@@ -15,10 +15,9 @@ export function validateCartPrintSelections(intent: CartCheckoutIntent): CartVal
       && selection.unitIndexes.length > 0 && selection.unitIndexes.length <= 1000
       && selection.unitIndexes.every(index => Number.isInteger(index) && index >= 0 && index < 1000));
   if (!validSelections) return [{ code: 'invalid_mint_selection', field: 'delivery.mintSelections', message: 'Provide distinct print preparations and nonnegative mint unit indexes.' }];
-  const selectedUnits = selections.flatMap(selection => selection.unitIndexes.map(index => `${selection.listingDigest.toLowerCase()}:${index}`));
-  const duplicateIssues = new Set(selectedUnits).size === selectedUnits.length ? [] : [{
-    code: 'duplicate_mint_unit', field: 'delivery.mintSelections', message: 'A minted unit can accompany only one physical copy in this checkout.',
-  }];
+  const duplicateIssues = selections.some(selection => new Set(selection.unitIndexes).size !== selection.unitIndexes.length) ? [{
+    code: 'duplicate_mint_unit', field: 'delivery.mintSelections', message: 'A minted unit can appear only once per print preparation.',
+  }] : [];
   const sourceIssues = selections.flatMap((selection, index) => {
     const sources = intent.items.filter(item => item.kind === 'listing' && item.listingDigest.toLowerCase() === selection.listingDigest.toLowerCase());
     const source = sources[0];
