@@ -10,6 +10,9 @@ export type PrintQuote = paths['/v1/prints/estimates']['post']['responses'][200]
 
 /** Drafts need a private production file; specifications may be completed before configuring a sale. */
 export type CreatePrintDrop = paths['/v1/prints/drops']['post']['requestBody']['content']['application/json'];
+/** Administrator input. The supplied files must have been uploaded by the authenticated administrator. */
+export type CreateConciergePrint = paths['/v1/prints/concierge/drafts']['post']['requestBody']['content']['application/json'];
+export type ConciergePrintDraft = paths['/v1/prints/concierge/drafts']['post']['responses'][201]['content']['application/json']['data'];
 export type PrintDrop = paths['/v1/prints/drops/mine/{id}']['get']['responses'][200]['content']['application/json']['data'];
 export type PublicPrintDrop = paths['/v1/prints/drops/{id}']['get']['responses'][200]['content']['application/json']['data'];
 export type PrintOption = paths['/v1/prints/drops/{id}/options/standard']['put']['responses'][200]['content']['application/json']['data'];
@@ -51,6 +54,9 @@ export type PrintPrepareOperation = {
 };
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
+  concierge: {
+    createDraft: (input: CreateConciergePrint, options?: RareAuthRequestOptions) => Promise<ConciergePrintDraft>;
+  };
   quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
   files: {
     validate: (input: PrintFileInput, options?: RareAuthRequestOptions) => Promise<PrintFileValidation>;

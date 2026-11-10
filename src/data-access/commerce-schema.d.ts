@@ -1077,6 +1077,39 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/prints/concierge/drafts": {
+        post: {
+            requestBody: {
+                content: {
+                    "application/json": {
+                        creatorUserId: string;
+                        drop: Omit<paths["/v1/prints/drops"]["post"]["requestBody"]["content"]["application/json"], "print"> & {
+                            print: Omit<paths["/v1/prints/drops"]["post"]["requestBody"]["content"]["application/json"]["print"], "images" | "specificationId"> & {
+                                images: string[];
+                                specificationId: string;
+                            };
+                        };
+                        displayPriceUsdCents: string;
+                        listing?: Omit<paths["/v1/prints/listings/prepare"]["post"]["requestBody"]["content"]["application/json"], "optionId" | "seller" | "mintSource">;
+                    };
+                };
+            };
+            responses: {
+                201: {
+                    content: {
+                        "application/json": {
+                            data: {
+                                dropId: string;
+                                listing?: paths["/v1/prints/listings/prepare"]["post"]["requestBody"]["content"]["application/json"];
+                                preparationId?: string;
+                                option: paths["/v1/prints/drops/{id}/options/standard"]["put"]["responses"][200]["content"]["application/json"]["data"];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
     "/v1/prints/drops": {
         parameters: {
             query?: never;

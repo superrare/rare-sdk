@@ -47,6 +47,9 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     return isPrintBatch<PreparePrintListing>(input) ? runPrintBatch(input, options, operation) : operation(input);
   }
   return {
+    concierge: {
+      createDraft: (input, options = {}) => data(client.POST('/v1/prints/concierge/drafts', { body: input, signal: options.signal })),
+    },
     async quote(input, options = {}) {
       const validation = validatePrintQuote(input);
       if (!validation.success) throw new Error('Provide a print product ID, positive copy count and two-letter destination country code.');
