@@ -20,6 +20,15 @@ export type ConfigurePrintOption = paths['/v1/prints/drops/{id}/options/standard
 /** Creators may replace the private production file after configuration or publication. Existing order snapshots remain unchanged; specification edits still require an unconfigured draft. */
 export type UpdatePrintDrop = paths['/v1/prints/drops/{id}']['patch']['requestBody']['content']['application/json'];
 export type PreparePrintListing = paths['/v1/prints/listings/prepare']['post']['requestBody']['content']['application/json'];
+/** Omit the key for a new draft. Keep the resolved request for retries across calls. */
+export type PrintDropInput = Omit<CreatePrintDrop, 'idempotencyKey'> & Partial<Pick<CreatePrintDrop, 'idempotencyKey'>>;
+/** Omit the salt for a new preparation. Keep the resolved request for retries across calls. */
+export type PrintListingInput = Omit<PreparePrintListing, 'listingSalt'> & Partial<Pick<PreparePrintListing, 'listingSalt'>>;
+type ConciergeListing = NonNullable<CreateConciergePrint['listing']>;
+export type ConciergePrintInput = Omit<CreateConciergePrint, 'drop' | 'listing'> & {
+  drop: Omit<CreateConciergePrint['drop'], 'idempotencyKey'> & Partial<Pick<CreateConciergePrint['drop'], 'idempotencyKey'>>;
+  listing?: Omit<ConciergeListing, 'listingSalt'> & Partial<Pick<ConciergeListing, 'listingSalt'>>;
+};
 export type PrintListingPreparation = paths['/v1/prints/listings/prepare']['post']['responses'][201]['content']['application/json']['data'];
 export type PrintActivity = paths['/v1/prints/drops/{id}/activity']['get']['responses'][200]['content']['application/json']['data'];
 /** Validate an owned, completed private upload for a curated print specification. */
@@ -41,7 +50,7 @@ export type PrintDropCreation = Omit<PrintDrop, 'options'>;
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
 
 export type PrintCreateOperation = {
-  (input: CreatePrintDrop): Promise<PrintDropCreation>;
+  (input: PrintDropInput): Promise<PrintDropCreation>;
   (items: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
 };
 export type PrintConfigureOperation = {
@@ -49,13 +58,13 @@ export type PrintConfigureOperation = {
   (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
 };
 export type PrintPrepareOperation = {
-  (input: PreparePrintListing): Promise<PrintListingPreparation>;
+  (input: PrintListingInput): Promise<PrintListingPreparation>;
   (items: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
 };
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
   concierge: {
-    createDraft: (input: CreateConciergePrint, options?: RareAuthRequestOptions) => Promise<ConciergePrintDraft>;
+    createDraft: (input: ConciergePrintInput, options?: RareAuthRequestOptions) => Promise<ConciergePrintDraft>;
   };
   quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
   files: {
