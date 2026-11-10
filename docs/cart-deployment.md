@@ -1,5 +1,12 @@
 # Cart deployment and signed payloads
 
+Ethereum mainnet authoring and checkout use Cart proxy
+`0x6cb621e971e57C4889e6ca15725c0E27EB5aE4ec`. Approvals target this proxy.
+The matching Lens is `0x740640f3db6c188663b64b3F30dB7b7Df4338a51` and the
+Hashes helper is `0x01d40F86b244E9a88Aae23c5E619090F308FF2Fa`.
+The [mainnet deployment record](https://github.com/superrare/core/blob/keegan/cart-fixed-quote-currency-swap/docs/data/cart-mainnet-fresh-2026-11-09.json)
+lists the six contract creations.
+
 New Sepolia authoring and checkout use the November 6 Cart proxy
 `0xACfF2622f53f360274df3014DC135EfDC058786B`. Approvals target this proxy.
 The matching Lens is `0xD9f2ED84317D517fc8e393227D76c63227e3f823` and

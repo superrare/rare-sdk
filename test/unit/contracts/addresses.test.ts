@@ -65,7 +65,10 @@ describe('chain and currency helpers', () => {
     expect(getCartAddress('sepolia')).toBe(getAddress('0xACfF2622f53f360274df3014DC135EfDC058786B'));
     expect(getCartLensAddress('sepolia')).toBe(getAddress('0xD9f2ED84317D517fc8e393227D76c63227e3f823'));
     expect(getCartHashesAddress('sepolia')).toBe(getAddress('0xD0e7aeE76485Bb3D6af3aBa187014DC636afF12A'));
-    expect(() => getCartAddress('mainnet')).toThrow('cart contract is not configured');
+    expect(getCartAddress('mainnet')).toBe(getAddress('0x6cb621e971e57C4889e6ca15725c0E27EB5aE4ec'));
+    expect(getCartLensAddress('mainnet')).toBe(getAddress('0x740640f3db6c188663b64b3F30dB7b7Df4338a51'));
+    expect(getCartHashesAddress('mainnet')).toBe(getAddress('0x01d40F86b244E9a88Aae23c5E619090F308FF2Fa'));
+    expect(() => getCartAddress('base')).toThrow('cart contract is not configured');
     expect(getContractAddresses('mainnet').liquidFactory).toBe('0x25f993C222fE5e891128a782A5168f1C78629540');
     expect(getContractAddresses('mainnet').erc1155Marketplace).toBe(
       '0x0015F7659d86cd7F1049C039abE72AEd702De678',
