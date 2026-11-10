@@ -41,6 +41,8 @@ import type {
   CartProductSku,
   CartDeliveryCheckout,
   CartCardCheckout,
+  CartCardCharge,
+  CartCardChargeResult,
   CartCheckoutRecovery,
   CartPaymentRequest,
   CartPaymentMethods,
@@ -260,6 +262,16 @@ export function createCartApiNamespace(
       client.GET('/v1/cart/checkout/coinflow/config', { params: { query: { chainId } } }),
       'Rare API did not return card payment availability.',
     ),
+    card: {
+      quote: (input: { email: string; subtotalCents: number }) => getWrappedData<{ totalCents: number }>(
+        protectedClient.POST('/v1/cart/checkout/coinflow/quote', { params: { query: { chainId } }, body: input }),
+        'Rare API did not return the card total.',
+      ),
+      charge: (input: CartCardCharge) => getWrappedData<CartCardChargeResult>(
+        protectedClient.POST('/v1/cart/checkout/coinflow/charge', { params: { query: { chainId } }, body: input }),
+        'Rare API did not return a card submission status.',
+      ),
+    },
     payment: async (input: CartPaymentRequest): Promise<CartCardCheckout> => {
       const plan = planCartPayment(input, { chainId, cartAddress: cartAddress() });
       const wire = await getWrappedData<Omit<CartCardCheckout, 'preparedPurchase'> & { preparedPurchase: CartApiPreparedPurchaseWire }>(

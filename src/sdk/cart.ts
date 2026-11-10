@@ -165,6 +165,7 @@ export function createCartNamespace(
       authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
       payment: api.checkout.payment,
       paymentMethods: api.checkout.paymentMethods,
+      card: api.checkout.card,
       prepare(intent) {
         const validation = validateCartCheckoutIntent(intent);
         if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'Cart checkout intent is invalid.', validation.issues);

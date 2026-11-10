@@ -279,7 +279,31 @@ export type CartPaymentMethods = {
   paymentCurrency: Address | null;
   minimumCents: number;
   maximumCentsExclusive: number;
+  directCard?: { merchantId: string; env: 'sandbox' };
 };
+export type CartCardCharge = {
+  orderId: Hex;
+  idempotencyKey: string;
+  reviewedTotalCents: number;
+  card: {
+    token: string;
+    expMonth: string;
+    expYear: string;
+    bin?: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    address1: string;
+    city: string;
+    country: string;
+    state?: string;
+    zip?: string;
+  };
+};
+export type CartCardChargeResult =
+  | { status: 'pending' }
+  | { status: 'accepted'; paymentId: string }
+  | { status: 'quote_changed'; totalCents: number };
 export type CartCardCheckout = {
   checkoutJwtToken: string;
   sessionKey: string;
@@ -421,6 +445,10 @@ export type CartApiNamespace = {
     recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
     payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
     paymentMethods: () => Promise<CartPaymentMethods>;
+    card: {
+      quote: (input: { email: string; subtotalCents: number }) => Promise<{ totalCents: number }>;
+      charge: (input: CartCardCharge) => Promise<CartCardChargeResult>;
+    };
   };
 };
 

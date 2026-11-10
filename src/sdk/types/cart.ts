@@ -154,6 +154,7 @@ export type CartNamespace = {
     prepare: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
     payment: CartApiNamespace['checkout']['payment'];
     paymentMethods: CartApiNamespace['checkout']['paymentMethods'];
+    card: CartApiNamespace['checkout']['card'];
     purchase: (params: CartPurchaseParams) => Promise<CartPurchaseResult>;
     execute: (params: CartCheckoutParams) => Promise<CartCheckoutResult>;
   };
