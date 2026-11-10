@@ -94,5 +94,6 @@ export type PrintsNamespace = {
   options: { configure: PrintConfigureOperation };
   listings: {
     prepare: PrintPrepareOperation;
+    getPreparation: (id: string, options?: RareAuthRequestOptions) => Promise<PrintListingPreparation>;
   };
 };

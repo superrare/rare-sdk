@@ -114,9 +114,10 @@ export type CartListingPublishParams = {
   /** Persist the exact authorization before publication; rejection prevents submission. */
   onSigned?: (artifact: CartListingRootArtifact & { signature: Hex }) => void | Promise<void>;
 };
-export type CartPrintListingPublishParams = Omit<CartListingPublishParams, 'preparation'> & {
-  printPreparations: PrintListingPreparation | readonly PrintListingPreparation[];
-};
+export type CartPrintListingPublishParams = Omit<CartListingPublishParams, 'preparation'> & (
+  | { printPreparations: PrintListingPreparation | readonly PrintListingPreparation[]; printPreparationId?: never }
+  | { printPreparationId: string; printPreparations?: never }
+);
 export type CartListingPublishResult = {
   preparation: CartListingPreparation;
   signedArtifact: CartListingRootArtifact & { signature: Hex };

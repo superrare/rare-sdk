@@ -98,6 +98,11 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     },
     releases: { list: input => data(publicClient.GET('/v1/prints/releases', { params: { query: input } })) },
     options: { configure },
-    listings: { prepare },
+    listings: {
+      prepare,
+      getPreparation: (id, options = {}) => data(client.GET('/v1/prints/listings/preparations/{id}', {
+        params: { path: { id } }, signal: options.signal,
+      })),
+    },
   };
 }

@@ -1,3 +1,4 @@
+import type { PrintsNamespace } from './types/prints.js';
 import { parsePrintListingTerms } from './prints-core.js';
 import type { CartListingPublishParams, CartListingPublishResult, CartPrintListingPublishParams } from './types/cart.js';
 import { erc20Abi, getAddress, isAddressEqual, parseEventLogs, type Address, type Hash, type Hex, type PublicClient, type TransactionReceipt } from 'viem';
@@ -47,6 +48,7 @@ export function createCartNamespace(
   chain: SupportedChain,
   chainId: number,
   addresses: { cart?: Address; cartLens?: Address },
+  getPrintPreparation: PrintsNamespace['listings']['getPreparation'],
   authenticatedFetch?: typeof globalThis.fetch,
 ): Omit<CartNamespace, 'orders'> {
   const api = createCartApiNamespace({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }, { chainId, cartAddress: addresses.cart }, authenticatedFetch);
@@ -91,10 +93,15 @@ export function createCartNamespace(
   async function publishListing(params: CartListingPublishParams): Promise<CartListingPublishResult>;
   async function publishListing(params: CartPrintListingPublishParams): Promise<Omit<CartListingPublishResult, 'preparation'>>;
   async function publishListing(params: CartListingPublishParams | CartPrintListingPublishParams) {
-    const input = structuredClone('preparation' in params ? params.preparation : params.printPreparations);
-    const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
     const { walletClient, account, accountAddress } = requireWallet(config);
     const cart = requireCart();
+    const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
+    const input = 'preparation' in params ? structuredClone(params.preparation)
+      : params.printPreparationId === undefined ? structuredClone(params.printPreparations)
+      : await getPrintPreparation(params.printPreparationId);
+    if ('printPreparationId' in params && params.printPreparationId !== undefined && ('artifact' in input || Array.isArray(input) || !('id' in input) || input.id !== params.printPreparationId)) {
+      throw new Error('Rare API returned a different print preparation.');
+    }
     const preparation = 'artifact' in input ? input : undefined;
     const printPreparations = 'artifact' in input ? [] : Array.isArray(input) ? input : [input];
     const printTerms = printPreparations.map((print) => {
