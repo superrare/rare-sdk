@@ -3,7 +3,7 @@ import type { PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './type
 
 export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], options: PrintBatchOptions<R>, operation: (input: T) => Promise<R>, identity: (input: T) => unknown = input => input): Promise<PrintBatchResult<R>[]> {
   validatePrintBatch(items, options, identity);
-  // Keep wallet prompts and dependent API writes sequential. Never retry an uncertain write here.
+  // Keep wallet prompts and dependent API writes sequential.
   return items.reduce<Promise<PrintBatchResult<R>[]>>(async (pending, item) => {
     const results = await pending;
     const previous = previousPrintSuccess(item.key, options.previousResults);

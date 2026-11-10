@@ -49,6 +49,7 @@ export type PrintBatchOptions<T> = { previousResults?: readonly PrintBatchResult
 export type PrintDropCreation = Omit<PrintDrop, 'options'>;
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
 
+/** Retries an uncertain write once. Resume an unconfirmed request through PrintRequestUncertainError. */
 export type PrintCreateOperation = {
   (input: PrintDropInput): Promise<PrintDropCreation>;
   (items: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
@@ -57,6 +58,7 @@ export type PrintConfigureOperation = {
   (input: PrintOptionConfiguration): Promise<PrintOption>;
   (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
 };
+/** Retries an uncertain write once with the same listing salt. */
 export type PrintPrepareOperation = {
   (input: PrintListingInput): Promise<PrintListingPreparation>;
   (items: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
@@ -64,6 +66,7 @@ export type PrintPrepareOperation = {
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {
   concierge: {
+    /** Retries an uncertain write once with the original draft key and listing salt. */
     createDraft: (input: ConciergePrintInput, options?: RareAuthRequestOptions) => Promise<ConciergePrintDraft>;
   };
   quote: (input: PrintQuoteInput, options?: RareAuthRequestOptions) => Promise<PrintQuote>;
