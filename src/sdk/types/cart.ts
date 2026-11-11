@@ -97,7 +97,7 @@ export type CartCheckoutResult = {
   paymentCurrency: Address; paymentAmount: bigint; lineCount: number; actionCount: number;
 };
 export type CartPayParams = { quote: CartCheckoutQuote; onAttempt?: (attemptId: string) => void | Promise<void> } & (
-  | { method: 'wallet'; autoApprove?: boolean }
+  | { method: 'wallet'; autoApprove?: boolean; onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void> }
   | { method: 'card'; email: string; attemptId?: string }
 );
 export type CartPaymentStart =
@@ -166,7 +166,10 @@ export type CartNamespace = {
   };
   checkout: {
     /** Price a checkout without creating a payment attempt. */
-    quote: (intent: CartCheckoutIntent) => Promise<CartCheckoutQuote>;
+    quote: (intent: CartCheckoutIntent, options?: {
+      /** Read the existing preparation details for advanced checkout displays. */
+      onPrepared?: (preparation: CartCheckoutPreparation) => void;
+    }) => Promise<CartCheckoutQuote>;
     /** Use a quote from this client. onAttempt can persist the reference before payment starts. */
     pay: (params: CartPayParams) => Promise<CartPaymentStart>;
     /** Observe a previously started attempt without submitting payment. */

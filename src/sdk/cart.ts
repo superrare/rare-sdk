@@ -10,7 +10,7 @@ import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planC
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
-import type { CartCheckoutIntent, CartCheckoutPreparation, CartCheckoutQuote } from './types/cart-api.js';
+import type { CartApiPreparedPurchase, CartCheckoutIntent, CartCheckoutPreparation, CartCheckoutQuote } from './types/cart-api.js';
 import { cartFulfillmentKinds, type CartCheckoutAuthorization, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
 import { requireWallet } from './wallet-shell.js';
 import { validateCartListingPublication } from './cart-listing-publication-core.js';
@@ -217,11 +217,12 @@ export function createCartNamespace(
       invalidateNonce() { return writeSimple('invalidateListingNonce'); },
     },
     checkout: {
-      async quote(intent) {
+      async quote(intent, options) {
         const preparation = await prepareCheckout(intent);
         const quote = preparation.quote;
         if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
         preparations.set(quote, preparation);
+        options?.onPrepared?.(preparation);
         return quote;
       },
       async pay(params) {
@@ -245,6 +246,7 @@ export function createCartNamespace(
         await params.onAttempt?.(attemptId);
         const purchase = await purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, {
           preparation, autoApprove: params.autoApprove,
+          onAuthorized: params.onAuthorized,
         });
         return { method: 'wallet', attemptId, purchase };
       },
@@ -282,7 +284,9 @@ async function purchaseCartCheckout(
   chainId: number,
   cart: Address,
   lens: Address | undefined,
-  params: CartPurchaseParams,
+  params: CartPurchaseParams & {
+    onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void>;
+  },
 ): Promise<CartPurchaseResult> {
   const validation = validateCartCheckoutPreparationForPurchase(params.preparation, { chainId: BigInt(chainId), cart });
   if (!validation.isValid) {
@@ -309,6 +313,7 @@ async function purchaseCartCheckout(
   }
 
   const preparedPurchase = await authorizeCartCheckout(api, chainId, cart, params.preparation);
+  await params.onAuthorized?.(preparedPurchase);
   const execution = await executeCartCheckout(publicClient, config, chainId, cart, lens, {
     ...preparedPurchase.executePurchase,
     autoApprove: params.autoApprove,
