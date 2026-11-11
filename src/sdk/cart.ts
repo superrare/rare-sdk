@@ -10,6 +10,7 @@ import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planC
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
+import type { CartCheckoutIntent, CartCheckoutPreparation, CartCheckoutQuote } from './types/cart-api.js';
 import { cartFulfillmentKinds, type CartCheckoutAuthorization, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
 import { requireWallet } from './wallet-shell.js';
 import { validateCartListingPublication } from './cart-listing-publication-core.js';
@@ -168,6 +169,19 @@ export function createCartNamespace(
       approvalReceipts: approvals.map(({ receipt }) => receipt) };
   }
 
+  const preparations = new WeakMap<CartCheckoutQuote, CartCheckoutPreparation>();
+  const prepareCheckout = (intent: CartCheckoutIntent) => {
+    const validation = validateCartCheckoutIntent(intent);
+    if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'Cart checkout intent is invalid.', validation.issues);
+    const defaultRecipient = config.account ?? config.walletClient?.account?.address;
+    const items = validation.value.items.map((item) => {
+      if (item.kind !== 'swap' || item.recipient !== undefined) return item;
+      if (defaultRecipient === undefined) throw new CartPreparationError('invalid_intent', 'Swap checkout requires an explicit recipient or a configured wallet account.');
+      return { ...item, recipient: defaultRecipient };
+    });
+    return api.checkout.preview({ ...validation.value, items });
+  };
+
   return {
     purchaseEligibility: createEligibilityNamespace(config, { chainId: chainId.toString(), cartAddress: requireCart }, authenticatedFetch),
     catalog: { products: api.catalog.products, variants: api.catalog.variants },
@@ -203,23 +217,49 @@ export function createCartNamespace(
       invalidateNonce() { return writeSimple('invalidateListingNonce'); },
     },
     checkout: {
+      async quote(intent) {
+        const preparation = await prepareCheckout(intent);
+        const quote = preparation.quote;
+        if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
+        preparations.set(quote, preparation);
+        return quote;
+      },
+      async pay(params) {
+        const preparation = preparations.get(params.quote);
+        if (preparation === undefined) {
+          throw new CartPreparationError('invalid_preparation', 'Use a quote from this Cart client.');
+        }
+        if (Date.parse(preparation.expiresAt) <= Date.now()) {
+          throw new CartPreparationError('quote_changed', 'The checkout quote expired. Review a fresh quote before paying.');
+        }
+        const generatedAttemptId = preparation.idempotencyKey ?? preparation.preparationReference;
+        if (params.method === 'card') {
+          const attemptId = params.attemptId ?? generatedAttemptId;
+          await params.onAttempt?.(attemptId);
+          const session = await api.checkout.payment({
+            method: 'card', preparation: { ...preparation, idempotencyKey: attemptId }, email: params.email,
+          });
+          return { method: 'card', attemptId, session };
+        }
+        const attemptId = generatedAttemptId;
+        await params.onAttempt?.(attemptId);
+        const purchase = await purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, {
+          preparation, autoApprove: params.autoApprove,
+        });
+        return { method: 'wallet', attemptId, purchase };
+      },
+      async resume(attemptId) {
+        const { status, orderId } = await api.checkout.recover(attemptId);
+        if (status !== 'EXECUTED' || orderId === undefined) return { status, orderId };
+        return { status, orderId, receipt: await api.checkout.receipt(orderId) };
+      },
       receipt: api.checkout.receipt,
       recover: api.checkout.recover,
       authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
       payment: api.checkout.payment,
       paymentMethods: api.checkout.paymentMethods,
       card: api.checkout.card,
-      prepare(intent) {
-        const validation = validateCartCheckoutIntent(intent);
-        if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'Cart checkout intent is invalid.', validation.issues);
-        const defaultRecipient = config.account ?? config.walletClient?.account?.address;
-        const items = validation.value.items.map((item) => {
-          if (item.kind !== 'swap' || item.recipient !== undefined) return item;
-          if (defaultRecipient === undefined) throw new CartPreparationError('invalid_intent', 'Swap checkout requires an explicit recipient or a configured wallet account.');
-          return { ...item, recipient: defaultRecipient };
-        });
-        return api.checkout.preview({ ...validation.value, items });
-      },
+      prepare: prepareCheckout,
       purchase(params) { return purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, params); },
       execute(params) { return executeCartCheckout(publicClient, config, chainId, requireCart(), addresses.cartLens, params); },
     },

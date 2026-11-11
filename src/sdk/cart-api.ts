@@ -231,8 +231,21 @@ export function createCartApiNamespace(
         intent,
         wire.preparationReference,
       );
+      const quote = wire.quote === undefined ? undefined : {
+        currency: getAddress(wire.quote.currency),
+        total: BigInt(wire.quote.total),
+        expiresAt: wire.quote.expiresAt,
+        lines: wire.quote.lines.map(line => ({ ...line, amount: BigInt(line.amount) })),
+      };
+      if (quote !== undefined && (
+        quote.currency !== getAddress(intent.paymentCurrency) ||
+        quote.total !== preparation.paymentAmount ||
+        !Number.isFinite(Date.parse(quote.expiresAt)) ||
+        quote.lines.some(line => line.amount < 0n) ||
+        quote.lines.reduce((total, line) => total + line.amount, 0n) !== quote.total
+      )) throw new Error('Rare API returned an inconsistent Cart quote.');
       return { ...preparation,
-        ...(intent.delivery === undefined ? {} : { idempotencyKey: globalThis.crypto.randomUUID() }),
+        ...(quote === undefined ? {} : { quote, expiresAt: quote.expiresAt }),        ...(intent.delivery === undefined ? {} : { idempotencyKey: globalThis.crypto.randomUUID() }),
         ...(wire.breakdown === undefined ? {} : { breakdown: {
           displayPrice: BigInt(wire.breakdown.displayPrice), production: BigInt(wire.breakdown.production), shipping: BigInt(wire.breakdown.shipping),
           networkFee: BigInt(wire.breakdown.networkFee), total: BigInt(wire.breakdown.total),

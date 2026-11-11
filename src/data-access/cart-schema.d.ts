@@ -4762,9 +4762,21 @@ export interface components {
                 }[];
             };
         };
+        CartCheckoutQuote: {
+            currency: string;
+            total: string;
+            /** Format: date-time */
+            expiresAt: string;
+            lines: {
+                /** @enum {string} */
+                kind: "items" | "fees" | "converted";
+                amount: string;
+            }[];
+        };
         CartCheckoutPreviewResponse: {
             data: {
                 preparationReference: string;
+                quote: components["schemas"]["CartCheckoutQuote"];
                 preparation: {
                     /** @enum {number} */
                     schemaVersion: 1;

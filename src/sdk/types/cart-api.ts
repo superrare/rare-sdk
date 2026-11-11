@@ -322,7 +322,16 @@ export type CartCheckoutQuoteEvidence = {
   summary: string;
 };
 
+/** All amounts are in base units of currency. Converted charges are grouped. */
+export type CartCheckoutQuote = {
+  currency: Address;
+  total: bigint;
+  expiresAt: string;
+  lines: readonly { kind: 'items' | 'fees' | 'converted'; amount: bigint }[];
+};
+
 export type CartCheckoutPreparation = {
+  quote?: CartCheckoutQuote;
   schemaVersion: 1;
   chainId: bigint;
   cartAddress: Address;
@@ -340,6 +349,10 @@ export type CartCheckoutPreparation = {
 };
 
 export type CartCheckoutPreviewWire = {
+  quote?: Omit<CartCheckoutQuote, 'total' | 'lines'> & {
+    total: string;
+    lines: readonly { kind: CartCheckoutQuote['lines'][number]['kind']; amount: string }[];
+  };
   preparationReference: string;
   preparation: CartApiPreparedPurchaseWire;
   breakdown?: { displayPrice: string; production: string; shipping: string; networkFee: string; total: string };
