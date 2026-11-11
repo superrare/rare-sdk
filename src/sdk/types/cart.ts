@@ -1,4 +1,4 @@
-import type { PrintListingPreparation } from './prints.js';
+import type { PrintListingPreparation, PrintRecoveryStore } from './prints.js';
 import type { CartOrdersNamespace } from './orders.js';
 import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
@@ -124,7 +124,7 @@ export type CartListingPublishParams = {
   /** Persist the exact authorization before publication; rejection prevents submission. */
   onSigned?: (artifact: CartListingRootArtifact & { signature: Hex }) => void | Promise<void>;
 };
-export type CartPrintListingPublishParams = Omit<CartListingPublishParams, 'preparation'> & (
+export type CartPrintListingPublishParams = Omit<CartListingPublishParams, 'preparation'> & { recovery?: PrintRecoveryStore } & (
   | { printPreparations: PrintListingPreparation | readonly PrintListingPreparation[]; printPreparationId?: never }
   | { printPreparationId: string; printPreparations?: never }
 );

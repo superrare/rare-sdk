@@ -1,4 +1,5 @@
 import type { PrintsNamespace } from './types/prints.js';
+import { printBatchInputDigest } from './prints-batch-core.js';
 import { parsePrintListingTerms } from './prints-core.js';
 import type { CartListingPublishParams, CartListingPublishResult, CartPrintListingPublishParams } from './types/cart.js';
 import { erc20Abi, getAddress, isAddressEqual, parseEventLogs, type Address, type Hash, type Hex, type PublicClient, type TransactionReceipt } from 'viem';
@@ -6,7 +7,7 @@ import { cartAbi } from '../contracts/abis/cart.js';
 import { cartLensAbi } from '../contracts/abis/cart-lens.js';
 import { ETH_ADDRESS, type SupportedChain } from '../contracts/addresses.js';
 import { approvalAbi, NftApprovalRequiredError, runWithApprovalSideEffectAlert, waitForApprovalState } from './approvals-shell.js';
-import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planCartCheckoutGas, hashCartListing, hashCartListingRoot, hashCartOrder, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
+import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planCartCheckoutGas, hashCartListing, hashCartListingRoot, hashCartOrder, parseCartListingRootArtifact, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
@@ -96,7 +97,6 @@ export function createCartNamespace(
   async function publishListing(params: CartListingPublishParams | CartPrintListingPublishParams) {
     const { walletClient, account, accountAddress } = requireWallet(config);
     const cart = requireCart();
-    const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
     const input = 'preparation' in params ? structuredClone(params.preparation)
       : params.printPreparationId === undefined ? structuredClone(params.printPreparations)
       : await getPrintPreparation(params.printPreparationId);
@@ -118,6 +118,14 @@ export function createCartNamespace(
         new Set(printPreparations.map(({ id }) => id)).size !== printPreparations.length)) {
       throw new Error('Publish between 1 and 10,000 distinct print preparations.');
     }
+    const recovery = 'preparation' in params ? undefined : params.recovery;
+    const recoveryKey = `publish:${printBatchInputDigest([chainId, cart, accountAddress, printPreparations.map(({ id }) => id)])}`;
+    const saved = await recovery?.read(recoveryKey);
+    const savedArtifact = saved === undefined ? undefined : parseCartListingRootArtifact(saved);
+    if (savedArtifact !== undefined && params.signedArtifact !== undefined) throw new Error('Use either saved print recovery or an explicit signed artifact.');
+    const retainedArtifact = savedArtifact === undefined
+      ? (params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact))
+      : { ...savedArtifact, signature: requirePrintPublicationSignature(savedArtifact.signature) };
     const deadline = printTerms.reduce<bigint | undefined>((minimum, terms) =>
       minimum === undefined || terms.deadline < minimum ? terms.deadline : minimum, undefined);
     const artifact = preparation?.artifact ?? buildCartListingRootArtifact({
@@ -160,6 +168,8 @@ export function createCartNamespace(
       { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
     ] }, message: root });
     const signedArtifact = { ...artifact, signature };
+    if (recovery !== undefined && saved === undefined)
+      await recovery.save(recoveryKey, JSON.stringify(signedArtifact));
     await params.onSigned?.(structuredClone(signedArtifact));
     const publishedRoot = preparation === undefined
       ? await api.listing.publishPrintPreparations(printPreparations.map(({ id }) => id), signedArtifact)
@@ -450,3 +460,8 @@ async function simulateCartCheckout(publicClient: PublicClient, cart: Address, a
 }
 
 export const cartDigestHelpers = { hashCartListingRoot, hashCartOrder };
+
+function requirePrintPublicationSignature(signature: Hex | undefined): Hex {
+  if (signature === undefined) throw new Error('Saved print publication has no seller signature.');
+  return signature;
+}
