@@ -25,6 +25,7 @@ const preparation: CartListingPreparation = {
 describe('durable Cart publication over HTTP', () => {
   it('signs one root for multiple print preparations and retries that root without signing', async () => {
     const submissions: unknown[] = [];
+    const reads: string[] = [];
     const walletClient = createWalletClient({ chain: sepolia, account: seller, transport: http('http://localhost') });
     const prompts = vi.spyOn(walletClient, 'signTypedData');
     const client = createRareClient({
@@ -33,6 +34,11 @@ describe('durable Cart publication over HTTP', () => {
       }) }),
       walletClient,
       transport: async (path: string, init?: RequestInit) => {
+        if (init?.method === 'GET') {
+          reads.push(path);
+          const saved = preparations.find(({ id }) => path === `/v1/prints/listings/preparations/${id}`);
+          return saved === undefined ? new Response(null, { status: 404 }) : Response.json({ data: saved });
+        }
         expect(path).toBe('/v1/cart/listing-roots');
         submissions.push(JSON.parse(await new Response(init?.body).text()));
         return Response.json({ data: { listingCount: 2 } });
@@ -60,6 +66,16 @@ describe('durable Cart publication over HTTP', () => {
     expect(submissions).toHaveLength(2);
     expect(submissions[0]).toEqual(submissions[1]);
     expect(submissions[0]).toMatchObject({ preparationIds: preparations.map(({ id }) => id) });
+
+    const [saved] = preparations;
+    if (saved === undefined) throw new Error('Missing saved print preparation');
+    expect(await client.prints.listings.getPreparation(saved.id)).toEqual(saved);
+    const single = await client.cart.listing.publish({ printPreparationId: saved.id });
+    expect(single.signedArtifact.entries).toHaveLength(1);
+    expect(submissions.at(-1)).toMatchObject({ preparationIds: [saved.id] });
+    expect(reads).toEqual(Array.from({ length: 2 }, () => `/v1/prints/listings/preparations/${saved.id}`));
+    await expect(client.cart.listing.publish({ printPreparationId: '00000000-0000-4000-8000-000000000000' })).rejects.toThrow();
+    expect(prompts).toHaveBeenCalledTimes(2);
   });
 
   it('awaits durable signing, aborts on persistence failure, and resumes the exact authorization without signing', async () => {

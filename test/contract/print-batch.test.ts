@@ -18,7 +18,7 @@ describe('print batch authoring over HTTP', () => {
       const body = Buffer.concat(chunks).toString();
       requests.push(body);
       response.setHeader('Content-Type', 'application/json');
-      if (requests.length === 2) {
+      if (requests.length === 2 || requests.length === 3) {
         response.writeHead(503);
         response.end(JSON.stringify({ error: 'upstream_unavailable', message: 'Try again later' }));
       } else {
@@ -43,13 +43,14 @@ describe('print batch authoring over HTTP', () => {
       const result = await rare.prints.drops.create(items);
       expect(result).toMatchObject([{ key: 'first', status: 'fulfilled', value: { id: 'first' } }, { key: 'second', status: 'rejected' }]);
       await expect(rare.prints.drops.create([{ key: 'first', input: { ...first, name: 'Changed' } }, { key: 'second', input: second }], { previousResults: result })).rejects.toThrow('changed terms');
-      expect(requests).toHaveLength(2);
+      expect(requests).toHaveLength(3);
       const retried = await rare.prints.drops.create(items, { previousResults: result });
       expect(retried).toMatchObject([{ key: 'first', status: 'fulfilled', value: { id: 'first' } }, { key: 'second', status: 'fulfilled', value: { id: 'second' } }]);
-      expect(requests).toHaveLength(3);
+      expect(requests).toHaveLength(4);
       expect(requests[1]).toBe(requests[2]);
+      expect(requests[2]).toBe(requests[3]);
       expect(JSON.parse(requests[0] ?? '')).toEqual(first);
-      expect(JSON.parse(requests[2] ?? '')).toEqual(second);
+      expect(JSON.parse(requests[3] ?? '')).toEqual(second);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

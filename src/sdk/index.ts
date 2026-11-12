@@ -73,5 +73,7 @@ export type * from './types/notifications.js';
 export { createBrowserAccountSessionStore } from './browser-session-store.js';
 export { RareApiError } from '../data-access/errors.js';
 export type * from './types/prints.js';
+export { PrintRequestUncertainError } from './print-write-shell.js';
+export { createConciergePrintRequest, createPrintDropRequest, createPrintListingRequest } from './print-request-shell.js';
 export type * from './types/shipping-addresses.js';
 export type * from './types/orders.js';
