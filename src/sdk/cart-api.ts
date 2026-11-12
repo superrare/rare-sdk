@@ -1,5 +1,4 @@
 import type { RareAuthRequestOptions } from './types/account.js';
-import {createCartAdjustmentsNamespace} from './cart-adjustments-shell.js';
 import { cartCatalogPage } from './cart-pagination-core.js';
 import { getAddress, isAddress, isHex, type Address, type Hex } from 'viem';
 import { createCartApiClient } from '../data-access/client.js';
@@ -211,7 +210,7 @@ export function createCartApiNamespace(
     },
   };
 
-  return { catalog, listing, checkout, adjustments:createCartAdjustmentsNamespace(protectedClient, client) };
+  return { catalog, listing, checkout };
 }
 
 export function toCartListingRootArtifactWire(

@@ -1,7 +1,5 @@
 import type { RareAuthRequestOptions } from './account.js';
 import type { CartSplit } from './cart.js';
-import type {CartAdjustmentsNamespace} from '../cart-adjustments-core.js';
-export type {CartAdjustmentCreateParams,CartAdjustment,CartAdjustmentListParams,CartAdjustmentRequestOptions,CartAdjustmentAssignment,CartAdjustmentAssignmentCreateParams,CartAdjustmentAssignmentListParams} from '../cart-adjustments-core.js';
 import type { Address, Hex } from 'viem';
 import type { IntegerInput } from './common.js';
 import type {
@@ -341,7 +339,6 @@ export type AttachCartSku = import('../../data-access/cart-schema.js').component
 export type CartProductSku = import('../../data-access/cart-schema.js').components['schemas']['CartProductSku'];
 
 export type CartApiNamespace = {
-  adjustments:CartAdjustmentsNamespace;
   catalog: {
     products: {
       create: (input: CreateCartProduct, options?: { idempotencyKey?: string }) => Promise<CartApiProduct>;
