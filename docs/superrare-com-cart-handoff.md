@@ -22,7 +22,7 @@ payloads](cart-deployment.md) for the matching Lens/Hashes addresses and rules.
 ## Author and publish one or many prints
 
 Use `rare.prints.listings.prepare` for each print offer. Pass one preparation
-or an array of up to 100 to `rare.cart.listing.publish({ printPreparations })`.
+or an array of up to 10,000 to `rare.cart.listing.publish({ printPreparations })`.
 The seller signs one Cart Listing Root per call. Save the signed artifact in
 `onSigned` before submission. To retry, pass the same preparations in the same
 order with the saved `signedArtifact`.

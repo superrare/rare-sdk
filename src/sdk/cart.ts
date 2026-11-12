@@ -106,9 +106,9 @@ export function createCartNamespace(
       }
       return terms;
     });
-    if (preparation === undefined && (printTerms.length < 1 || printTerms.length > 100 ||
+    if (preparation === undefined && (printTerms.length < 1 || printTerms.length > 10_000 ||
         new Set(printPreparations.map(({ id }) => id)).size !== printPreparations.length)) {
-      throw new Error('Publish between 1 and 100 distinct print preparations.');
+      throw new Error('Publish between 1 and 10,000 distinct print preparations.');
     }
     const deadline = printTerms.reduce<bigint | undefined>((minimum, terms) =>
       minimum === undefined || terms.deadline < minimum ? terms.deadline : minimum, undefined);
