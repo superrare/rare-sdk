@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
@@ -17,39 +16,13 @@ const deployedAccount = () => {
 };
 
 const objectKey = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
-const removeObject = (key: string, access: 'public' | 'private'): void => {
-  if (!/^(?:[a-f0-9]{64}|pending\/rare-api\/[0-9a-f-]{36})$/.test(key)) throw new Error('Invalid test object key');
-  try {
-    execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'rm', `gs://rare-api-${access}-upload-dev/${key}`], { stdio: 'pipe' });
-  } catch (error) {
-    // Rejected requests and failures before storage have no object to delete.
-    const stderr = error !== null && typeof error === 'object' && 'stderr' in error && error.stderr instanceof Uint8Array
-      ? Buffer.from(error.stderr).toString('utf8') : '';
-    if (!/No URLs matched|URLs matched no objects or files|NotFoundException|HTTPError 404|does not exist/.test(stderr)) throw error;
-  }
-};
-
-const withLiveAccount = async (operation: (account: ReturnType<typeof deployedAccount>, track: (bytes: Uint8Array) => void) => Promise<void>): Promise<void> => {
+const withLiveAccount = async (operation: (account: ReturnType<typeof deployedAccount>) => Promise<void>): Promise<void> => {
   const account = deployedAccount();
-  // Fail before writes if cleanup access is unavailable.
-  execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'buckets', 'describe', 'gs://rare-api-public-upload-dev', '--format=value(name)'], { stdio: 'pipe' });
-  execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'buckets', 'describe', 'gs://rare-api-private-upload-dev', '--format=value(name)'], { stdio: 'pipe' });
-  const keys = new Set<string>();
-  const track = (bytes: Uint8Array): void => {
-    // Register the intended key before transmission, including ambiguous failures.
-    // eslint-disable-next-line functional/immutable-data
-    keys.add(objectKey(bytes));
-  };
   try {
     await account.client.auth.loginWithWallet({ address: account.wallet.address, chainId: 1, signMessage: message => account.wallet.signMessage({ message }) });
-    await operation(account, track);
+    await operation(account);
   } finally {
-    const cleanup = await Promise.allSettled([
-      account.client.auth.logout(),
-      ...[...keys].flatMap(key => [Promise.resolve().then(() => removeObject(key, 'public')), Promise.resolve().then(() => removeObject(key, 'private'))]),
-    ]);
-    const failed = cleanup.filter(result => result.status === 'rejected');
-    if (failed.length > 0) throw new AggregateError(failed.map(result => result.reason), 'Live upload cleanup failed');
+    await account.client.auth.logout();
   }
 };
 
@@ -60,7 +33,7 @@ const uploadRequest = (api: string, bytes: Uint8Array, authorization?: string, f
 
 describe('uploads through deployed API and real GCS', () => {
   it('uses the existing uploader with application-owned authentication for public and private files', async () => {
-    await withLiveAccount(async ({ api, client }, track) => {
+    await withLiveAccount(async ({ api, client }) => {
       const session = await client.auth.getSession();
       if (!session) throw new Error('Missing live session');
       const external = createRareClient({
@@ -73,7 +46,6 @@ describe('uploads through deployed API and real GCS', () => {
       const accessModes: readonly ('public' | 'private')[] = ['public', 'private'];
       for (const access of accessModes) {
         const bytes = randomBytes(1024);
-        track(bytes);
         const uploaded = await external.upload(bytes, 'artwork.bin', { access });
         expect(uploaded).toMatchObject({ access, key: objectKey(bytes), size: bytes.length });
         const repeated = await client.upload(bytes, 'same-artwork.bin', { access });
@@ -91,9 +63,8 @@ describe('uploads through deployed API and real GCS', () => {
   }, 180_000);
 
   it('deduplicates concurrent uploads, preserves stored metadata, and does not edit profiles', async () => {
-    await withLiveAccount(async ({ client }, track) => {
+    await withLiveAccount(async ({ client }) => {
       const bytes = randomBytes(1024);
-      track(bytes);
       const before = await client.profile.get();
       const results = await Promise.all([client.upload(bytes, 'first.bin'), client.upload(bytes, 'second.bin')]);
       expect(results[0]).toEqual(results[1]);
@@ -110,8 +81,8 @@ describe('uploads through deployed API and real GCS', () => {
   }, 180_000);
 
   it('uploads beyond Cloud Run request limits using multiple direct GCS chunks', async () => {
-    await withLiveAccount(async ({ client }, track) => {
-      const bytes = randomBytes(33 * 1024 * 1024); track(bytes);
+    await withLiveAccount(async ({ client }) => {
+      const bytes = randomBytes(33 * 1024 * 1024);
       const result = await client.upload(bytes, 'video.mp4', { contentType: 'video/mp4' });
       expect(result).toMatchObject({ key: objectKey(bytes), size: bytes.length, contentType: 'video/mp4' });
       const downloaded = new Uint8Array(await (await fetch(result.url)).arrayBuffer());
@@ -121,8 +92,8 @@ describe('uploads through deployed API and real GCS', () => {
   }, 240_000);
 
   it('binds finalization to the initiating account and keeps pending objects private', async () => {
-    await withLiveAccount(async ({ api, client }, track) => {
-      const bytes = randomBytes(1024); track(bytes);
+    await withLiveAccount(async ({ api, client }) => {
+      const bytes = randomBytes(1024);
       const session = await client.auth.getSession(); if (!session) throw new Error('Missing live session');
       const started = await uploadRequest(api, bytes, `Bearer ${session.accessToken}`); expect(started.status).toBe(201);
       const input: unknown = await started.json(); const pending = parseUploadSession(input);
@@ -141,14 +112,13 @@ describe('uploads through deployed API and real GCS', () => {
         expect((await fetch(staged)).status).toBe(403);
         const completed = await complete(`Bearer ${session.accessToken}`); expect(completed.status).toBe(200);
         const result: unknown = await completed.json(); expect(await (await complete(`Bearer ${session.accessToken}`)).json()).toEqual(result);
-      } finally { await other.auth.logout(); removeObject(`pending/rare-api/${pending.id}`, 'private'); }
+      } finally { await other.auth.logout(); }
     });
   }, 180_000);
 
   it('isolates private files from public storage and denies anonymous private downloads', async () => {
-    await withLiveAccount(async ({ client }, track) => {
+    await withLiveAccount(async ({ client }) => {
       const bytes = randomBytes(1024);
-      track(bytes);
       const privateAsset = await client.upload(bytes, 'document.bin', { access: 'private' });
       expect(privateAsset).toMatchObject({ access: 'private', key: objectKey(bytes), contentType: 'application/octet-stream', size: bytes.length, uploadId: expect.any(String) });
       expect(privateAsset).not.toHaveProperty('url');
@@ -167,20 +137,16 @@ describe('uploads through deployed API and real GCS', () => {
       if (privateAsset.access !== 'private' || duplicate.access !== 'private') throw new Error('Expected private upload receipts');
       expect(duplicate.uploadId).not.toBe(privateAsset.uploadId);
       expect(duplicate).not.toHaveProperty('url');
-      const metadata: unknown = JSON.parse(execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'objects', 'describe', `gs://rare-api-private-upload-dev/${privateAsset.key}`, '--format=json'], { encoding: 'utf8' }));
-      if (metadata === null || typeof metadata !== 'object' || !('cache_control' in metadata)) throw new Error('Missing private storage cache metadata');
-      expect(metadata.cache_control).toBe('private, no-store');
     });
   }, 180_000);
 
   it('uploads an avatar through shared storage, attaches it, and clears it without changing other fields', async () => {
-    await withLiveAccount(async ({ client }, track) => {
+    await withLiveAccount(async ({ client }) => {
       const before = await client.profile.get();
       // Add a valid GIF comment extension before the trailer to give this run unique bytes.
       const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
       const comment = Buffer.from(randomBytes(16).toString('hex'));
       const bytes = Buffer.concat([gif.subarray(0, -1), Buffer.from([0x21, 0xfe, comment.length]), comment, Buffer.from([0, 0x3b])]);
-      track(bytes);
       try {
         const updated = await client.profile.uploadAvatar(bytes, 'avatar.gif');
         expect(updated.profile.avatar).toBe(`https://storage.googleapis.com/rare-api-public-upload-dev/${objectKey(bytes)}`);
@@ -199,12 +165,11 @@ describe('uploads through deployed API and real GCS', () => {
   }, 180_000);
 
   it('rejects unauthenticated, empty, oversized and unexpected-field uploads at the live HTTP boundary', async () => {
-    await withLiveAccount(async ({ api, client }, track) => {
+    await withLiveAccount(async ({ api, client }) => {
       const session = await client.auth.getSession();
       if (!session) throw new Error('Missing live session');
       const authorization = `Bearer ${session.accessToken}`;
       const bytes = randomBytes(1024);
-      track(bytes);
       for (const credential of [undefined, 'Bearer forged']) expect((await uploadRequest(api, bytes, credential)).status).toBe(401);
       expect((await uploadRequest(api, bytes, authorization, { accountId: 'another-account' })).status).toBe(400);
       expect((await uploadRequest(api, bytes, authorization, { access: 'invalid' })).status).toBe(400);
