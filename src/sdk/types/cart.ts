@@ -4,6 +4,7 @@ import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
   CartApiListingRoot, CartApiNamespace, CartApiPreparedPurchase, CartCheckoutIntent,
   CartCheckoutPreparation, CartListingIntent, CartDeliveryCheckout,
+  CartCheckoutQuote, CartCheckoutRecovery, CartCheckoutReceipt, CartCardCheckout,
 } from './cart-api.js';
 import type { CartRoutingNamespace } from './cart-routing.js';
 import type { PurchaseEligibilityNamespace } from './eligibility.js';
@@ -95,6 +96,15 @@ export type CartCheckoutResult = {
   txHash: Hash; receipt: TransactionReceipt; approvalTxHash?: Hash; orderId: Hex; payer: Address;
   paymentCurrency: Address; paymentAmount: bigint; lineCount: number; actionCount: number;
 };
+export type CartPayParams = { quote: CartCheckoutQuote; onAttempt?: (attemptId: string) => void | Promise<void> } & (
+  | { method: 'wallet'; autoApprove?: boolean; onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void> }
+  | { method: 'card'; email: string; attemptId?: string }
+);
+export type CartPaymentStart =
+  | { method: 'wallet'; attemptId: string; purchase: CartPurchaseResult }
+  | { method: 'card'; attemptId: string; session: CartCardCheckout };
+export type CartPaymentResume = Pick<CartCheckoutRecovery, 'status' | 'orderId'> & { receipt?: CartCheckoutReceipt };
+
 export type CartPurchaseParams = { preparation: CartCheckoutPreparation; autoApprove?: boolean };
 /** Resume the original saved reference or delivery draft without submitting payment. */
 export type CartCheckoutAuthorization = CartCheckoutPreparation | CartDeliveryCheckout | { preparationReference: string };
@@ -155,6 +165,15 @@ export type CartNamespace = {
     invalidateNonce: () => Promise<{ txHash: Hash; receipt: TransactionReceipt }>;
   };
   checkout: {
+    /** Price a checkout without creating a payment attempt. */
+    quote: (intent: CartCheckoutIntent, options?: {
+      /** Read the existing preparation details for advanced checkout displays. */
+      onPrepared?: (preparation: CartCheckoutPreparation) => void;
+    }) => Promise<CartCheckoutQuote>;
+    /** Use a quote from this client. onAttempt can persist the reference before payment starts. */
+    pay: (params: CartPayParams) => Promise<CartPaymentStart>;
+    /** Observe a previously started attempt without submitting payment. */
+    resume: (attemptId: string) => Promise<CartPaymentResume>;
     receipt: CartApiNamespace['checkout']['receipt'];
     recover: CartApiNamespace['checkout']['recover'];
     /** Authorizes a reviewed quote and reserves any required claims, without paying. */
