@@ -4,6 +4,500 @@
  */
 
 export interface paths {
+    "/v1/cart/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reusable platform adjustment definitions */
+        get: {
+            parameters: {
+                query?: {
+                    phase?: "LISTING_CONFIGURATION" | "CHECKOUT";
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Adjustment definitions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                effect: "CHARGE";
+                                /** @enum {string} */
+                                phase: "LISTING_CONFIGURATION" | "CHECKOUT";
+                                code: string;
+                                calculation: {
+                                    /** @enum {string} */
+                                    type: "FIXED";
+                                    amount: string;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                } | {
+                                    /** @enum {string} */
+                                    type: "PER_UNIT";
+                                    amount: string;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                } | {
+                                    /** @enum {string} */
+                                    type: "PERCENTAGE";
+                                    basisPoints: number;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                };
+                                recipient: {
+                                    /** @enum {string} */
+                                    type: "FIXED";
+                                    address: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "TOKEN_CREATOR";
+                                };
+                                id: string;
+                                chargeSku: string;
+                            }[];
+                            hasNextPage: boolean;
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a reusable platform adjustment definition
+         * @description Creates an inactive adjustment definition. Assign it to SKUs or collections before preparing and signing seller listings.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CartAdjustmentCreate"];
+                };
+            };
+            responses: {
+                /** @description Adjustment definition created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                effect: "CHARGE";
+                                /** @enum {string} */
+                                phase: "LISTING_CONFIGURATION" | "CHECKOUT";
+                                code: string;
+                                calculation: {
+                                    /** @enum {string} */
+                                    type: "FIXED";
+                                    amount: string;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                } | {
+                                    /** @enum {string} */
+                                    type: "PER_UNIT";
+                                    amount: string;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                } | {
+                                    /** @enum {string} */
+                                    type: "PERCENTAGE";
+                                    basisPoints: number;
+                                    /** @enum {string} */
+                                    currencyMode: "COMPONENT_CURRENCY";
+                                };
+                                recipient: {
+                                    /** @enum {string} */
+                                    type: "FIXED";
+                                    address: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "TOKEN_CREATOR";
+                                };
+                                id: string;
+                                chargeSku: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cart/adjustments/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active platform adjustment assignments */
+        get: {
+            parameters: {
+                query?: {
+                    phase?: "LISTING_CONFIGURATION" | "CHECKOUT";
+                    page?: number;
+                    perPage?: number;
+                    adjustmentId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Adjustment assignments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                adjustmentId: string;
+                                /** @default {} */
+                                scope: {
+                                    chainIds?: string[];
+                                    sellerAddresses?: string[];
+                                    nfts?: {
+                                        chainId: string;
+                                        contract: string;
+                                        tokenId: string;
+                                    }[];
+                                    collections?: {
+                                        chainId: string;
+                                        contract: string;
+                                    }[];
+                                    skus?: string[];
+                                    fulfillmentKinds?: number[];
+                                    settlementCurrencies?: string[];
+                                    paymentCurrencies?: string[];
+                                    productIds?: string[];
+                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
+                                };
+                                priority: number;
+                                /** Format: date-time */
+                                validFrom?: string | null;
+                                /** Format: date-time */
+                                validUntil?: string | null;
+                                id: string;
+                            }[];
+                            hasNextPage: boolean;
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Apply an existing platform adjustment
+         * @description Assigns an existing fee without duplicating its definition or charge SKU. Higher priority replaces lower priority for the same adjustment code. Equal highest priorities are rejected when resolving a listing. Existing signed terms remain unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CartAdjustmentAssignmentCreate"];
+                };
+            };
+            responses: {
+                /** @description Fee assigned */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                adjustmentId: string;
+                                /** @default {} */
+                                scope: {
+                                    chainIds?: string[];
+                                    sellerAddresses?: string[];
+                                    nfts?: {
+                                        chainId: string;
+                                        contract: string;
+                                        tokenId: string;
+                                    }[];
+                                    collections?: {
+                                        chainId: string;
+                                        contract: string;
+                                    }[];
+                                    skus?: string[];
+                                    fulfillmentKinds?: number[];
+                                    settlementCurrencies?: string[];
+                                    paymentCurrencies?: string[];
+                                    productIds?: string[];
+                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
+                                };
+                                priority: number;
+                                /** Format: date-time */
+                                validFrom?: string | null;
+                                /** Format: date-time */
+                                validUntil?: string | null;
+                                id: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cart/adjustments/assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disable a platform adjustment assignment */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Adjustment assignment disabled */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                id: string;
+                                disabled: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid fee configuration */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Fee administrator access required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Adjustment definition or assignment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cart/products": {
         parameters: {
             query?: never;
@@ -324,6 +818,8 @@ export interface paths {
                 query?: {
                     page?: number;
                     perPage?: number;
+                    releaseDraftId?: string;
+                    releaseContract?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1154,14 +1650,13 @@ export interface paths {
                 content: {
                     "application/json": {
                         variants: {
-                            /** Verified creator-owned future token; does not assert that minting occurred. */
-                            plannedNft?: {
-                                chainId: string;
-                                contract: string;
-                                tokenId: string;
-                            };
                             metadata: {
                                 [key: string]: unknown;
+                            };
+                            plannedNft?: {
+                                chainId: string | number;
+                                contract: string;
+                                tokenId: string;
                             };
                         }[];
                     } | {
@@ -2482,7 +2977,10 @@ export interface paths {
                                     minimumUnitPrice: string;
                                     availableQuantity: string;
                                     paymentRecipient: string;
-                                    splits: { recipient: string; basisPoints: number }[];
+                                    splits: {
+                                        recipient: string;
+                                        basisPoints: number;
+                                    }[];
                                 }[];
                             };
                         };
@@ -2566,19 +3064,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search Cart Listings */
+        /**
+         * Search Cart Listings
+         * @description Public search is anonymous. eligibility=eligible requires account bearer authentication or a first-party server session.
+         */
         get: {
             parameters: {
                 query: {
                     chainId: string | number;
                     cartAddress: string;
+                    /** @description Return only listings eligible for the authenticated account. Requires an account bearer token or a first-party server session. */
+                    eligibility?: "eligible";
                     q?: string;
                     sku?: string;
                     seller?: string;
                     fulfillmentKind?: number | null;
                     settlementCurrency?: string;
                     productId?: string;
-                    eligibility?: "eligible";
                     sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "deadlineAsc";
                     page?: number;
                     perPage?: number;
@@ -3308,6 +3810,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cart/checkout/coinflow/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Cart card checkout capability */
+        get: {
+            parameters: {
+                query: {
+                    chainId: string | number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Card availability and payment limits */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                enabled: boolean;
+                                paymentCurrency: string | null;
+                                minimumCents: number;
+                                maximumCentsExclusive: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cart/checkout/coinflow": {
         parameters: {
             query?: never;
@@ -3317,7 +3864,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Prepare Cart delivery checkout for card settlement */
+        /** Prepare card settlement for a Cart checkout */
         post: {
             parameters: {
                 query: {
@@ -3332,7 +3879,11 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["CartDeliveryCheckoutRequest"];
+                    "application/json": components["schemas"]["CartDeliveryCheckoutRequest"] | {
+                        preparationReference: string;
+                        /** Format: email */
+                        email: string;
+                    };
                 };
             };
             responses: {
@@ -3390,7 +3941,10 @@ export interface paths {
                                             minimumUnitPrice: string;
                                             availableQuantity: string;
                                             paymentRecipient: string;
-                                            splits: { recipient: string; basisPoints: number }[];
+                                            splits: {
+                                                recipient: string;
+                                                basisPoints: number;
+                                            }[];
                                         }[];
                                         authorization: {
                                             listingRoots: {
@@ -3640,505 +4194,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-
-    "/v1/cart/adjustments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List reusable platform adjustment definitions */
-        get: {
-            parameters: {
-                query?: {
-                    phase?: "LISTING_CONFIGURATION" | "CHECKOUT";
-                    page?: number;
-                    perPage?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Adjustment definitions */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                /** @enum {string} */
-                                effect: "CHARGE";
-                                /** @enum {string} */
-                                phase: "LISTING_CONFIGURATION" | "CHECKOUT";
-                                code: string;
-                                calculation: {
-                                    /** @enum {string} */
-                                    type: "FIXED";
-                                    amount: string;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                } | {
-                                    /** @enum {string} */
-                                    type: "PER_UNIT";
-                                    amount: string;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                } | {
-                                    /** @enum {string} */
-                                    type: "PERCENTAGE";
-                                    basisPoints: number;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                };
-                                recipient: {
-                                    /** @enum {string} */
-                                    type: "FIXED";
-                                    address: string;
-                                } | {
-                                    /** @enum {string} */
-                                    type: "TOKEN_CREATOR";
-                                };
-                                id: string;
-                                chargeSku: string;
-                            }[];
-                            hasNextPage: boolean;
-                        };
-                    };
-                };
-                /** @description Invalid fee configuration */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Authentication required */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Fee administrator access required */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Adjustment definition or assignment not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create a reusable platform adjustment definition
-         * @description Creates an inactive adjustment definition. Assign it to SKUs or collections before preparing and signing seller listings.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CartAdjustmentCreate"];
-                };
-            };
-            responses: {
-                /** @description Adjustment definition created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                /** @enum {string} */
-                                effect: "CHARGE";
-                                /** @enum {string} */
-                                phase: "LISTING_CONFIGURATION" | "CHECKOUT";
-                                code: string;
-                                calculation: {
-                                    /** @enum {string} */
-                                    type: "FIXED";
-                                    amount: string;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                } | {
-                                    /** @enum {string} */
-                                    type: "PER_UNIT";
-                                    amount: string;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                } | {
-                                    /** @enum {string} */
-                                    type: "PERCENTAGE";
-                                    basisPoints: number;
-                                    /** @enum {string} */
-                                    currencyMode: "COMPONENT_CURRENCY";
-                                };
-                                recipient: {
-                                    /** @enum {string} */
-                                    type: "FIXED";
-                                    address: string;
-                                } | {
-                                    /** @enum {string} */
-                                    type: "TOKEN_CREATOR";
-                                };
-                                id: string;
-                                chargeSku: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Invalid fee configuration */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Authentication required */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Fee administrator access required */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Adjustment definition or assignment not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/cart/adjustments/assignments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List active platform adjustment assignments */
-        get: {
-            parameters: {
-                query?: {
-                    phase?: "LISTING_CONFIGURATION" | "CHECKOUT";
-                    page?: number;
-                    perPage?: number;
-                    adjustmentId?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Adjustment assignments */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                adjustmentId: string;
-                                /** @default {} */
-                                scope: {
-                                    chainIds?: string[];
-                                    sellerAddresses?: string[];
-                                    nfts?: {
-                                        chainId: string;
-                                        contract: string;
-                                        tokenId: string;
-                                    }[];
-                                    collections?: {
-                                        chainId: string;
-                                        contract: string;
-                                    }[];
-                                    skus?: string[];
-                                    fulfillmentKinds?: number[];
-                                    settlementCurrencies?: string[];
-                                    paymentCurrencies?: string[];
-                                    productIds?: string[];
-                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
-                                };
-                                priority: number;
-                                /** Format: date-time */
-                                validFrom?: string | null;
-                                /** Format: date-time */
-                                validUntil?: string | null;
-                                id: string;
-                            }[];
-                            hasNextPage: boolean;
-                        };
-                    };
-                };
-                /** @description Invalid fee configuration */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Authentication required */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Fee administrator access required */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Adjustment definition or assignment not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Apply an existing platform adjustment
-         * @description Assigns an existing fee without duplicating its definition or charge SKU. Higher priority replaces lower priority for the same adjustment code. Equal highest priorities are rejected when resolving a listing. Existing signed terms remain unchanged.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CartAdjustmentAssignmentCreate"];
-                };
-            };
-            responses: {
-                /** @description Fee assigned */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                adjustmentId: string;
-                                /** @default {} */
-                                scope: {
-                                    chainIds?: string[];
-                                    sellerAddresses?: string[];
-                                    nfts?: {
-                                        chainId: string;
-                                        contract: string;
-                                        tokenId: string;
-                                    }[];
-                                    collections?: {
-                                        chainId: string;
-                                        contract: string;
-                                    }[];
-                                    skus?: string[];
-                                    fulfillmentKinds?: number[];
-                                    settlementCurrencies?: string[];
-                                    paymentCurrencies?: string[];
-                                    productIds?: string[];
-                                    saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
-                                };
-                                priority: number;
-                                /** Format: date-time */
-                                validFrom?: string | null;
-                                /** Format: date-time */
-                                validUntil?: string | null;
-                                id: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Invalid fee configuration */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Authentication required */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Fee administrator access required */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Adjustment definition or assignment not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/cart/adjustments/assignments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Disable a platform adjustment assignment */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Adjustment assignment disabled */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                id: string;
-                                disabled: boolean;
-                            };
-                        };
-                    };
-                };
-                /** @description Invalid fee configuration */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Authentication required */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Fee administrator access required */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-                /** @description Adjustment definition or assignment not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CartErrorResponse"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CartAdjustmentCreate: {
+            /** @enum {string} */
+            effect: "CHARGE";
+            /** @enum {string} */
+            phase: "LISTING_CONFIGURATION" | "CHECKOUT";
+            code: string;
+            calculation: {
+                /** @enum {string} */
+                type: "FIXED";
+                amount: string;
+                /** @enum {string} */
+                currencyMode: "COMPONENT_CURRENCY";
+            } | {
+                /** @enum {string} */
+                type: "PER_UNIT";
+                amount: string;
+                /** @enum {string} */
+                currencyMode: "COMPONENT_CURRENCY";
+            } | {
+                /** @enum {string} */
+                type: "PERCENTAGE";
+                basisPoints: number;
+                /** @enum {string} */
+                currencyMode: "COMPONENT_CURRENCY";
+            };
+            recipient: {
+                /** @enum {string} */
+                type: "FIXED";
+                address: string;
+            } | {
+                /** @enum {string} */
+                type: "TOKEN_CREATOR";
+            };
+        };
+        CartErrorResponse: {
+            error: {
+                code: string;
+                message: string;
+                retryable: boolean;
+                listingDigest?: string;
+                lineIndex?: number;
+            };
+        };
+        CartAdjustmentAssignmentCreate: {
+            adjustmentId: string;
+            /** @default {} */
+            scope: {
+                chainIds?: string[];
+                sellerAddresses?: string[];
+                nfts?: {
+                    chainId: string;
+                    contract: string;
+                    tokenId: string;
+                }[];
+                collections?: {
+                    chainId: string;
+                    contract: string;
+                }[];
+                skus?: string[];
+                fulfillmentKinds?: number[];
+                settlementCurrencies?: string[];
+                paymentCurrencies?: string[];
+                productIds?: string[];
+                saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
+            };
+            priority: number;
+            /** Format: date-time */
+            validFrom?: string | null;
+            /** Format: date-time */
+            validUntil?: string | null;
+        };
         CartProductCreateRequest: {
             slug?: string | null;
             metadata: {
@@ -4169,15 +4299,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-        };
-        CartErrorResponse: {
-            error: {
-                code: string;
-                message: string;
-                retryable: boolean;
-                listingDigest?: string;
-                lineIndex?: number;
-            };
         };
         CartProductListResponse: {
             data: components["schemas"]["CartProduct"][];
@@ -4240,12 +4361,6 @@ export interface components {
         CartSavedCartItemRequest: {
             quantity: string;
         };
-        CartSkuCreateRequest: {
-            universalTokenId?: string | null;
-            metadata: {
-                [key: string]: unknown;
-            };
-        };
         CartSku: {
             id: string;
             sku: string;
@@ -4257,10 +4372,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-        };
-        CartSkuListResponse: {
-            data: components["schemas"]["CartSku"][];
-            hasNextPage: boolean;
         };
         CartProductSkuRequest: {
             sku: string;
@@ -4301,7 +4412,10 @@ export interface components {
             availableQuantity: string;
             maxQuantityPerCheckout?: string;
             paymentRecipient?: string;
-            splits?: {recipient: string; basisPoints: number}[];
+            splits?: {
+                recipient: string;
+                basisPoints: number;
+            }[];
             displayUnitPrice: string;
         };
         CartListingSearchResponse: {
@@ -4381,7 +4495,10 @@ export interface components {
                 minimumUnitPrice: string;
                 availableQuantity: string;
                 paymentRecipient: string;
-                splits: { recipient: string; basisPoints: number }[];
+                splits: {
+                    recipient: string;
+                    basisPoints: number;
+                }[];
             };
             displayUnitPrice: string;
             /** Format: date-time */
@@ -4423,7 +4540,10 @@ export interface components {
                         minimumUnitPrice: string;
                         availableQuantity: string;
                         paymentRecipient: string;
-                        splits: { recipient: string; basisPoints: number }[];
+                        splits: {
+                            recipient: string;
+                            basisPoints: number;
+                        }[];
                     };
                     listingDigest: string;
                     leaf: string;
@@ -4489,9 +4609,21 @@ export interface components {
                     postalOrZipCode: string;
                     countryCode: string;
                 };
+                mintSelections?: {
+                    /** Format: uuid */
+                    preparationId: string;
+                    listingDigest: string;
+                    unitIndexes: number[];
+                }[];
             } | {
                 /** Format: uuid */
                 savedAddressId: string;
+                mintSelections?: {
+                    /** Format: uuid */
+                    preparationId: string;
+                    listingDigest: string;
+                    unitIndexes: number[];
+                }[];
             };
         };
         CartPrepareCheckoutResponse: {
@@ -4534,7 +4666,10 @@ export interface components {
                         minimumUnitPrice: string;
                         availableQuantity: string;
                         paymentRecipient: string;
-                        splits: { recipient: string; basisPoints: number }[];
+                        splits: {
+                            recipient: string;
+                            basisPoints: number;
+                        }[];
                     }[];
                     authorization: {
                         listingRoots: {
@@ -4606,9 +4741,21 @@ export interface components {
                     postalOrZipCode: string;
                     countryCode: string;
                 };
+                mintSelections?: {
+                    /** Format: uuid */
+                    preparationId: string;
+                    listingDigest: string;
+                    unitIndexes: number[];
+                }[];
             } | {
                 /** Format: uuid */
                 savedAddressId: string;
+                mintSelections?: {
+                    /** Format: uuid */
+                    preparationId: string;
+                    listingDigest: string;
+                    unitIndexes: number[];
+                }[];
             };
         };
         CartCheckoutPreviewResponse: {
@@ -4653,7 +4800,10 @@ export interface components {
                             minimumUnitPrice: string;
                             availableQuantity: string;
                             paymentRecipient: string;
-                            splits: { recipient: string; basisPoints: number }[];
+                            splits: {
+                                recipient: string;
+                                basisPoints: number;
+                            }[];
                         }[];
                         authorization: {
                             listingRoots: {
@@ -4732,7 +4882,6 @@ export interface components {
             payer: string | null;
             paymentCurrency: string | null;
             paymentAmount: string | null;
-            splitAllocations: { logId: string; lineIndex: string; listingDigest: string; currency: string; recipient: string; amount: string }[];
             lines: {
                 lineIndex: string;
                 sku: string;
@@ -4753,6 +4902,15 @@ export interface components {
                 tokenId: string;
                 unitIndex: string;
             }[];
+            /** @default [] */
+            splitAllocations: {
+                logId: string;
+                lineIndex: string;
+                listingDigest: string;
+                currency: string;
+                recipient: string;
+                amount: string;
+            }[];
             issues: {
                 code: string;
                 message: string;
@@ -4761,71 +4919,7 @@ export interface components {
                 actionIndex?: string;
             }[];
         };
-        /** @description A JSON object whose values may contain nested JSON data. */
-    
-        CartAdjustmentCreate: {
-            /** @enum {string} */
-            effect: "CHARGE";
-            /** @enum {string} */
-            phase: "LISTING_CONFIGURATION" | "CHECKOUT";
-            code: string;
-            calculation: {
-                /** @enum {string} */
-                type: "FIXED";
-                amount: string;
-                /** @enum {string} */
-                currencyMode: "COMPONENT_CURRENCY";
-            } | {
-                /** @enum {string} */
-                type: "PER_UNIT";
-                amount: string;
-                /** @enum {string} */
-                currencyMode: "COMPONENT_CURRENCY";
-            } | {
-                /** @enum {string} */
-                type: "PERCENTAGE";
-                basisPoints: number;
-                /** @enum {string} */
-                currencyMode: "COMPONENT_CURRENCY";
-            };
-            recipient: {
-                /** @enum {string} */
-                type: "FIXED";
-                address: string;
-            } | {
-                /** @enum {string} */
-                type: "TOKEN_CREATOR";
-            };
-        };
-        CartAdjustmentAssignmentCreate: {
-            adjustmentId: string;
-            /** @default {} */
-            scope: {
-                chainIds?: string[];
-                sellerAddresses?: string[];
-                nfts?: {
-                    chainId: string;
-                    contract: string;
-                    tokenId: string;
-                }[];
-                collections?: {
-                    chainId: string;
-                    contract: string;
-                }[];
-                skus?: string[];
-                fulfillmentKinds?: number[];
-                settlementCurrencies?: string[];
-                paymentCurrencies?: string[];
-                productIds?: string[];
-                saleTypes?: ("PRIMARY_SALE" | "SECONDARY_SALE")[];
-            };
-            priority: number;
-            /** Format: date-time */
-            validFrom?: string | null;
-            /** Format: date-time */
-            validUntil?: string | null;
-        };
-};
+    };
     responses: never;
     parameters: never;
     requestBodies: never;

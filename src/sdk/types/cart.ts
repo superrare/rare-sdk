@@ -1,7 +1,8 @@
+import type { CartOrdersNamespace } from './orders.js';
 import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
   CartApiListingRoot, CartApiNamespace, CartApiPreparedPurchase, CartCheckoutIntent,
-  CartCheckoutPreparation, CartListingIntent,
+  CartCheckoutPreparation, CartListingIntent, CartDeliveryCheckout,
 } from './cart-api.js';
 import type { CartRoutingNamespace } from './cart-routing.js';
 import type { PurchaseEligibilityNamespace } from './eligibility.js';
@@ -94,6 +95,8 @@ export type CartCheckoutResult = {
   paymentCurrency: Address; paymentAmount: bigint; lineCount: number; actionCount: number;
 };
 export type CartPurchaseParams = { preparation: CartCheckoutPreparation; autoApprove?: boolean };
+/** Resume the original saved reference or delivery draft without submitting payment. */
+export type CartCheckoutAuthorization = CartCheckoutPreparation | CartDeliveryCheckout | { preparationReference: string };
 export type CartPurchaseResult = CartCheckoutResult & {
   preparation: CartCheckoutPreparation;
   preparedPurchase: CartApiPreparedPurchase;
@@ -122,6 +125,7 @@ export type CartValidationResult<T> = { isValid: true; value: T } | { isValid: f
 
 export type CartNamespace = {
   purchaseEligibility: PurchaseEligibilityNamespace;
+  orders: CartOrdersNamespace;
   catalog: {
     products: CartApiNamespace['catalog']['products'];
     variants: CartApiNamespace['catalog']['variants'];
@@ -144,9 +148,13 @@ export type CartNamespace = {
   };
   checkout: {
     receipt: CartApiNamespace['checkout']['receipt'];
+    recover: CartApiNamespace['checkout']['recover'];
     /** Authorizes a reviewed quote and reserves any required claims, without paying. */
-    authorize: (preparation: CartCheckoutPreparation) => Promise<CartApiPreparedPurchase>;
+    authorize: (input: CartCheckoutAuthorization) => Promise<CartApiPreparedPurchase>;
     prepare: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
+    payment: CartApiNamespace['checkout']['payment'];
+    paymentMethods: CartApiNamespace['checkout']['paymentMethods'];
+    card: CartApiNamespace['checkout']['card'];
     purchase: (params: CartPurchaseParams) => Promise<CartPurchaseResult>;
     execute: (params: CartCheckoutParams) => Promise<CartCheckoutResult>;
   };

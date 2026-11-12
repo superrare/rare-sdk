@@ -2,6 +2,8 @@ import type { RareAuthRequestOptions } from './account.js';
 import type { CartSplit } from './cart.js';
 import type { Address, Hex } from 'viem';
 import type { IntegerInput } from './common.js';
+import type { AccountCheckoutRecoveryWire } from './orders.js';
+import type { ShippingDetails } from './shipping-addresses.js';
 import type {
   CartFulfillmentKind,
   CartSellerFulfillmentKind,
@@ -249,9 +251,64 @@ export type CartCheckoutIntentItem = {
   recipient?: Address;
 };
 
+/** Bind physical copies to the actual tokens minted by this checkout, in unit order. */
+export type CartPrintMintSelection = { preparationId: string; listingDigest: Hex; unitIndexes: number[] };
+export type CartDeliverySelection = {
+  mintSelections?: CartPrintMintSelection[];
+};
+
 export type CartCheckoutIntent = {
   paymentCurrency: Address;
   items: readonly CartCheckoutIntentItem[];
+  delivery?: ({ recipientDetails: ShippingDetails } | { savedAddressId: string }) & CartDeliverySelection;
+};
+export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
+export type CartCheckoutBreakdown = { displayPrice: bigint; production: bigint; shipping: bigint; networkFee: bigint; total: bigint };
+export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' | 'preparedPurchase'> & {
+  orderId?: Hex;
+  preparedPurchase?: CartApiPreparedPurchase;
+};
+
+export type CartPaymentRequest = {
+  method: 'card';
+  preparation: CartCheckoutPreparation;
+  email: string;
+};
+export type CartPaymentMethods = {
+  enabled: boolean;
+  paymentCurrency: Address | null;
+  minimumCents: number;
+  maximumCentsExclusive: number;
+  directCard?: { merchantId: string; env: 'sandbox' };
+};
+export type CartCardCharge = {
+  orderId: Hex;
+  idempotencyKey: string;
+  reviewedTotalCents: number;
+  card: {
+    token: string;
+    expMonth: string;
+    expYear: string;
+    bin?: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    address1: string;
+    city: string;
+    country: string;
+    state?: string;
+    zip?: string;
+  };
+};
+export type CartCardChargeResult =
+  | { status: 'pending' }
+  | { status: 'accepted'; paymentId: string }
+  | { status: 'quote_changed'; totalCents: number };
+export type CartCardCheckout = {
+  checkoutJwtToken: string;
+  sessionKey: string;
+  config: { merchantId: string; env: 'sandbox' | 'prod' };
+  preparedPurchase: CartApiPreparedPurchase;
 };
 
 export type CartCheckoutFee = { label: string; currency: Address; amount: bigint };
@@ -272,6 +329,8 @@ export type CartCheckoutPreparation = {
   preparedAt: string;
   expiresAt: string;
   preparationReference: string;
+  idempotencyKey?: string;
+  breakdown?: CartCheckoutBreakdown;
   intent: CartCheckoutIntent;
   paymentAmount: bigint;
   fees: CartCheckoutFee[];
@@ -283,6 +342,7 @@ export type CartCheckoutPreparation = {
 export type CartCheckoutPreviewWire = {
   preparationReference: string;
   preparation: CartApiPreparedPurchaseWire;
+  breakdown?: { displayPrice: string; production: string; shipping: string; networkFee: string; total: string };
 };
 
 export type CartApiPreparedPurchaseWire = {
@@ -360,6 +420,7 @@ export type CartApiNamespace = {
       listMine: (params?: CartProductsMineParams, options?: RareAuthRequestOptions) => Promise<CartProductSearchResult>;
       update: (id: string, input: CreateCartProduct, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
       publish: (id: string) => Promise<CartApiProduct>;
+      archive: (id: string) => Promise<CartApiProduct>;
       search: (params?: CartProductSearchParams) => Promise<CartProductSearchResult>;
       get: (id: string) => Promise<CartApiProduct>;
     };
@@ -379,7 +440,15 @@ export type CartApiNamespace = {
   checkout: {
     receipt: (orderId: Hex) => Promise<CartCheckoutReceipt>;
     preview: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
-    prepare: (preparationReference: string) => Promise<CartApiPreparedPurchase>;
+    prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
+    /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
+    recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
+    payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
+    paymentMethods: () => Promise<CartPaymentMethods>;
+    card: {
+      quote: (input: { email: string; subtotalCents: number }) => Promise<{ totalCents: number }>;
+      charge: (input: CartCardCharge) => Promise<CartCardChargeResult>;
+    };
   };
 };
 

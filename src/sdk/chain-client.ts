@@ -1,3 +1,4 @@
+import type { CartOrdersNamespace } from './types/orders.js';
 import { getContractAddresses, chainIds } from '../contracts/addresses.js';
 import type { Address } from 'viem';
 import { createRareApi } from './api.js';
@@ -20,6 +21,7 @@ import { createReleaseNamespace } from './release.js';
 import { createCollectionNamespace } from './collection.js';
 import { createUtilsNamespace } from './utils.js';
 import { createCartNamespace } from './cart.js';
+import { createPrintsNamespace } from './prints.js';
 import { buildNftUniversalTokenId } from './nft-core.js';
 import {
   createErc1155CollectionNamespace,
@@ -75,7 +77,7 @@ export type * from './types/client.js';
  * });
  * ```
  */
-export function createChainClient(config: RareClientConfig, api = createRareApi({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }), authenticatedFetch?: typeof globalThis.fetch): RareClient {
+export function createChainClient(config: RareClientConfig, orders: CartOrdersNamespace, api = createRareApi({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }), authenticatedFetch?: typeof globalThis.fetch): RareClient {
   const { publicClient } = config;
   const runtimeConfig: RareClientConfig = config.walletClient === undefined
     ? config
@@ -181,7 +183,8 @@ export function createChainClient(config: RareClientConfig, api = createRareApi(
     utils: createUtilsNamespace(),
     token: createTokenNamespace(publicClient, chain),
     currency: createCurrencyNamespace(publicClient, chain),
-    cart: createCartNamespace(publicClient, runtimeConfig, chain, chainId, addresses, authenticatedFetch),
+    cart: { ...createCartNamespace(publicClient, runtimeConfig, chain, chainId, addresses, authenticatedFetch), orders },
+    prints: createPrintsNamespace(runtimeConfig, authenticatedFetch),
     search: {
       async liquidEditions(params = {}): ReturnType<RareClient['search']['liquidEditions']> {
         assertNoClientChainOverride(params, 'rare.search.liquidEditions', chain);
