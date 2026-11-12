@@ -2,11 +2,11 @@ import { createApiClient } from '../data-access/client.js';
 import type { SearchPageResponse } from './api.js';
 import { favoritePageQuery } from './favorites-core.js';
 import type { RareClientConfig } from './types/client.js';
-import type { PrintsNamespace, PrintDropInput, PrintListingInput, CreatePrintDrop, PrintDropCreation, PrintBatchItem, PrintBatchOptions, PrintBatchResult,
+import type { PrintsNamespace, PrintDropInput, PrintListingInput, CreatePrintDrop, PrintDropCreation, PrintBatchInput, PrintSetupOptions, PrintBatchOptions, PrintBatchResult,
   PrintOptionConfiguration, PrintOption, PreparePrintListing, PrintListingPreparation } from './types/prints.js';
-import { createConciergePrintRequest, createPrintDropRequest, createPrintListingRequest } from './print-request-shell.js';
+import { createConciergePrintRequest, createPrintDropRequest, createPrintListingRequest, retainPrintIdentifier } from './print-request-shell.js';
 import { runPrintWrite } from './print-write-shell.js';
-import { isPrintBatch } from './prints-batch-core.js';
+import { isPrintBatch, printBatchInputDigest, printBatchItems } from './prints-batch-core.js';
 import { runPrintBatch } from './prints-batch-shell.js';
 import { validatePrintListingQuantityLimit } from './prints-core.js';
 import { validatePrintQuote, validatePrintFileInput, validatePrintMockupId } from './print-configuration-core.js';
@@ -24,33 +24,37 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     if (response.data === undefined) throw new Error('Rare API did not return print data.');
     return response.data.data;
   };
-  function create(input: PrintDropInput): Promise<PrintDropCreation>;
-  function create(input: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
-  function create(input: PrintDropInput | readonly PrintBatchItem<CreatePrintDrop>[], options: PrintBatchOptions<PrintDropCreation> = {}) {
-    const operation = (value: CreatePrintDrop) => {
-      const body = structuredClone(value);
-      return runPrintWrite(options => client.POST('/v1/prints/drops', { ...options, body }));
+  function create(input: PrintDropInput, options?: PrintSetupOptions): Promise<PrintDropCreation>;
+  function create(input: PrintBatchInput<PrintDropInput>, options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
+  function create(input: PrintDropInput | PrintBatchInput<PrintDropInput>, options: PrintBatchOptions<PrintDropCreation> = {}) {
+    const operation = async (input: PrintDropInput, key = '0') => {
+      const value = structuredClone(input);
+      const idempotencyKey = value.idempotencyKey ?? await retainPrintIdentifier(
+        options.recovery, `draft:${printBatchInputDigest([key, value])}`, () => createPrintDropRequest(value).idempotencyKey);
+      const body: CreatePrintDrop = { ...value, idempotencyKey };
+      return runPrintWrite(request => client.POST('/v1/prints/drops', { ...request, body }));
     };
-    if (!isPrintBatch<CreatePrintDrop>(input)) return operation(createPrintDropRequest(input));
-    if (input.some(item => !item.input.idempotencyKey?.trim())) throw new Error('Batch print creation requires a stable idempotencyKey for every item.');
-    return runPrintBatch(input, options, operation);
+    return isPrintBatch<PrintDropInput>(input) ? runPrintBatch(printBatchItems(input), options, operation) : operation(input);
   }
-  function configure(input: PrintOptionConfiguration): Promise<PrintOption>;
-  function configure(items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
-  function configure(input: PrintOptionConfiguration | readonly PrintBatchItem<PrintOptionConfiguration>[], options: PrintBatchOptions<PrintOption> = {}) {
+  function configure(input: PrintOptionConfiguration, options?: PrintSetupOptions): Promise<PrintOption>;
+  function configure(items: PrintBatchInput<PrintOptionConfiguration>, options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
+  function configure(input: PrintOptionConfiguration | PrintBatchInput<PrintOptionConfiguration>, options: PrintBatchOptions<PrintOption> = {}) {
     const operation = (value: PrintOptionConfiguration) => data(client.PUT('/v1/prints/drops/{id}/options/standard', { params: { path: { id: value.dropId } }, body: value.input }));
-    return isPrintBatch<PrintOptionConfiguration>(input) ? runPrintBatch(input, options, operation) : operation(input);
+    return isPrintBatch<PrintOptionConfiguration>(input) ? runPrintBatch(printBatchItems(input), options, operation) : operation(input);
   }
-  function prepare(input: PrintListingInput): Promise<PrintListingPreparation>;
-  function prepare(input: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
-  function prepare(input: PrintListingInput | readonly PrintBatchItem<PreparePrintListing>[], options: PrintBatchOptions<PrintListingPreparation> = {}) {
-    const operation = (value: PreparePrintListing) => {
+  function prepare(input: PrintListingInput, options?: PrintSetupOptions): Promise<PrintListingPreparation>;
+  function prepare(input: PrintBatchInput<PrintListingInput>, options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
+  function prepare(input: PrintListingInput | PrintBatchInput<PrintListingInput>, options: PrintBatchOptions<PrintListingPreparation> = {}) {
+    const operation = async (input: PrintListingInput, key = '0') => {
+      const value = structuredClone(input);
       const validation = validatePrintListingQuantityLimit(value);
-      if (!validation.valid) return Promise.reject(new Error(validation.message));
-      const body = structuredClone(value);
-      return runPrintWrite(options => client.POST('/v1/prints/listings/prepare', { ...options, body }));
+      if (!validation.valid) throw new Error(validation.message);
+      const listingSalt = value.listingSalt ?? await retainPrintIdentifier(
+        options.recovery, `prepare:${printBatchInputDigest([key, value])}`, () => createPrintListingRequest(value).listingSalt);
+      const body: PreparePrintListing = { ...value, listingSalt };
+      return runPrintWrite(request => client.POST('/v1/prints/listings/prepare', { ...request, body }));
     };
-    return isPrintBatch<PreparePrintListing>(input) ? runPrintBatch(input, options, operation) : operation(createPrintListingRequest(input));
+    return isPrintBatch<PrintListingInput>(input) ? runPrintBatch(printBatchItems(input), options, operation) : operation(input);
   }
   return {
     concierge: {

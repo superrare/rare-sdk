@@ -1,4 +1,4 @@
-import type { PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './types/prints.js';
+import type { PrintBatchInput, PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './types/prints.js';
 import { keccak256, toHex } from 'viem';
 
 const canonicalInput = (input: unknown): unknown => {
@@ -12,7 +12,7 @@ const canonicalInput = (input: unknown): unknown => {
 
 export const printBatchInputDigest = (input: unknown): string => keccak256(toHex(JSON.stringify(canonicalInput(input))));
 
-export function isPrintBatch<T>(input: unknown): input is readonly PrintBatchItem<T>[] {
+export function isPrintBatch<T>(input: unknown): input is PrintBatchInput<T> {
   return Array.isArray(input);
 }
 
@@ -35,4 +35,10 @@ export function validatePrintBatch<T, R>(items: readonly PrintBatchItem<T>[], op
 
 export function previousPrintSuccess<R>(key: string, previous: readonly PrintBatchResult<R>[] = []): PrintBatchResult<R> | undefined {
   return previous.find(result => result.key === key && result.status === 'fulfilled');
+}
+
+export function printBatchItems<T extends object>(input: PrintBatchInput<T>): PrintBatchItem<T>[] {
+  return input.map((item, index) => 'key' in item && 'input' in item
+    ? item
+    : { key: String(index), input: item });
 }

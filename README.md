@@ -563,17 +563,11 @@ and can apply their own Imgix source or other image service.
 
 Run `npm run test:integration:uploads` manually against a deployed dev API with
 `RARE_ACCOUNT_TEST_API_URL`, `RARE_ACCOUNT_TEST_PRIVATE_KEY`, and
-`RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` configured. This
-suite uses real storage and requires authenticated `gcloud` access on
-`superrare-dev` to delete its unique test objects from both upload buckets.
-It verifies concurrent deduplication, first-writer metadata, public byte-for-byte
-downloads, avatar attachment and clearing, unchanged unrelated profile fields,
-and HTTP rejection of anonymous, forged, empty, oversized and unexpected-field
-requests. Object hashes are registered before requests so cleanup also runs after
-an ambiguous upload failure. It also verifies private references, anonymous download
-denial, separate bucket storage, private cache metadata, a 33 MiB multi-chunk upload,
-private staging, unfinished-upload rejection, and account-bound repeat finalization. The dev API must use
-`rare-api-public-upload-dev` and `rare-api-private-upload-dev`. It is not a CI job.
+`RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` configured. Use a dev API backed by
+`rare-api-public-upload-dev` and `rare-api-private-upload-dev`. The suite checks
+public downloads, private upload isolation, account-bound finalization, and a
+33 MiB multi-chunk upload. It also checks avatar updates, deduplication, and
+invalid requests. Test uploads remain in the dev buckets.
 
 Avatar uploads accept PNG, JPEG or GIF, up to 5 MiB. The upload method saves the
 returned URL to your profile. If the upload succeeds but saving fails,
@@ -765,9 +759,7 @@ or follow the first account from the second. The first/third pair is used for an
 accepted direct conversation. Blocking is restored afterward. Public messages and
 transient direct replies are deleted. Request seed messages remain for repeatable
 runs, and new groups are closed with their durable history retained.
-Set `RARE_MESSAGING_TEST_PRIVATE_BUCKET` to the deployment's private messaging
-bucket and authenticate `gcloud` for `superrare-dev` so attachment fixtures can be
-removed. These tests verify private bytes through authenticated downloads and
+These tests verify private bytes through authenticated downloads and
 verify revocation after bans and message deletion. They are excluded from the
 standard test command and do not run in CI.
 
@@ -794,18 +786,10 @@ variables plus `RARE_MESSAGING_TEST_PUBLIC_CONTEXTS`, a JSON array containing on
 existing context of each type: `auction` with `id`, `liquid-edition` with `chainId`
 and `contractAddress`, and `drop-announcement` with `id`. Use dedicated fixture rooms
 where the test account is not already subscribed. The suite deletes its messages
-and leaves each room afterward. Set `RARE_MESSAGING_TEST_PIPELINES_DIR` to the
-monorepo's `services/pipelines` directory and `RARE_MESSAGING_TEST_DATABASE_URL`
-to the matching non-production deployment database connection. System fixtures
-invoke the production Pipelines writer directly; no internal HTTP producer key is used. Public delivery tests
-verify delivery for all three room types, default subscriptions in a new room, mentions-only and muted
-preferences, and actual app-inbox delivery. A positive control confirms that the
-worker is running during muted-delivery checks. System-message fixtures use a new
-temporary drop room, then verify anonymous thread reads, producer retry deduplication,
-one notification per event, and rejection of user writes/edits/deletes. The SDK does
-not expose a system-message write endpoint. Deleting the fixture drop leaves its
-unadvertised durable system history; tests do not put synthetic events into an
-existing auction or liquid-edition history.
+and leaves each room afterward. Public delivery tests verify app-inbox delivery
+for all three room types, default subscriptions, and mentions-only and muted
+preferences. They also check that ordinary callers cannot write trusted system
+messages. A separate unmuted room verifies delivery during the muted-room check.
 
 For public history, `nextCursor` is the last sequence in a truncated page. While
 polling forward, request `history(room.id, { after, limit: 100 })`, drain every

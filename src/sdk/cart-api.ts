@@ -1,3 +1,4 @@
+import { runPrintWrite } from './print-write-shell.js';
 import type { RareAuthRequestOptions } from './types/account.js';
 import { cartCatalogPage } from './cart-pagination-core.js';
 import { getAddress, isAddress, isHex, type Address, type Hex } from 'viem';
@@ -65,10 +66,10 @@ export function createCartApiNamespace(
   scope: CartApiScope,
   authenticatedFetch?: typeof globalThis.fetch,
 ): CartApiNamespace {
-  const client = createCartApiClient(options.baseUrl, options.fetch) as unknown as CartApiTransport;
-  const protectedClient = authenticatedFetch === undefined
-    ? client
-    : createCartApiClient(options.baseUrl, authenticatedFetch) as unknown as CartApiTransport;
+  const apiClient = createCartApiClient(options.baseUrl, options.fetch);
+  const authenticatedClient = authenticatedFetch === undefined ? apiClient : createCartApiClient(options.baseUrl, authenticatedFetch);
+  const client = apiClient as unknown as CartApiTransport;
+  const protectedClient = authenticatedClient as unknown as CartApiTransport;
   const chainId = chainIdString(scope.chainId);
   const cartAddress = (): Address => {
     if (scope.cartAddress === undefined) {
@@ -183,10 +184,15 @@ export function createCartApiNamespace(
       }),
       'Rare API did not return the invalidated Cart Listing.',
     ),
-    publishPrintPreparations: async (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => getWrappedData(
-      protectedClient.POST('/v1/cart/listing-roots', { body: { preparationIds, artifact: toCartListingRootArtifactWire(artifact) } }),
-      'Rare API did not return the ingested Cart Listing Root.',
-    ),
+    publishPrintPreparations: async (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => {
+      const result = await runPrintWrite(request => authenticatedClient.POST('/v1/cart/listing-roots', {
+        ...request, body: { preparationIds, artifact: toCartListingRootArtifactWire(artifact) },
+      }));
+      const { root, signature } = result;
+      if (!isHex(root.listingsRoot) || !isHex(signature)) throw new Error('Rare API returned an invalid signed Cart Listing Root.');
+      return { ...result, chainId: String(result.chainId), cart: getAddress(result.cart), seller: getAddress(result.seller),
+        root: { ...root, listingsRoot: root.listingsRoot }, signature };
+    },
     publish: async (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => getWrappedData(
       protectedClient.POST('/v1/cart/listing-roots', { body: {
         artifact: toCartListingRootArtifactWire(artifact),

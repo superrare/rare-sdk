@@ -26,6 +26,11 @@ describe('durable Cart publication over HTTP', () => {
   it('signs one root for multiple print preparations and retries that root without signing', async () => {
     const submissions: unknown[] = [];
     const reads: string[] = [];
+    const checkpoints = new Map<string, string>();
+    const recovery = {
+      read: async (key: string) => checkpoints.get(key),
+      save: async (key: string, value: string) => { checkpoints.set(key, value); },
+    };
     const walletClient = createWalletClient({ chain: sepolia, account: seller, transport: http('http://localhost') });
     const prompts = vi.spyOn(walletClient, 'signTypedData');
     const client = createRareClient({
@@ -40,8 +45,9 @@ describe('durable Cart publication over HTTP', () => {
           return saved === undefined ? new Response(null, { status: 404 }) : Response.json({ data: saved });
         }
         expect(path).toBe('/v1/cart/listing-roots');
-        submissions.push(JSON.parse(await new Response(init?.body).text()));
-        return Response.json({ data: { listingCount: 2 } });
+        const publication = JSON.parse(await new Response(init?.body).text());
+        submissions.push(publication);
+        return Response.json({ data: { ...publication.artifact, listingCount: publication.artifact.entries.length } });
       },
     });
     const preparations = ['1', '2'].map((suffix): PrintListingPreparation => {
@@ -55,13 +61,13 @@ describe('durable Cart publication over HTTP', () => {
           intent: { deadline: '2000000000' } },
       };
     });
-    const result = await client.cart.listing.publish({ printPreparations: preparations, onSigned: () => {
+    const result = await client.cart.listing.publish({ printPreparations: preparations, recovery, onSigned: () => {
       expect(submissions).toHaveLength(0);
     } });
     expect(prompts).toHaveBeenCalledTimes(1);
     expect(result.signedArtifact.entries).toHaveLength(2);
     expect(result.signedArtifact.entries.every(({ proof }) => proof.length === 1)).toBe(true);
-    await client.cart.listing.publish({ printPreparations: preparations, signedArtifact: result.signedArtifact });
+    await client.cart.listing.publish({ printPreparations: preparations, recovery });
     expect(prompts).toHaveBeenCalledTimes(1);
     expect(submissions).toHaveLength(2);
     expect(submissions[0]).toEqual(submissions[1]);

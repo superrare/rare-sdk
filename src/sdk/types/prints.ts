@@ -45,23 +45,30 @@ export type PrintBatchItem<T> = { key: string; input: T };
 export type PrintBatchResult<T> = { key: string; inputDigest: string; status: 'fulfilled'; value: T } |
   { key: string; inputDigest: string; status: 'rejected'; error: unknown };
 /** Keep keys and operation inputs unchanged when reusing previous results. */
-export type PrintBatchOptions<T> = { previousResults?: readonly PrintBatchResult<T>[] };
+/** Store checkpoints in the current account and API environment. Writes must be durable before resolving. */
+export type PrintRecoveryStore = {
+  read: (key: string) => Promise<string | undefined>;
+  save: (key: string, value: string) => Promise<void>;
+};
+export type PrintSetupOptions = { recovery?: PrintRecoveryStore };
+export type PrintBatchInput<T> = readonly (T | PrintBatchItem<T>)[];
+export type PrintBatchOptions<T> = PrintSetupOptions & { previousResults?: readonly PrintBatchResult<T>[] };
 export type PrintDropCreation = Omit<PrintDrop, 'options'>;
 export type PrintOptionConfiguration = { dropId: string; input: ConfigurePrintOption };
 
 /** Retries an uncertain write once. Resume an unconfirmed request through PrintRequestUncertainError. */
 export type PrintCreateOperation = {
-  (input: PrintDropInput): Promise<PrintDropCreation>;
-  (items: readonly PrintBatchItem<CreatePrintDrop>[], options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
+  (input: PrintDropInput, options?: PrintSetupOptions): Promise<PrintDropCreation>;
+  (items: PrintBatchInput<PrintDropInput>, options?: PrintBatchOptions<PrintDropCreation>): Promise<PrintBatchResult<PrintDropCreation>[]>;
 };
 export type PrintConfigureOperation = {
-  (input: PrintOptionConfiguration): Promise<PrintOption>;
-  (items: readonly PrintBatchItem<PrintOptionConfiguration>[], options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
+  (input: PrintOptionConfiguration, options?: PrintSetupOptions): Promise<PrintOption>;
+  (items: PrintBatchInput<PrintOptionConfiguration>, options?: PrintBatchOptions<PrintOption>): Promise<PrintBatchResult<PrintOption>[]>;
 };
 /** Retries an uncertain write once with the same listing salt. */
 export type PrintPrepareOperation = {
-  (input: PrintListingInput): Promise<PrintListingPreparation>;
-  (items: readonly PrintBatchItem<PreparePrintListing>[], options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
+  (input: PrintListingInput, options?: PrintSetupOptions): Promise<PrintListingPreparation>;
+  (items: PrintBatchInput<PrintListingInput>, options?: PrintBatchOptions<PrintListingPreparation>): Promise<PrintBatchResult<PrintListingPreparation>[]>;
 };
 /** Print authoring uses the account session; purchasing uses rare.cart.checkout. */
 export type PrintsNamespace = {

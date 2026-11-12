@@ -1,7 +1,7 @@
 import { getAddress, isAddress, isHex } from 'viem';
 import type { CartListing } from './types/cart.js';
 import type { PreparePrintListing, PrintListingPreparation } from './types/prints.js';
-export function validatePrintListingQuantityLimit(input: PreparePrintListing): { valid: true } | { valid: false; message: string } {
+export function validatePrintListingQuantityLimit(input: Pick<PreparePrintListing, 'maxQuantityPerCheckout'>): { valid: true } | { valid: false; message: string } {
   const quantity = input.maxQuantityPerCheckout ?? '1';
   if (typeof quantity !== 'string' || !/^[1-9][0-9]*$/u.test(quantity) || quantity.length > 4 || BigInt(quantity) > 1000n) {
     return { valid: false, message: 'Print checkout quantity limits must be positive integer strings from 1 to 1000.' };

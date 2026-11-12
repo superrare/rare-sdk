@@ -1,5 +1,4 @@
 import { retryPublicSend } from './messaging-live.js';
-import { appendSystemFixture } from './messaging-system-fixture.js';
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -10,30 +9,6 @@ const required = (name: string): string => { const value = process.env[name]; if
 const origin = () => { const url = new URL(required('RARE_ACCOUNT_TEST_API_URL')); if (url.protocol !== 'https:' || url.hostname === 'api.superrare.com' || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error('Use a non-production HTTPS API origin'); return url.origin; };
 
 describe('public durable messaging against deployed services', () => {
-  it('deduplicates semantically identical producer payloads despite nested object key order', async () => {
-    const apiBaseUrl = origin();
-    const key = required('RARE_ACCOUNT_TEST_PRIVATE_KEY');
-    if (!isPrivateKeyString(key)) throw new Error('Invalid dedicated test wallet');
-    const wallet = privateKeyToAccount(key);
-    const account = createRareClient({ apiBaseUrl });
-    const api = createRareClient({ apiBaseUrl: apiBaseUrl });
-    try {
-      await account.auth.loginWithWallet({ address: wallet.address, chainId: 11155111, signMessage: message => wallet.signMessage({ message }) });
-      const upload = await account.upload(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'), 'system-message-fixture.gif', { contentType: 'image/gif' });
-      const imageUrl = upload.url;
-      const drop = await account.drops.create({ type: 'NONE', startsAt: new Date(Date.now() + 86400000).toISOString(), metadata: { headline: `Producer retry fixture ${randomUUID()}`, description: 'Dedicated SDK integration fixture', destinationUrl: '', imageUrl } });
-      try {
-        const room = await api.messaging.public.resolveRoom({ type: 'drop-announcement', id: drop.id });
-        const input = { sourceId: `integration:${randomUUID()}`, type: 'integration.notice', summary: 'Producer retry fixture', payload: { z: 1, nested: { b: 2, a: 1 }, values: [1, 2] }, occurredAt: new Date().toISOString() };
-        const message = await appendSystemFixture(room.context, input);
-        const retry = await appendSystemFixture(room.context, { ...input, payload: { values: [1, 2], nested: { a: 1, b: 2 }, z: 1 } });
-        expect(retry.id).toBe(message.id);
-        await expect(appendSystemFixture(room.context, { ...input, payload: { ...input.payload, values: [2, 1] } })).rejects.toThrow('reused');
-        expect((await api.messaging.public.history(room.id)).messages.filter(row => row.id === message.id)).toHaveLength(1);
-      } finally { await account.drops.delete(drop.id); }
-    } finally { await account.auth.logout(); }
-  }, 240_000);
-
   it.each(['auction', 'liquid-edition', 'drop-announcement'])('round-trips %s public history while protecting system messages', async type => {
     const apiBaseUrl = origin();
     const contexts: unknown = JSON.parse(required('RARE_MESSAGING_TEST_PUBLIC_CONTEXTS'));

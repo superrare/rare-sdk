@@ -1,7 +1,7 @@
 import { previousPrintSuccess, printBatchInputDigest, validatePrintBatch } from './prints-batch-core.js';
 import type { PrintBatchItem, PrintBatchOptions, PrintBatchResult } from './types/prints.js';
 
-export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], options: PrintBatchOptions<R>, operation: (input: T) => Promise<R>, identity: (input: T) => unknown = input => input): Promise<PrintBatchResult<R>[]> {
+export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], options: PrintBatchOptions<R>, operation: (input: T, key: string) => Promise<R>, identity: (input: T) => unknown = input => input): Promise<PrintBatchResult<R>[]> {
   validatePrintBatch(items, options, identity);
   // Keep wallet prompts and dependent API writes sequential.
   return items.reduce<Promise<PrintBatchResult<R>[]>>(async (pending, item) => {
@@ -10,7 +10,7 @@ export async function runPrintBatch<T, R>(items: readonly PrintBatchItem<T>[], o
     if (previous !== undefined) return [...results, previous];
     const inputDigest = printBatchInputDigest(identity(item.input));
     try {
-      return [...results, { key: item.key, inputDigest, status: 'fulfilled', value: await operation(item.input) }];
+      return [...results, { key: item.key, inputDigest, status: 'fulfilled', value: await operation(item.input, item.key) }];
     } catch (error) {
       return [...results, { key: item.key, inputDigest, status: 'rejected', error }];
     }
