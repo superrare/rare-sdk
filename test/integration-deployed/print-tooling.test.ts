@@ -207,10 +207,10 @@ describe('print tooling through deployed Rare API', () => {
       if (prepared[0]?.status !== 'fulfilled') throw new Error('Batch print preparation failed', { cause: prepared });
       const frozen = prepared[0].value;
       expect((await rare.prints.listings.prepare(preparationInput)).id).toBe(frozen.id);
-      const signedBatch = await rare.prints.listings.publish([{ key: 'print', input: { preparation: frozen } }]);
-      if (signedBatch[0]?.status !== 'fulfilled') throw new Error('Batch print publication failed', { cause: signedBatch });
-      const published = signedBatch[0].value;
-      expect(await rare.prints.listings.publish([{ key: 'print', input: { preparation: frozen } }], { previousResults: signedBatch })).toEqual(signedBatch);
+      const published = await rare.cart.listing.publish({ printPreparations: frozen });
+      expect((await rare.cart.listing.publish({
+        printPreparations: frozen, signedArtifact: published.signedArtifact,
+      })).publishedRoot).toEqual(published.publishedRoot);
       expect(published).not.toHaveProperty('approvalTxHash');
       const entry = published.signedArtifact.entries[0];
       if (!entry) throw new Error('Published print Listing returned no Cart entry.');
@@ -282,7 +282,7 @@ describe('print tooling through deployed Rare API', () => {
           const mappedOption = await rare.prints.options.configure({ dropId: mapped.id, input: { displayPriceUsdCents: '10000' } });
           const mappedPreparation = await rare.prints.listings.prepare({ optionId: mappedOption.id, seller: wallet.address,
             listingSalt: keccak256(toHex(randomUUID())), deadline: String(Math.floor(Date.now() / 1000) + 86_400), availableQuantity: '10' });
-          const mappedPublication = await rare.prints.listings.publish({ preparation: mappedPreparation });
+          const mappedPublication = await rare.cart.listing.publish({ printPreparations: mappedPreparation });
           const mappedEntry = mappedPublication.signedArtifact.entries[0];
           if (!mappedEntry) throw new Error('Mapped print returned no Listing.');
           expect(mappedEntry.listing.fulfillmentKind).toBe(1);
@@ -359,7 +359,7 @@ describe('print tooling through deployed Rare API', () => {
           const gated = await rare.prints.listings.prepare({ optionId: option.id, seller: wallet.address,
             listingSalt: keccak256(toHex(randomUUID())), deadline: String(Math.floor(Date.now() / 1000) + 86_400),
             availableQuantity: '10', maxQuantityPerCheckout: '2', eligibilityRuleId: rule.id });
-          const gatedPublication = await rare.prints.listings.publish({ preparation: gated });
+          const gatedPublication = await rare.cart.listing.publish({ printPreparations: gated });
           const gatedEntry = gatedPublication.signedArtifact.entries[0];
           if (!gatedEntry) throw new Error('Gated print publication returned no Listing.');
           expect((await rare.prints.drops.get(created.id)).options.find(candidate => candidate.listingDigest === gatedEntry.listingDigest))

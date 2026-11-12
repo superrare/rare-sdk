@@ -1,9 +1,11 @@
+import { parsePrintListingTerms } from './prints-core.js';
+import type { CartListingPublishParams, CartListingPublishResult, CartPrintListingPublishParams } from './types/cart.js';
 import { erc20Abi, getAddress, isAddressEqual, parseEventLogs, type Address, type Hash, type Hex, type PublicClient, type TransactionReceipt } from 'viem';
 import { cartAbi } from '../contracts/abis/cart.js';
 import { cartLensAbi } from '../contracts/abis/cart-lens.js';
 import { ETH_ADDRESS, type SupportedChain } from '../contracts/addresses.js';
 import { approvalAbi, NftApprovalRequiredError, runWithApprovalSideEffectAlert, waitForApprovalState } from './approvals-shell.js';
-import { buildCartListingRootArtifact, cartDomain, hashCartListing, hashCartListingRoot, hashCartOrder, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
+import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planCartCheckoutGas, hashCartListing, hashCartListingRoot, hashCartOrder, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
 import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
 import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
 import type { RareClientConfig } from './types/client.js';
@@ -86,6 +88,79 @@ export function createCartNamespace(
     return { txHash, receipt };
   };
 
+  async function publishListing(params: CartListingPublishParams): Promise<CartListingPublishResult>;
+  async function publishListing(params: CartPrintListingPublishParams): Promise<Omit<CartListingPublishResult, 'preparation'>>;
+  async function publishListing(params: CartListingPublishParams | CartPrintListingPublishParams) {
+    const input = structuredClone('preparation' in params ? params.preparation : params.printPreparations);
+    const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
+    const { walletClient, account, accountAddress } = requireWallet(config);
+    const cart = requireCart();
+    const preparation = 'artifact' in input ? input : undefined;
+    const printPreparations = 'artifact' in input ? [] : Array.isArray(input) ? input : [input];
+    const printTerms = printPreparations.map((print) => {
+      const terms = parsePrintListingTerms(print);
+      if (String(chainId) !== print.chain_id || !isAddressEqual(cart, getAddress(print.cart_address)) ||
+        !isAddressEqual(accountAddress, terms.listing.seller) ||
+        hashCartListing(terms.listing, chainId, cart) !== print.listing_digest) {
+        throw new Error('Print preparation does not match its Listing, seller or Cart deployment.');
+      }
+      return terms;
+    });
+    if (preparation === undefined && (printTerms.length < 1 || printTerms.length > 10_000 ||
+        new Set(printPreparations.map(({ id }) => id)).size !== printPreparations.length)) {
+      throw new Error('Publish between 1 and 10,000 distinct print preparations.');
+    }
+    const deadline = printTerms.reduce<bigint | undefined>((minimum, terms) =>
+      minimum === undefined || terms.deadline < minimum ? terms.deadline : minimum, undefined);
+    const artifact = preparation?.artifact ?? buildCartListingRootArtifact({
+      listings: printTerms.map(({ listing }) => listing), chainId, cart,
+      nonce: retainedArtifact === undefined
+        ? await publicClient.readContract({ address: cart, abi: cartAbi, functionName: 'listingNonces', args: [accountAddress] })
+        : BigInt(retainedArtifact.root.nonce),
+      deadline: deadline ?? 0n,
+    });
+    if (preparation === undefined && BigInt(artifact.root.deadline) <= BigInt(Math.floor(Date.now() / 1000))) {
+      throw new Error('Print Listing terms have expired. Prepare fresh terms before publishing.');
+    }
+    validateCartListingPublication(preparation ?? { artifact, intent: { seller: accountAddress, deadline: BigInt(artifact.root.deadline) } },
+      retainedArtifact, { chainId, cart, seller: accountAddress });
+    if (!isAddressEqual(artifact.seller, accountAddress)) throw new Error('Listing Root signer does not match the connected seller.');
+    const requiredApprovals = requiredCartApprovals(artifact.entries.map((entry) => ({
+      ...entry.listing,
+      tokenId: BigInt(entry.listing.tokenId),
+      minimumUnitPrice: BigInt(entry.listing.minimumUnitPrice),
+      availableQuantity: BigInt(entry.listing.availableQuantity),
+    })));
+    const approvalStates = await Promise.all(requiredApprovals.map(async (tokenContract) => ({
+      tokenContract,
+      approved: await publicClient.readContract({ address: tokenContract, abi: approvalAbi,
+        functionName: 'isApprovedForAll', args: [accountAddress, requireCart()] }),
+    })));
+    const missingApprovals = approvalStates.filter(({ approved }) => !approved).map(({ tokenContract }) => tokenContract);
+    if (missingApprovals.length > 0 && params.autoApprove !== true) {
+      throw new NftApprovalRequiredError({ nftAddress: missingApprovals[0]!, operator: requireCart() });
+    }
+    const approvals = await missingApprovals.reduce(async (pending, tokenContract) => {
+      const previous = await pending;
+      const approval = await setApproval(tokenContract, true);
+      return approval.txHash === undefined || approval.receipt === undefined
+        ? previous
+        : [...previous, { txHash: approval.txHash, receipt: approval.receipt }];
+    }, Promise.resolve([] as Array<{ txHash: Hash; receipt: TransactionReceipt }>));
+    const root = { listingsRoot: artifact.root.listingsRoot, nonce: BigInt(artifact.root.nonce), deadline: BigInt(artifact.root.deadline) };
+    const signature = retainedArtifact?.signature ?? await walletClient.signTypedData({ account, domain: cartDomain(artifact.chainId, artifact.cart), primaryType: 'ListingRoot', types: { ListingRoot: [
+      { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
+    ] }, message: root });
+    const signedArtifact = { ...artifact, signature };
+    await params.onSigned?.(structuredClone(signedArtifact));
+    const publishedRoot = preparation === undefined
+      ? await api.listing.publishPrintPreparations(printPreparations.map(({ id }) => id), signedArtifact)
+      : await api.listing.publish(preparation.intent, signedArtifact);
+    return { ...(preparation === undefined ? {} : { preparation }), signedArtifact, publishedRoot,
+      approvalTxHashes: approvals.map(({ txHash }) => txHash),
+      approvalReceipts: approvals.map(({ receipt }) => receipt) };
+  }
+
   return {
     purchaseEligibility: createEligibilityNamespace(config, { chainId: chainId.toString(), cartAddress: requireCart }, authenticatedFetch),
     catalog: { products: api.catalog.products, variants: api.catalog.variants },
@@ -112,46 +187,7 @@ export function createCartNamespace(
         const artifact = buildCartListingRootArtifact({ listings, chainId, cart, nonce, deadline: intent.deadline });
         return { intent, artifact, requiredApprovals: requiredCartApprovals(listings) };
       },
-      async publish(params) {
-        const preparation = structuredClone(params.preparation);
-        const retainedArtifact = params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact);
-        const { walletClient, account, accountAddress } = requireWallet(config);
-        validateCartListingPublication(preparation, retainedArtifact, { chainId, cart: requireCart(), seller: accountAddress });
-        const artifact = preparation.artifact;
-        if (!isAddressEqual(artifact.seller, accountAddress)) throw new Error('Listing Root signer does not match the connected seller.');
-        const requiredApprovals = requiredCartApprovals(artifact.entries.map((entry) => ({
-          ...entry.listing,
-          tokenId: BigInt(entry.listing.tokenId),
-          minimumUnitPrice: BigInt(entry.listing.minimumUnitPrice),
-          availableQuantity: BigInt(entry.listing.availableQuantity),
-        })));
-        const approvalStates = await Promise.all(requiredApprovals.map(async (tokenContract) => ({
-          tokenContract,
-          approved: await publicClient.readContract({ address: tokenContract, abi: approvalAbi,
-            functionName: 'isApprovedForAll', args: [accountAddress, requireCart()] }),
-        })));
-        const missingApprovals = approvalStates.filter(({ approved }) => !approved).map(({ tokenContract }) => tokenContract);
-        if (missingApprovals.length > 0 && params.autoApprove !== true) {
-          throw new NftApprovalRequiredError({ nftAddress: missingApprovals[0]!, operator: requireCart() });
-        }
-        const approvals = await missingApprovals.reduce(async (pending, tokenContract) => {
-          const previous = await pending;
-          const approval = await setApproval(tokenContract, true);
-          return approval.txHash === undefined || approval.receipt === undefined
-            ? previous
-            : [...previous, { txHash: approval.txHash, receipt: approval.receipt }];
-        }, Promise.resolve([] as Array<{ txHash: Hash; receipt: TransactionReceipt }>));
-        const root = { listingsRoot: artifact.root.listingsRoot, nonce: BigInt(artifact.root.nonce), deadline: BigInt(artifact.root.deadline) };
-        const signature = retainedArtifact?.signature ?? await walletClient.signTypedData({ account, domain: cartDomain(artifact.chainId, artifact.cart), primaryType: 'ListingRoot', types: { ListingRoot: [
-          { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
-        ] }, message: root });
-        const signedArtifact = { ...artifact, signature };
-        await params.onSigned?.(structuredClone(signedArtifact));
-        const publishedRoot = await api.listing.publish(preparation.intent, signedArtifact);
-        return { preparation, signedArtifact, publishedRoot,
-          approvalTxHashes: approvals.map(({ txHash }) => txHash),
-          approvalReceipts: approvals.map(({ receipt }) => receipt) };
-      },
+      publish: publishListing,
       search: api.listing.search,
       get: api.listing.get,
       invalidate: api.listing.invalidate,
@@ -345,9 +381,17 @@ async function readCartLensPreflight(publicClient: PublicClient, lens: Address, 
 async function simulateCartCheckout(publicClient: PublicClient, cart: Address, account: Address, value: bigint,
   params: CartCheckoutParams, message: string) {
   try {
-    return await publicClient.simulateContract({ address: cart, abi: cartAbi, functionName: 'executePurchase',
+    const estimatedGas = await publicClient.estimateContractGas({ address: cart, abi: cartAbi, functionName: 'executePurchase',
       args: [params.order, params.lines, params.listings, params.authorization, params.route, params.actions, params.platformSignature],
       account, value });
+    const gasPlan = planCartCheckoutGas(estimatedGas);
+    if (!gasPlan.isValid) throw new CartPreparationError('resource_limit_exceeded', 'Cart checkout must use at most 12,000,000 gas.', gasPlan.issues);
+    const simulation = await publicClient.simulateContract({ address: cart, abi: cartAbi, functionName: 'executePurchase',
+      args: [params.order, params.lines, params.listings, params.authorization, params.route, params.actions, params.platformSignature],
+      account, value, gas: cartMaximumCheckoutGas });
+    // Do not require the wallet to fund the entire policy ceiling for a small checkout.
+    return { ...simulation, request: { ...simulation.request,
+      gas: gasPlan.value } };
   } catch (cause) {
     throw new CartExecutionError(message, { orderId: params.order.orderId, cart, cause });
   }

@@ -183,6 +183,10 @@ export function createCartApiNamespace(
       }),
       'Rare API did not return the invalidated Cart Listing.',
     ),
+    publishPrintPreparations: async (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => getWrappedData(
+      protectedClient.POST('/v1/cart/listing-roots', { body: { preparationIds, artifact: toCartListingRootArtifactWire(artifact) } }),
+      'Rare API did not return the ingested Cart Listing Root.',
+    ),
     publish: async (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }): Promise<CartApiListingRoot> => getWrappedData(
       protectedClient.POST('/v1/cart/listing-roots', { body: {
         artifact: toCartListingRootArtifactWire(artifact),
