@@ -5,7 +5,7 @@ import { createPublicClient, http, zeroAddress } from 'viem';
 import { sepolia } from 'viem/chains';
 import { createRareClient } from '../../src/sdk/client.js';
 import { PrintRequestUncertainError, RareApiError } from '../../src/sdk/index.js';
-import { createConciergePrintRequest, createPrintDropRequest, createPrintListingRequest } from '../../src/sdk/print-request-shell.js';
+import { createPrintDropRequest, createPrintListingRequest } from '../../src/sdk/print-request-shell.js';
 
 const dropId = '11111111-1111-4111-8111-111111111111';
 const optionId = '22222222-2222-4222-8222-222222222222';
@@ -72,36 +72,25 @@ describe('ordinary print preparation through the SDK', () => {
       expect(calls.at(-1)?.body).toMatchObject({ mintSource });
       const draft = { chainId: '11155111', name: 'New print', print: { productionUploadKey: 'a'.repeat(64) } } satisfies Parameters<typeof createPrintDropRequest>[0];
       const listing = { optionId, seller: zeroAddress, deadline: '1999999999', availableQuantity: '2' };
-      const concierge = { creatorUserId: '17', drop: { ...draft, print: { ...draft.print, images: ['https://example.com/preview.jpg'], specificationId: 'GLOBAL-FAP-8X12' } },
-        displayPriceUsdCents: '1000', listing: { deadline: listing.deadline, availableQuantity: listing.availableQuantity } };
 
       await rare.prints.drops.create(draft);
       expect(calls.at(-1)?.body).toMatchObject({ idempotencyKey: expect.stringMatching(/^[0-9a-f-]{36}$/u) });
       await rare.prints.listings.prepare(listing);
       expect(calls.at(-1)?.body).toMatchObject({ listingSalt: expect.stringMatching(/^0x[0-9a-f]{64}$/u) });
-      await rare.prints.concierge.createDraft(concierge);
-      expect(calls.at(-1)?.body).toMatchObject({
-        drop: { idempotencyKey: expect.stringMatching(/^[0-9a-f-]{36}$/u) },
-        listing: { listingSalt: expect.stringMatching(/^0x[0-9a-f]{64}$/u) },
-      });
 
       const savedDraft = createPrintDropRequest(draft);
       const savedListing = createPrintListingRequest(listing);
-      const savedConcierge = createConciergePrintRequest(concierge);
       for (let attempt = 0; attempt < 2; attempt += 1) {
         await rare.prints.drops.create(savedDraft);
         expect(calls.at(-1)?.body).toEqual(savedDraft);
         await rare.prints.listings.prepare(savedListing);
         expect(calls.at(-1)?.body).toEqual(savedListing);
-        await rare.prints.concierge.createDraft(savedConcierge);
-        expect(calls.at(-1)?.body).toEqual(savedConcierge);
       }
       expect(createPrintDropRequest(draft).idempotencyKey).not.toBe(savedDraft.idempotencyKey);
       expect(createPrintListingRequest(listing).listingSalt).not.toBe(savedListing.listingSalt);
       const operations = [
         () => rare.prints.drops.create(draft),
         () => rare.prints.listings.prepare(listing),
-        () => rare.prints.concierge.createDraft(concierge),
       ];
       for (const operation of operations) {
         const before = calls.length;
