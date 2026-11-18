@@ -129,6 +129,34 @@ export const rareMinterAbi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: '_root', type: 'bytes32' },
+      { indexed: false, name: '_endTimestamp', type: 'uint256' },
+      { indexed: true, name: '_contractAddress', type: 'address' },
+    ],
+    name: 'SetContractAllowListConfig',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'contractAddress', type: 'address' },
+      { indexed: false, name: 'limit', type: 'uint256' },
+    ],
+    name: 'ContractMintLimitSet',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'contractAddress', type: 'address' },
+      { indexed: false, name: 'limit', type: 'uint256' },
+    ],
+    name: 'ContractTxLimitSet',
+    type: 'event',
+  },
+  {
     inputs: [
       { name: '_root', type: 'bytes32' },
       { name: '_endTimestamp', type: 'uint256' },

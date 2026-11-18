@@ -85,6 +85,20 @@ export async function sendPreparedTransaction(
     chainId: number;
   },
 ): Promise<TransactionResult> {
+  const txHash = await broadcastPreparedTransaction(walletClient, account, tx, expected);
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  return { txHash, receipt };
+}
+
+export async function broadcastPreparedTransaction(
+  walletClient: WalletClient,
+  account: Address | WalletAccount,
+  tx: UniswapTransactionRequest,
+  expected: {
+    accountAddress: Address;
+    chainId: number;
+  },
+): Promise<Hash> {
   if (!isAddressEqual(tx.from, expected.accountAddress)) {
     throw new Error(
       `Prepared transaction sender ${tx.from} does not match wallet account ${expected.accountAddress}.`,
@@ -96,16 +110,13 @@ export async function sendPreparedTransaction(
     );
   }
 
-  const txHash = await walletClient.sendTransaction({
+  return walletClient.sendTransaction({
     account,
     to: tx.to,
     data: tx.data,
     value: parsePreparedBigInt(tx.value),
     chain: undefined,
   });
-
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-  return { txHash, receipt };
 }
 
 export type { Hash };

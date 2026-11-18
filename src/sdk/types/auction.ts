@@ -1,5 +1,5 @@
 import type { Address, Hash } from 'viem';
-import type { AmountInput, CurrencyInput, TimestampInput, TransactionResult, IntegerInput } from './common.js';
+import type { AmountInput, CurrencyInput, TimestampInput, TransactionMethod, TransactionResult, IntegerInput } from './common.js';
 import type { BatchAuctionNamespace } from './batch-auction.js';
 
 export type AuctionCreateParams = {
@@ -74,10 +74,10 @@ export type AuctionStatus = {
 }
 
 export type AuctionMarketplaceNamespace = {
-  create: (params: AuctionCreateParams) => Promise<AuctionCreateResult>;
-  bid: (params: AuctionBidParams) => Promise<AuctionBidResult>;
-  settle: (params: AuctionSettleParams) => Promise<TransactionResult>;
-  cancel: (params: AuctionCancelParams) => Promise<TransactionResult>;
+  create: TransactionMethod<AuctionCreateParams, AuctionCreateResult>;
+  bid: TransactionMethod<AuctionBidParams, AuctionBidResult>;
+  settle: TransactionMethod<AuctionSettleParams, TransactionResult>;
+  cancel: TransactionMethod<AuctionCancelParams, TransactionResult>;
   status: (params: AuctionStatusParams) => Promise<AuctionStatus>;
 }
 

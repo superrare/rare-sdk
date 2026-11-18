@@ -5,6 +5,7 @@ import type { RareClientConfig } from './types/client.js';
 import type { CollectionDeployNamespace } from './types/collection.js';
 import { requireWallet } from './wallet-shell.js';
 import { toPositiveInteger } from './amounts-core.js';
+import { defineTransactionMethod } from './transaction-submission.js';
 
 export function createDeployNamespace(
   publicClient: PublicClient,
@@ -12,7 +13,7 @@ export function createDeployNamespace(
   addresses: { factory: Address; lazyBatchMintFactory?: Address },
 ): Pick<CollectionDeployNamespace, 'erc721' | 'lazyBatchMint'> {
   return {
-    async erc721(params): ReturnType<CollectionDeployNamespace['erc721']> {
+    erc721: defineTransactionMethod(async (params) => {
       const maxTokens = params.maxTokens === undefined ? undefined : toPositiveInteger(params.maxTokens, 'maxTokens');
       const { walletClient, account } = requireWallet(config);
       const txHash = maxTokens !== undefined
@@ -33,26 +34,31 @@ export function createDeployNamespace(
           chain: undefined,
         });
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: factoryAbi,
-        logs: receipt.logs,
-        eventName: 'SovereignBatchMintCreated',
-      });
-
-      const log = logs[0];
-      if (log === undefined) {
-        throw new Error('Deploy transaction succeeded but SovereignBatchMintCreated event was not found in logs.');
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: log.args.contractAddress,
-      };
-    },
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: factoryAbi,
+            logs: receipt.logs,
+            eventName: 'SovereignBatchMintCreated',
+          });
 
-    async lazyBatchMint(params): ReturnType<CollectionDeployNamespace['lazyBatchMint']> {
+          const log = logs[0];
+          if (log === undefined) {
+            throw new Error('Deploy transaction succeeded but SovereignBatchMintCreated event was not found in logs.');
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: log.args.contractAddress,
+          };
+        },
+      };
+    }),
+
+    lazyBatchMint: defineTransactionMethod(async (params) => {
       const maxTokens = params.maxTokens === undefined ? undefined : toPositiveInteger(params.maxTokens, 'maxTokens');
       if (!addresses.lazyBatchMintFactory) {
         throw new Error(
@@ -80,24 +86,29 @@ export function createDeployNamespace(
           chain: undefined,
         });
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      const logs = parseEventLogs({
-        abi: lazyBatchMintFactoryAbi,
-        logs: receipt.logs,
-        eventName: 'LazySovereignBatchMintCreated',
-      });
-
-      if (!logs[0]) {
-        throw new Error(
-          'Deploy transaction succeeded but LazySovereignBatchMintCreated event was not found in logs.',
-        );
-      }
-
       return {
-        txHash,
-        receipt,
-        contract: logs[0].args.contractAddress,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          const logs = parseEventLogs({
+            abi: lazyBatchMintFactoryAbi,
+            logs: receipt.logs,
+            eventName: 'LazySovereignBatchMintCreated',
+          });
+
+          if (!logs[0]) {
+            throw new Error(
+              'Deploy transaction succeeded but LazySovereignBatchMintCreated event was not found in logs.',
+            );
+          }
+
+          return {
+            txHash,
+            receipt,
+            contract: logs[0].args.contractAddress,
+          };
+        },
       };
-    },
+    }),
   };
 }

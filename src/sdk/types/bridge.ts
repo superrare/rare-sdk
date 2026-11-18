@@ -1,6 +1,6 @@
 import type { Address } from 'viem';
 import type { SupportedChain } from '../../contracts/addresses.js';
-import type { AmountInput, TransactionResult } from './common.js';
+import type { AmountInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type BridgeParams = {
   amount: AmountInput;
@@ -35,5 +35,5 @@ export type BridgeResult = BridgeQuote & TransactionResult & {
 
 export type BridgeNamespace = {
   quote: (params: BridgeParams) => Promise<BridgeQuote>;
-  send: (params: BridgeSendParams) => Promise<BridgeResult>;
+  send: TransactionMethod<BridgeSendParams, BridgeResult>;
 }

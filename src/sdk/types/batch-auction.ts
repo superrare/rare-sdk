@@ -1,6 +1,6 @@
 import type { Address, Hash, Hex } from 'viem';
 import type { BatchTokenListArtifact, BatchTokenProofArtifact } from '../batch-core.js';
-import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionMethod, TransactionResult } from './common.js';
 
 export type BatchAuctionRootSource =
   | { root: Hex; artifact?: BatchTokenListArtifact }
@@ -122,10 +122,10 @@ export type BatchAuctionStatus = {
 }
 
 export type BatchAuctionNamespace = {
-  create: (params: BatchAuctionCreateParams) => Promise<BatchAuctionCreateResult>;
-  cancel: (params: BatchAuctionCancelParams) => Promise<BatchAuctionCancelResult>;
+  create: TransactionMethod<BatchAuctionCreateParams, BatchAuctionCreateResult>;
+  cancel: TransactionMethod<BatchAuctionCancelParams, BatchAuctionCancelResult>;
   roots: (params?: BatchAuctionRootsParams) => Promise<Hex[]>;
-  bid: (params: BatchAuctionBidParams) => Promise<BatchAuctionBidResult>;
-  settle: (params: BatchAuctionSettleParams) => Promise<BatchAuctionSettleResult>;
+  bid: TransactionMethod<BatchAuctionBidParams, BatchAuctionBidResult>;
+  settle: TransactionMethod<BatchAuctionSettleParams, BatchAuctionSettleResult>;
   status: (params: BatchAuctionStatusParams) => Promise<BatchAuctionStatus>;
 }

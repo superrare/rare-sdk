@@ -1,5 +1,5 @@
 import type { Address, Hash, Hex } from 'viem';
-import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionResult } from './common.js';
+import type { AmountInput, CurrencyInput, IntegerInput, TimestampInput, TransactionMethod, TransactionResult } from './common.js';
 import type {
   ReleaseAllowlistArtifact,
   ReleaseAllowlistWalletProof,
@@ -593,51 +593,51 @@ export type Erc1155ReleaseStatus = {
 export type Erc1155ReleaseNamespace = {
   allowlist: {
     getConfig: (params: { contract: Address; tokenId: IntegerInput }) => Promise<Erc1155ReleaseAllowlistConfig>;
-    setConfig: (params: Erc1155ReleaseSetAllowlistConfigParams) => Promise<Erc1155ReleaseSetAllowlistConfigResult>;
-    setConfigBatch: (params: Erc1155ReleaseSetAllowlistConfigBatchParams) => Promise<Erc1155ReleaseSetAllowlistConfigBatchResult>;
-    clear: (params: { contract: Address; tokenId: IntegerInput }) => Promise<Erc1155ReleaseSetAllowlistConfigResult>;
+    setConfig: TransactionMethod<Erc1155ReleaseSetAllowlistConfigParams, Erc1155ReleaseSetAllowlistConfigResult>;
+    setConfigBatch: TransactionMethod<Erc1155ReleaseSetAllowlistConfigBatchParams, Erc1155ReleaseSetAllowlistConfigBatchResult>;
+    clear: TransactionMethod<{ contract: Address; tokenId: IntegerInput }, Erc1155ReleaseSetAllowlistConfigResult>;
     build: (params: { input: string; format: 'csv' | 'json' }) => ReleaseAllowlistArtifact;
     parse: (params: { input: string }) => ReleaseAllowlistArtifact;
     proof: (params: { artifact: ReleaseAllowlistArtifact; address: Address }) => ReleaseAllowlistWalletProof | null;
   };
   limits: {
     getMint: (params: { contract: Address; tokenId: IntegerInput }) => Promise<Erc1155ReleaseLimitConfig>;
-    setMint: (params: Erc1155ReleaseSetLimitParams) => Promise<Erc1155ReleaseSetLimitResult>;
-    setMintBatch: (params: Erc1155ReleaseSetLimitBatchParams) => Promise<Erc1155ReleaseSetLimitBatchResult>;
+    setMint: TransactionMethod<Erc1155ReleaseSetLimitParams, Erc1155ReleaseSetLimitResult>;
+    setMintBatch: TransactionMethod<Erc1155ReleaseSetLimitBatchParams, Erc1155ReleaseSetLimitBatchResult>;
     getTx: (params: { contract: Address; tokenId: IntegerInput }) => Promise<Erc1155ReleaseLimitConfig>;
-    setTx: (params: Erc1155ReleaseSetLimitParams) => Promise<Erc1155ReleaseSetLimitResult>;
-    setTxBatch: (params: Erc1155ReleaseSetLimitBatchParams) => Promise<Erc1155ReleaseSetLimitBatchResult>;
+    setTx: TransactionMethod<Erc1155ReleaseSetLimitParams, Erc1155ReleaseSetLimitResult>;
+    setTxBatch: TransactionMethod<Erc1155ReleaseSetLimitBatchParams, Erc1155ReleaseSetLimitBatchResult>;
   };
-  configure: (params: Erc1155ReleaseConfigureParams) => Promise<Erc1155ReleaseConfigureResult>;
-  configureBatch: (params: Erc1155ReleaseConfigureBatchParams) => Promise<Erc1155ReleaseConfigureBatchResult>;
-  cancel: (params: Erc1155ReleaseCancelParams) => Promise<Erc1155ReleaseCancelResult>;
-  mint: (params: Erc1155ReleaseMintParams) => Promise<Erc1155ReleaseMintResult>;
+  configure: TransactionMethod<Erc1155ReleaseConfigureParams, Erc1155ReleaseConfigureResult>;
+  configureBatch: TransactionMethod<Erc1155ReleaseConfigureBatchParams, Erc1155ReleaseConfigureBatchResult>;
+  cancel: TransactionMethod<Erc1155ReleaseCancelParams, Erc1155ReleaseCancelResult>;
+  mint: TransactionMethod<Erc1155ReleaseMintParams, Erc1155ReleaseMintResult>;
   status: (params: Erc1155ReleaseStatusParams) => Promise<Erc1155ReleaseStatus>;
 }
 
 export type Erc1155ListingNamespace = {
   release: Erc1155ReleaseNamespace;
-  create: (params: Erc1155ListingCreateParams) => Promise<Erc1155ListingCreateResult>;
-  createBatch: (params: Erc1155ListingCreateBatchParams) => Promise<Erc1155ListingCreateBatchResult>;
-  cancel: (params: Erc1155ListingCancelParams) => Promise<TransactionResult>;
-  buy: (params: Erc1155ListingBuyParams) => Promise<Erc1155ListingBuyResult>;
-  checkout: (params: Erc1155CheckoutParams) => Promise<Erc1155CheckoutResult>;
+  create: TransactionMethod<Erc1155ListingCreateParams, Erc1155ListingCreateResult>;
+  createBatch: TransactionMethod<Erc1155ListingCreateBatchParams, Erc1155ListingCreateBatchResult>;
+  cancel: TransactionMethod<Erc1155ListingCancelParams, TransactionResult>;
+  buy: TransactionMethod<Erc1155ListingBuyParams, Erc1155ListingBuyResult>;
+  checkout: TransactionMethod<Erc1155CheckoutParams, Erc1155CheckoutResult>;
   status: (params: Erc1155ListingStatusParams) => Promise<Erc1155ListingStatus>;
 }
 
 export type Erc1155OfferNamespace = {
-  create: (params: Erc1155OfferCreateParams) => Promise<Erc1155OfferCreateResult>;
-  cancel: (params: Erc1155OfferCancelParams) => Promise<TransactionResult>;
-  accept: (params: Erc1155OfferAcceptParams) => Promise<Erc1155OfferAcceptResult>;
+  create: TransactionMethod<Erc1155OfferCreateParams, Erc1155OfferCreateResult>;
+  cancel: TransactionMethod<Erc1155OfferCancelParams, TransactionResult>;
+  accept: TransactionMethod<Erc1155OfferAcceptParams, Erc1155OfferAcceptResult>;
   status: (params: Erc1155OfferStatusParams) => Promise<Erc1155OfferStatus>;
 }
 
 export type Erc1155CollectionNamespace = {
-  createToken: (params: Erc1155CollectionCreateTokenParams) => Promise<Erc1155CollectionCreateTokenResult>;
-  mint: (params: Erc1155CollectionMintParams) => Promise<Erc1155CollectionMintResult>;
-  mintBatch: (params: Erc1155CollectionMintBatchParams) => Promise<Erc1155CollectionMintBatchResult>;
-  setMinterApproval: (params: Erc1155CollectionSetMinterApprovalParams) => Promise<Erc1155CollectionSetMinterApprovalResult>;
-  updateTokenUri: (params: Erc1155CollectionUpdateTokenUriParams) => Promise<Erc1155CollectionUpdateTokenUriResult>;
-  disable: (params: Erc1155CollectionDisableParams) => Promise<Erc1155CollectionDisableResult>;
+  createToken: TransactionMethod<Erc1155CollectionCreateTokenParams, Erc1155CollectionCreateTokenResult>;
+  mint: TransactionMethod<Erc1155CollectionMintParams, Erc1155CollectionMintResult>;
+  mintBatch: TransactionMethod<Erc1155CollectionMintBatchParams, Erc1155CollectionMintBatchResult>;
+  setMinterApproval: TransactionMethod<Erc1155CollectionSetMinterApprovalParams, Erc1155CollectionSetMinterApprovalResult>;
+  updateTokenUri: TransactionMethod<Erc1155CollectionUpdateTokenUriParams, Erc1155CollectionUpdateTokenUriResult>;
+  disable: TransactionMethod<Erc1155CollectionDisableParams, Erc1155CollectionDisableResult>;
   status: (params: Erc1155CollectionStatusParams) => Promise<Erc1155CollectionStatus>;
 }

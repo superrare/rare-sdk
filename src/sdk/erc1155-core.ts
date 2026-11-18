@@ -874,10 +874,14 @@ export function shapeErc1155CheckoutResult(params: {
     summary: execution.summary,
     items: execution.items,
     payments: params.payments.map((payment) => ({ ...payment })),
-    approvalTxHashes: params.payments
-      .map((payment) => payment.approvalTxHash)
-      .filter((hash): hash is Hex => hash !== undefined),
+    approvalTxHashes: collectErc1155CheckoutApprovalTxHashes(params.payments),
   };
+}
+
+export function collectErc1155CheckoutApprovalTxHashes(payments: readonly Erc1155CheckoutPayment[]): Hex[] {
+  return payments
+    .map((payment) => payment.approvalTxHash)
+    .filter((hash): hash is Hex => hash !== undefined);
 }
 
 export type Erc1155CheckoutProcessedItemInput = {

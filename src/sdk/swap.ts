@@ -18,13 +18,15 @@ import {
   PaymentApprovalRequiredError,
   toTokenAmount,
 } from './payments-shell.js';
-import { runWithApprovalSideEffectAlert } from './approvals-shell.js';
+import { createApprovalSideEffectAlert } from './approvals-shell.js';
 import {
+  broadcastPreparedTransaction,
   getConfiguredAccountAddress,
   requireWallet,
   resolveDeadline,
   sendPreparedTransaction,
 } from './wallet-shell.js';
+import { defineTransactionMethod, type PendingTransaction } from './transaction-submission.js';
 import {
   requireConfiguredAddress,
   requireInput,
@@ -58,7 +60,6 @@ import type { RareClientConfig } from './types/client.js';
 import type {
   BuyRareParams,
   BuyRareQuote,
-  BuyRareResult,
   BuyTokenParams,
   SellTokenParams,
   SwapNamespace,
@@ -374,7 +375,7 @@ async function executeRawRouterBuy(params: {
   inputs: readonly `0x${string}`[];
   recipient?: Address;
   deadline?: IntegerInput;
-}): Promise<TransactionResult & { minAmountOut: bigint }> {
+}): Promise<PendingTransaction<TransactionResult & { minAmountOut: bigint }>> {
   const { walletClient, account, accountAddress } = requireWallet(params.config);
   const router = requireConfiguredAddress(params.addresses.swapRouter, 'Liquid router', params.chain);
   validateRouterPayload(params.commands, params.inputs);
@@ -394,8 +395,13 @@ async function executeRawRouterBuy(params: {
     value: ethAmount,
   });
 
-  const targetReceipt = await params.publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-  return { txHash: targetTxHash, receipt: targetReceipt, minAmountOut: minTokensOut };
+  return {
+    submitted: { txHash: targetTxHash },
+    settle: async () => {
+      const targetReceipt = await params.publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+      return { txHash: targetTxHash, receipt: targetReceipt, minAmountOut: minTokensOut };
+    },
+  };
 }
 
 async function executeRawRouterSell(params: {
@@ -411,7 +417,7 @@ async function executeRawRouterSell(params: {
   recipient?: Address;
   deadline?: IntegerInput;
   autoApprove?: boolean;
-}): Promise<TransactionResult & { minAmountOut: bigint; tokenAmount: bigint; approvalTxHash?: `0x${string}` }> {
+}): Promise<PendingTransaction<TransactionResult & { minAmountOut: bigint; tokenAmount: bigint; approvalTxHash?: `0x${string}` }>> {
   const { walletClient, account, accountAddress } = requireWallet(params.config);
   const router = requireConfiguredAddress(params.addresses.swapRouter, 'Liquid router', params.chain);
   validateRouterPayload(params.commands, params.inputs);
@@ -432,7 +438,7 @@ async function executeRawRouterSell(params: {
     params.autoApprove,
   );
 
-  const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+  const withApprovalAlert = createApprovalSideEffectAlert({
     operation: 'swap sell',
     approvals: [{
       type: 'erc20',
@@ -440,29 +446,31 @@ async function executeRawRouterSell(params: {
       target: params.token,
       spender: router,
     }],
-    run: async () => {
-      const targetTxHash = await walletClient.writeContract({
-        address: router,
-        abi: liquidRouterAbi,
-        functionName: 'sell',
-        args: [
-          params.token,
-          tokenAmount,
-          params.recipient ?? accountAddress,
-          minEthOut,
-          params.commands,
-          [...params.inputs],
-          resolveDeadline(params.deadline),
-        ],
-        account,
-        chain: undefined,
-      });
-
-      const targetReceipt = await params.publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-      return { txHash: targetTxHash, receipt: targetReceipt };
-    },
   });
-  return { txHash, receipt, minAmountOut: minEthOut, tokenAmount, approvalTxHash };
+  const txHash = await withApprovalAlert(() => walletClient.writeContract({
+    address: router,
+    abi: liquidRouterAbi,
+    functionName: 'sell',
+    args: [
+      params.token,
+      tokenAmount,
+      params.recipient ?? accountAddress,
+      minEthOut,
+      params.commands,
+      [...params.inputs],
+      resolveDeadline(params.deadline),
+    ],
+    account,
+    chain: undefined,
+  }));
+
+  return {
+    submitted: { txHash, approvalTxHash },
+    settle: async () => {
+      const receipt = await withApprovalAlert(() => params.publicClient.waitForTransactionReceipt({ hash: txHash }));
+      return { txHash, receipt, minAmountOut: minEthOut, tokenAmount, approvalTxHash };
+    },
+  };
 }
 
 function isRawTokenTradeParams(
@@ -492,29 +500,41 @@ export function createSwapNamespace(
   const { publicClient } = config;
 
   return {
-    async buy(params): Promise<TransactionResult> {
-      const result = await executeRawRouterBuy({
+    buy: defineTransactionMethod(async (params) => {
+      const pending = await executeRawRouterBuy({
         publicClient,
         config,
         chain,
         addresses,
         ...params,
       });
-      return { txHash: result.txHash, receipt: result.receipt };
-    },
+      return {
+        submitted: { txHash: pending.submitted.txHash },
+        settle: async () => {
+          const result = await pending.settle();
+          return { txHash: result.txHash, receipt: result.receipt };
+        },
+      };
+    }),
 
-    async sell(params): Promise<TransactionResult> {
-      const result = await executeRawRouterSell({
+    sell: defineTransactionMethod(async (params) => {
+      const pending = await executeRawRouterSell({
         publicClient,
         config,
         chain,
         addresses,
         ...params,
       });
-      return { txHash: result.txHash, receipt: result.receipt };
-    },
+      return {
+        submitted: { txHash: pending.submitted.txHash },
+        settle: async () => {
+          const result = await pending.settle();
+          return { txHash: result.txHash, receipt: result.receipt };
+        },
+      };
+    }),
 
-    async swapTokens(params): Promise<TransactionResult> {
+    swapTokens: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const router = requireConfiguredAddress(addresses.swapRouter, 'Liquid router', chain);
       validateRouterPayload(params.commands, params.inputs);
@@ -535,7 +555,7 @@ export function createSwapNamespace(
             params.autoApprove,
           );
 
-      const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'swap tokens',
         approvals: [{
           type: 'erc20',
@@ -543,32 +563,34 @@ export function createSwapNamespace(
           target: params.tokenIn,
           spender: router,
         }],
-        run: async () => {
-          const targetTxHash = await walletClient.writeContract({
-            address: router,
-            abi: liquidRouterAbi,
-            functionName: 'swap',
-            args: [
-              params.tokenIn,
-              amountIn,
-              params.tokenOut,
-              params.recipient ?? accountAddress,
-              minAmountOut,
-              params.commands,
-              [...params.inputs],
-              resolveDeadline(params.deadline),
-            ],
-            account,
-            chain: undefined,
-            value: params.tokenIn === ETH_ADDRESS ? amountIn : undefined,
-          });
-
-          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-          return { txHash: targetTxHash, receipt: targetReceipt };
-        },
       });
-      return { txHash, receipt };
-    },
+      const txHash = await withApprovalAlert(() => walletClient.writeContract({
+        address: router,
+        abi: liquidRouterAbi,
+        functionName: 'swap',
+        args: [
+          params.tokenIn,
+          amountIn,
+          params.tokenOut,
+          params.recipient ?? accountAddress,
+          minAmountOut,
+          params.commands,
+          [...params.inputs],
+          resolveDeadline(params.deadline),
+        ],
+        account,
+        chain: undefined,
+        value: params.tokenIn === ETH_ADDRESS ? amountIn : undefined,
+      }));
+
+      return {
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+          return { txHash, receipt };
+        },
+      };
+    }),
 
     async quoteBuyToken(params: TokenTradeQuoteParams): Promise<TokenTradeQuote> {
       const localInputs = planTokenTradeLocalInputs(params);
@@ -593,9 +615,9 @@ export function createSwapNamespace(
       return quote.quote;
     },
 
-    async buyToken(params): Promise<TokenTradeResult> {
+    buyToken: defineTransactionMethod(async (params): Promise<PendingTransaction<TokenTradeResult>> => {
       if (isRawTokenTradeParams(params)) {
-        const result = await executeRawRouterBuy({
+        const pending = await executeRawRouterBuy({
           publicClient,
           config,
           chain,
@@ -609,14 +631,20 @@ export function createSwapNamespace(
           deadline: params.deadline,
         });
         return {
-          txHash: result.txHash,
-          receipt: result.receipt,
-          estimatedAmountOut: 0n,
-          minAmountOut: result.minAmountOut,
-          routeSource: 'raw',
-          execution: 'raw-router',
-          commands: params.commands,
-          inputs: params.inputs,
+          submitted: { txHash: pending.submitted.txHash },
+          settle: async () => {
+            const result = await pending.settle();
+            return {
+              txHash: result.txHash,
+              receipt: result.receipt,
+              estimatedAmountOut: 0n,
+              minAmountOut: result.minAmountOut,
+              routeSource: 'raw',
+              execution: 'raw-router',
+              commands: params.commands,
+              inputs: params.inputs,
+            };
+          },
         };
       }
 
@@ -655,16 +683,21 @@ export function createSwapNamespace(
           value: quoteDetails.quote.amountIn,
         });
 
-        const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
         return {
-          txHash: targetTxHash,
-          receipt: targetReceipt,
-          estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
-          minAmountOut: quoteDetails.quote.minAmountOut,
-          routeSource: quoteDetails.quote.routeSource,
-          execution: quoteDetails.quote.execution,
-          commands: quoteDetails.quote.commands,
-          inputs: quoteDetails.quote.inputs,
+          submitted: { txHash: targetTxHash },
+          settle: async () => {
+            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+            return {
+              txHash: targetTxHash,
+              receipt: targetReceipt,
+              estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
+              minAmountOut: quoteDetails.quote.minAmountOut,
+              routeSource: quoteDetails.quote.routeSource,
+              execution: quoteDetails.quote.execution,
+              commands: quoteDetails.quote.commands,
+              inputs: quoteDetails.quote.inputs,
+            };
+          },
         };
       }
 
@@ -673,18 +706,25 @@ export function createSwapNamespace(
         quote: quoteDetails.rawQuote,
         deadline: uniswapDeadline,
       });
-      const sent = await sendPreparedTransaction(publicClient, walletClient, account, swapResponse.swap, {
+      const txHash = await broadcastPreparedTransaction(walletClient, account, swapResponse.swap, {
         accountAddress,
         chainId,
       });
       return {
-        ...sent,
-        estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
-        minAmountOut: quoteDetails.quote.minAmountOut,
-        routeSource: quoteDetails.quote.routeSource,
-        execution: quoteDetails.quote.execution,
+        submitted: { txHash },
+        settle: async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          return {
+            txHash,
+            receipt,
+            estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
+            minAmountOut: quoteDetails.quote.minAmountOut,
+            routeSource: quoteDetails.quote.routeSource,
+            execution: quoteDetails.quote.execution,
+          };
+        },
       };
-    },
+    }),
 
     async quoteSellToken(params: TokenTradeQuoteParams): Promise<TokenTradeQuote> {
       const localInputs = planTokenTradeLocalInputs(params);
@@ -709,9 +749,9 @@ export function createSwapNamespace(
       return quote.quote;
     },
 
-    async sellToken(params): Promise<TokenTradeResult> {
+    sellToken: defineTransactionMethod(async (params): Promise<PendingTransaction<TokenTradeResult>> => {
       if (isRawTokenTradeParams(params)) {
-        const result = await executeRawRouterSell({
+        const pending = await executeRawRouterSell({
           publicClient,
           config,
           chain,
@@ -726,14 +766,21 @@ export function createSwapNamespace(
           autoApprove: params.autoApprove,
         });
         return {
-          txHash: result.txHash,
-          receipt: result.receipt,
-          estimatedAmountOut: 0n,
-          minAmountOut: result.minAmountOut,
-          routeSource: 'raw',
-          execution: 'raw-router',
-          commands: params.commands,
-          inputs: params.inputs,
+          submitted: pending.submitted,
+          settle: async () => {
+            const result = await pending.settle();
+            return {
+              txHash: result.txHash,
+              receipt: result.receipt,
+              estimatedAmountOut: 0n,
+              minAmountOut: result.minAmountOut,
+              routeSource: 'raw',
+              execution: 'raw-router',
+              commands: params.commands,
+              inputs: params.inputs,
+              approvalTxHash: result.approvalTxHash,
+            };
+          },
         };
       }
 
@@ -768,7 +815,7 @@ export function createSwapNamespace(
           params.autoApprove,
         );
 
-        const { txHash, receipt } = await runWithApprovalSideEffectAlert({
+        const withApprovalAlert = createApprovalSideEffectAlert({
           operation: 'sell token',
           approvals: [{
             type: 'erc20',
@@ -776,39 +823,40 @@ export function createSwapNamespace(
             target: params.token,
             spender: router,
           }],
-          run: async () => {
-            const targetTxHash = await walletClient.writeContract({
-              address: router,
-              abi: liquidRouterAbi,
-              functionName: 'sell',
-              args: [
-                params.token,
-                tokenAmount,
-                params.recipient ?? accountAddress,
-                quoteDetails.quote.minAmountOut,
-                quoteDetails.quote.commands,
-                [...quoteDetails.quote.inputs],
-                resolveDeadline(params.deadline),
-              ],
-              account,
-              chain: undefined,
-            });
-
-            const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
-            return { txHash: targetTxHash, receipt: targetReceipt };
-          },
         });
+        const txHash = await withApprovalAlert(() => walletClient.writeContract({
+          address: router,
+          abi: liquidRouterAbi,
+          functionName: 'sell',
+          args: [
+            params.token,
+            tokenAmount,
+            params.recipient ?? accountAddress,
+            quoteDetails.quote.minAmountOut,
+            quoteDetails.quote.commands,
+            [...quoteDetails.quote.inputs],
+            resolveDeadline(params.deadline),
+          ],
+          account,
+          chain: undefined,
+        }));
 
         return {
-          txHash,
-          receipt,
-          estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
-          minAmountOut: quoteDetails.quote.minAmountOut,
-          routeSource: quoteDetails.quote.routeSource,
-          execution: quoteDetails.quote.execution,
-          commands: quoteDetails.quote.commands,
-          inputs: quoteDetails.quote.inputs,
-          approvalTxHash,
+          submitted: { txHash, approvalTxHash },
+          settle: async () => {
+            const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+            return {
+              txHash,
+              receipt,
+              estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
+              minAmountOut: quoteDetails.quote.minAmountOut,
+              routeSource: quoteDetails.quote.routeSource,
+              execution: quoteDetails.quote.execution,
+              commands: quoteDetails.quote.commands,
+              inputs: quoteDetails.quote.inputs,
+              approvalTxHash,
+            };
+          },
         };
       }
 
@@ -840,7 +888,7 @@ export function createSwapNamespace(
           })).txHash
         : undefined;
 
-      const sent = await runWithApprovalSideEffectAlert({
+      const withApprovalAlert = createApprovalSideEffectAlert({
         operation: 'sell token',
         approvals: [
           {
@@ -856,34 +904,41 @@ export function createSwapNamespace(
             spender: approval.approval?.to,
           },
         ],
-        run: async () => {
-          const swapResponse = await requestUniswapSwap({
-            apiKey: quoteDetails.apiKey,
-            quote: quoteDetails.rawQuote,
-            deadline: uniswapDeadline,
-          });
-          return sendPreparedTransaction(publicClient, walletClient, account, swapResponse.swap, {
-            accountAddress,
-            chainId,
-          });
-        },
+      });
+      const txHash = await withApprovalAlert(async () => {
+        const swapResponse = await requestUniswapSwap({
+          apiKey: quoteDetails.apiKey,
+          quote: quoteDetails.rawQuote,
+          deadline: uniswapDeadline,
+        });
+        return broadcastPreparedTransaction(walletClient, account, swapResponse.swap, {
+          accountAddress,
+          chainId,
+        });
       });
       return {
-        ...sent,
-        estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
-        minAmountOut: quoteDetails.quote.minAmountOut,
-        routeSource: quoteDetails.quote.routeSource,
-        execution: quoteDetails.quote.execution,
-        approvalTxHash,
-        approvalResetTxHash,
+        submitted: { txHash, approvalTxHash, approvalResetTxHash },
+        settle: async () => {
+          const receipt = await withApprovalAlert(() => publicClient.waitForTransactionReceipt({ hash: txHash }));
+          return {
+            txHash,
+            receipt,
+            estimatedAmountOut: quoteDetails.quote.estimatedAmountOut,
+            minAmountOut: quoteDetails.quote.minAmountOut,
+            routeSource: quoteDetails.quote.routeSource,
+            execution: quoteDetails.quote.execution,
+            approvalTxHash,
+            approvalResetTxHash,
+          };
+        },
       };
-    },
+    }),
 
     async quoteBuyRare(params): Promise<BuyRareQuote> {
       return buildBuyRareQuote(publicClient, chain, addresses, params);
     },
 
-    async buyRare(params): Promise<BuyRareResult> {
+    buyRare: defineTransactionMethod(async (params) => {
       const { walletClient, account, accountAddress } = requireWallet(config);
       const router = requireConfiguredAddress(addresses.swapRouter, 'Liquid router', chain);
       const quote = await buildBuyRareQuote(publicClient, chain, addresses, params);
@@ -898,15 +953,20 @@ export function createSwapNamespace(
         value: quote.ethAmount,
       });
 
-      const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
       return {
-        txHash: targetTxHash,
-        receipt: targetReceipt,
-        estimatedRareOut: quote.estimatedRareOut,
-        minRareOut: quote.minRareOut,
-        commands: quote.commands,
-        inputs: quote.inputs,
+        submitted: { txHash: targetTxHash },
+        settle: async () => {
+          const targetReceipt = await publicClient.waitForTransactionReceipt({ hash: targetTxHash });
+          return {
+            txHash: targetTxHash,
+            receipt: targetReceipt,
+            estimatedRareOut: quote.estimatedRareOut,
+            minRareOut: quote.minRareOut,
+            commands: quote.commands,
+            inputs: quote.inputs,
+          };
+        },
       };
-    },
+    }),
   };
 }
