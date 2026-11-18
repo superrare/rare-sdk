@@ -212,10 +212,6 @@ export function createChainClient(config: RareClientConfig, orders: CartOrdersNa
       },
     },
     nft: {
-      async events(params, options) {
-        assertNoClientChainOverride(params, 'rare.nft.events', chain);
-        return api.getNftEvents(buildNftUniversalTokenId({ ...params, chainId }), options);
-      },
       async favoriteCount(params) {
         assertNoClientChainOverride(params, 'rare.nft.favoriteCount', chain);
         return api.getNftFavoriteCount(buildNftUniversalTokenId({ ...params, chainId }));
