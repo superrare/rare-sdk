@@ -890,9 +890,12 @@ Run real-browser authentication checks manually with
 They use the same existing test wallet and deployed API variables as the account
 suite. Chromium performs the actual cross-origin fetches and preflights; only the
 empty third-party application document is supplied by the test. Auth/API responses
-are never intercepted. The suite checks unregistered origins, independent bearer
-sessions, hosted authorization initiation, SIWE tampering, origin mismatch, replay
-and actual challenge expiration. The expiration case takes about five minutes.
+are never intercepted. The first browser origin defaults to the preview API
+origin. Set `RARE_ACCOUNT_BROWSER_ORIGIN` to use another HTTPS origin allowed by
+Auth. Set `RARE_ACCOUNT_BROWSER_SECOND_ORIGIN` to a second allowed origin for the
+two-origin cases. The suite also checks rejection of an unapproved origin,
+independent bearer sessions, hosted authorization initiation, SIWE tampering,
+replay, and expiration. The expiration case takes about five minutes.
 
 For a disposable real Auth service backed by Redis, set
 `RARE_ACCOUNT_BROWSER_API_URL=http://127.0.0.1:<port>`. This mode serves genuine
