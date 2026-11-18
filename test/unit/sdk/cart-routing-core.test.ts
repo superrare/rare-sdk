@@ -99,6 +99,26 @@ describe('Cart routing functional core', () => {
     expect(result.maximumPaymentInput).toBe(2500n);
   });
 
+  it('buys native and wrapped ETH in one swap while preserving both payouts', () => {
+    const plan = planCartRoutingQuote(chain, cart, {
+      paymentCurrency: usdc,
+      obligations: [
+        { settlementCurrency: eth, amount: 500n },
+        { settlementCurrency: weth, amount: 250n },
+      ],
+    });
+    expect(plan.foreignObligations).toEqual([{ settlementCurrency: eth, amount: 750n }]);
+    expect(cartRoutingProviderOutput(plan, eth)).toBe(weth);
+    const result = buildCartRoutingQuoteResult(
+      plan, router, plan.foreignObligations.map((obligation) => quoted(plan, obligation)), 1_800_000_000_000,
+    );
+    expect(result.route.commands).toBe('0x1004');
+    expect(result.evidence.exactOutputs).toEqual([
+      { settlementCurrency: eth, amount: 500n },
+      { settlementCurrency: weth, amount: 250n },
+    ]);
+  });
+
   it('quotes wrapped ETH while preserving the signed native settlement in a mixed Cart', () => {
     const plan = planCartRoutingQuote(chain, cart, {
       paymentCurrency: usdc,

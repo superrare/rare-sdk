@@ -114,12 +114,20 @@ export function planCartRoutingQuote(
   }
 
   const settlements: CartRoutingSettlement[] = [];
-  const foreignObligations: CartRoutingForeignObligation[] = [];
+  const routedTotals = new Map<Address, bigint>();
   const directPaymentInput = totals.get(paymentCurrency) ?? 0n;
+  const wrapped = getWrappedEthAddress(chain);
+  const combineNativeOutputs = wrapped !== null && totals.has(wrapped) && totals.has(ETH_ADDRESS) &&
+    !isAddressEqual(paymentCurrency, wrapped) && !isAddressEqual(paymentCurrency, ETH_ADDRESS);
   for (const [settlementCurrency, amount] of totals) {
     const routed = !isAddressEqual(settlementCurrency, paymentCurrency);
     settlements.push({ settlementCurrency, amount, routed });
-    if (routed) foreignObligations.push({ settlementCurrency, amount });
+    if (routed) {
+      const output = combineNativeOutputs && isAddressEqual(settlementCurrency, wrapped)
+        ? ETH_ADDRESS
+        : settlementCurrency;
+      routedTotals.set(output, (routedTotals.get(output) ?? 0n) + amount);
+    }
   }
   return {
     chain,
@@ -129,7 +137,7 @@ export function planCartRoutingQuote(
     mode,
     directPaymentInput,
     settlements,
-    foreignObligations,
+    foreignObligations: Array.from(routedTotals, ([settlementCurrency, amount]) => ({ settlementCurrency, amount })),
   };
 }
 
