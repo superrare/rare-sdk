@@ -247,8 +247,13 @@ export function createCartApiNamespace(
       return { ...preparation,
         ...(quote === undefined ? {} : { quote, expiresAt: quote.expiresAt }),        ...(intent.delivery === undefined ? {} : { idempotencyKey: globalThis.crypto.randomUUID() }),
         ...(wire.breakdown === undefined ? {} : { breakdown: {
-          displayPrice: BigInt(wire.breakdown.displayPrice), production: BigInt(wire.breakdown.production), shipping: BigInt(wire.breakdown.shipping),
-          networkFee: BigInt(wire.breakdown.networkFee), total: BigInt(wire.breakdown.total),
+          ...(wire.breakdown.displayPrice === undefined ? {} : { displayPrice: BigInt(wire.breakdown.displayPrice) }),
+          ...(wire.breakdown.displayPrices === undefined ? {} : { displayPrices: wire.breakdown.displayPrices.map(({ currency, amount }) => ({
+            currency: getAddress(currency), amount: BigInt(amount),
+          })) }),
+          production: BigInt(wire.breakdown.production), shipping: BigInt(wire.breakdown.shipping),
+          ...(wire.breakdown.networkFee === undefined ? {} : { networkFee: BigInt(wire.breakdown.networkFee) }),
+          ...(wire.breakdown.total === undefined ? {} : { total: BigInt(wire.breakdown.total) }),
         } }),
       };
     },

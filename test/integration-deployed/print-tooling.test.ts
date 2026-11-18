@@ -231,7 +231,8 @@ describe('print tooling through deployed Rare API', () => {
         delivery: { savedAddressId: addressId } })).rejects.toMatchObject({ status: 422 });
       expect(checkout.breakdown?.production).toBeGreaterThan(0n);
       expect(checkout.breakdown?.shipping).toBeGreaterThanOrEqual(0n);
-      if (!checkout.breakdown) throw new Error('Print checkout requires a cost breakdown.');
+      if (checkout.breakdown?.displayPrice === undefined || checkout.breakdown.networkFee === undefined)
+        throw new Error('USDC print checkout requires a single-currency cost breakdown.');
       expect(checkout.breakdown.total).toBe(checkout.breakdown.displayPrice + checkout.breakdown.production + checkout.breakdown.shipping + checkout.breakdown.networkFee);
       expect(option.metadata).not.toHaveProperty('productionQuote');
       expect(checkout.breakdown?.total).toBe(checkout.paymentAmount);
@@ -320,7 +321,8 @@ describe('print tooling through deployed Rare API', () => {
           if (!batch.intent.delivery || !batch.idempotencyKey) throw new Error('Batch quote lost its delivery identity.');
           expect(batch.intent.items).toHaveLength(5);
           const breakdown = batch.breakdown;
-          if (!breakdown) throw new Error('Mixed delivery quote did not return the print cost breakdown.');
+          if (breakdown?.displayPrice === undefined)
+            throw new Error('Mixed delivery quote did not return the USDC print cost breakdown.');
           expect(breakdown.displayPrice).toBe(300_000_000n);
           expect(breakdown.production).toBeGreaterThan(0n);
           expect(breakdown.shipping).toBeGreaterThanOrEqual(0n);
