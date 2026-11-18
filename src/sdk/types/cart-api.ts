@@ -286,7 +286,7 @@ export type CartPaymentMethods = {
   paymentCurrency: Address | null;
   minimumCents: number;
   maximumCentsExclusive: number;
-  directCard?: { merchantId: string; env: 'sandbox' };
+  directCard?: { merchantId: string; env: 'sandbox' | 'prod' };
 };
 export type CartCardCharge = {
   orderId: Hex;
