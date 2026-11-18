@@ -115,10 +115,11 @@ describe.sequential('SDK eligibility against the deployed Rare API', () => {
         await expect.poll(async () => (await rare.cart.listing.search({ eligibility: 'eligible', sku: reward.sku })).data
           .some(listing => listing.listingDigest === rewardListing.listingDigest), { timeout: 30_000, interval: 2_000 }).toBe(true);
 
-        const prepared = await rare.cart.checkout.authorize((await preview(rewardListing.listingDigest)));
+        const rewardPreparation = await preview(rewardListing.listingDigest);
+        const prepared = await rare.cart.checkout.authorize(rewardPreparation);
         expect(prepared.executePurchase.order.paymentAmount).toBeLessThanOrEqual(1_000_000_000_000_000n);
         expect(await claims()).toMatchObject([{ id: issued.id, status: 'RESERVED' }]);
-        const retried = await rare.cart.checkout.authorize((await preview(rewardListing.listingDigest)));
+        const retried = await rare.cart.checkout.authorize(rewardPreparation);
         expect(retried.executePurchase.order.orderId).toBe(prepared.executePurchase.order.orderId);
         const redemption = await rare.cart.checkout.execute(prepared.executePurchase);
         expect(redemption.receipt.status).toBe('success');
