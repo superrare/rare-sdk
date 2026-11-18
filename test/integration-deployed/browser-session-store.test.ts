@@ -41,7 +41,9 @@ type BrowserFixture = {
   refreshTokens: string[];
   captures: Promise<void>[];
 };
-const state: { browser?: Browser; server?: Server; directory?: string; origin?: string; fixtures: BrowserFixture[] } = { fixtures: [] };
+const state: { browser?: Browser; server?: Server; directory?: string; origin?: string; javascript?: string; fixtures: BrowserFixture[] } = { fixtures: [] };
+
+const browserDocument = '<!doctype html><title>SDK persistent sessions</title><script src="/sdk.js"></script>';
 
 const openPage = async (fixture: BrowserFixture) => {
   const page = await fixture.context.newPage();
@@ -50,7 +52,13 @@ const openPage = async (fixture: BrowserFixture) => {
     if (!wallet) throw new Error('Unknown dedicated wallet');
     return wallet.signMessage({ message });
   });
-  await page.goto(state.origin ?? '');
+  const { origin, javascript } = state;
+  if (origin === undefined) throw new Error('Browser fixture origin is unavailable');
+  if (javascript !== undefined) {
+    await page.route(`${origin}/`, route => route.fulfill({ contentType: 'text/html', body: browserDocument }));
+    await page.route(`${origin}/sdk.js`, route => route.fulfill({ contentType: 'application/javascript', body: javascript }));
+  }
+  await page.goto(origin);
   await page.evaluate(apiBaseUrl => { window.rareBrowserTest = window.RareSdk.createRareClient({ apiBaseUrl }); }, configuration().apiBaseUrl);
   return page;
 };
@@ -95,20 +103,28 @@ const authenticatedAddress = (page: Page) => page.evaluate(async ({ apiBaseUrl, 
 }, { apiBaseUrl: configuration().apiBaseUrl, authOnly: configuration().authOnly });
 
 beforeAll(async () => {
-  configuration();
+  const { apiBaseUrl, authOnly } = configuration();
   state.directory = await mkdtemp(join(tmpdir(), 'rare-sdk-browser-session-'));
   await build({ config: false, entry: [resolve('src/sdk/index.ts')], format: 'iife', globalName: 'RareSdk', platform: 'browser', target: 'es2023', dts: false, outDir: state.directory, deps: { alwaysBundle: () => true }, clean: true, logLevel: 'error' });
-  const javascript = await readFile(join(state.directory, 'index.iife.js'));
+  const javascript = await readFile(join(state.directory, 'index.iife.js'), 'utf8');
+  state.browser = await chromium.launch();
+  if (!authOnly) {
+    const origin = process.env.RARE_ACCOUNT_BROWSER_ORIGIN ?? new URL(apiBaseUrl).origin;
+    if (new URL(origin).protocol !== 'https:' || new URL(origin).origin !== origin)
+      throw new Error('Set RARE_ACCOUNT_BROWSER_ORIGIN to a canonical HTTPS origin allowed by Auth.');
+    state.origin = origin;
+    state.javascript = javascript;
+    return;
+  }
   state.server = createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': request.url === '/sdk.js' ? 'application/javascript' : 'text/html' });
-    response.end(request.url === '/sdk.js' ? javascript : '<!doctype html><title>SDK persistent sessions</title><script src="/sdk.js"></script>');
+    response.end(request.url === '/sdk.js' ? javascript : browserDocument);
   });
   state.server.listen(0, '127.0.0.1');
   await once(state.server, 'listening');
   const address = state.server.address();
   if (!address || typeof address === 'string') throw new Error('Missing application server address');
   state.origin = `http://127.0.0.1:${address.port}`;
-  state.browser = await chromium.launch();
 }, 60_000);
 afterEach(async () => {
   await Promise.all(state.fixtures.map(async fixture => {
