@@ -19,12 +19,16 @@ const config = () => {
 
 // Only the empty application page is intercepted. Every API/Auth request reaches
 // the real service, with Origin/preflight behavior enforced by Chromium.
-const applicationPage = async (browser: Browser, local: boolean) => {
+const applicationPage = async (browser: Browser, local: boolean, second = false) => {
   const page = await browser.newPage();
   const applicationHtml = '<!doctype html><title>SDK authentication integration</title>';
   const origin = await (async () => {
     if (!local) {
-      const value = `https://sdk-${randomUUID()}.example`;
+      const apiOrigin = new URL(config().apiBaseUrl).origin;
+      const first = process.env.RARE_ACCOUNT_BROWSER_ORIGIN ?? apiOrigin;
+      const value = second ? process.env.RARE_ACCOUNT_BROWSER_SECOND_ORIGIN : first;
+      if (!value || new URL(value).protocol !== 'https:' || new URL(value).origin !== value || (second && value === first))
+        throw new Error('Configure distinct HTTPS origins allowed by Auth for the browser tests.');
       await page.route(`${value}/`, route => route.fulfill({ status: 200, contentType: 'text/html', body: applicationHtml }));
       return value;
     }
@@ -81,9 +85,9 @@ describe('real-browser third-party wallet authentication', () => {
     expect(response.status).toBe(200);
   };
 
-  it('authenticates two unregistered browser origins with independent SDK bearer sessions', async () => {
+  it('authenticates two approved browser origins with independent SDK bearer sessions', async () => {
     const { apiBaseUrl, wallet, local } = config();
-    const apps = await Promise.all([applicationPage(browser(), local), applicationPage(browser(), local)]);
+    const apps = await Promise.all([applicationPage(browser(), local), applicationPage(browser(), local, true)]);
     const clients = apps.map(({ page, origin }) => ({ origin, client: createRareClient({ apiBaseUrl, apiFetch: browserFetch(page) }) }));
     try {
       for (const { origin, client } of clients) {
@@ -112,6 +116,18 @@ describe('real-browser third-party wallet authentication', () => {
     }
   }, 120_000);
 
+  it('rejects a wallet challenge from an unapproved origin', async () => {
+    const { apiBaseUrl, wallet } = config();
+    const origin = `https://sdk-${randomUUID()}.example`;
+    const response = await fetch(`${apiBaseUrl}/auth/v2/wallet/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: origin },
+      body: JSON.stringify({ client_id: 'rare-sdk', address: wallet.address, chain_id: 1, origin }),
+    });
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ error: 'access_denied' });
+  }, 30_000);
+
   it('allows hosted Connect authorization initiation without browser cookies', async () => {
     const { apiBaseUrl, local } = config();
     const { page } = await applicationPage(browser(), local);
@@ -126,7 +142,7 @@ describe('real-browser third-party wallet authentication', () => {
   it('rejects mismatched challenge origins, altered domain/URI, wrong redemption origin and proof replay', async () => {
     const { apiBaseUrl, wallet, local } = config();
     const first = await applicationPage(browser(), local);
-    const second = await applicationPage(browser(), local);
+    const second = await applicationPage(browser(), local, true);
     const request = browserFetch(first.page);
     try {
       const mismatch = await request(`${apiBaseUrl}/auth/v2/wallet/challenge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: 'rare-sdk', address: wallet.address, chain_id: 1, origin: second.origin }) });
