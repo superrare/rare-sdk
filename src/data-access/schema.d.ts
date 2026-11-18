@@ -4,6 +4,1354 @@
  */
 
 export interface paths {
+    "/v1/drops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List public drop announcements in a calendar window */
+        get: {
+            parameters: {
+                query: {
+                    page?: number;
+                    perPage?: number;
+                    from: string;
+                    to: string;
+                    address?: string;
+                    username?: string;
+                    userId?: number;
+                    type?: "NONE" | "SINGLE_ARTWORK" | "EDITION" | "RELEASE" | "LIQUID_EDITION";
+                    isCurated?: "true" | "false";
+                    isFeatured?: "true" | "false";
+                    sortBy?: "STARTS_AT" | "CREATED_AT" | "UPDATED_AT";
+                    sortDirection?: "ASC" | "DESC";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public drop calendar */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DropAnnouncement"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid drop input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Drop not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create your own drop announcement */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "NONE" | "SINGLE_ARTWORK" | "EDITION" | "RELEASE" | "LIQUID_EDITION";
+                        /** Format: date-time */
+                        startsAt: string;
+                        metadata: {
+                            headline: string;
+                            description: string;
+                            destinationUrl: "" | string;
+                            /** Format: uri */
+                            imageUrl: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Public drop announcement */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DropAnnouncement"];
+                        };
+                    };
+                };
+                /** @description Invalid drop input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Drop not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/drops/{dropId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a public drop announcement */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    dropId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public drop announcement */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DropAnnouncement"];
+                        };
+                    };
+                };
+                /** @description Invalid drop input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Drop not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete your own drop announcement */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    dropId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Drop deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                deleted: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid drop input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Drop not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update your own drop announcement */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    dropId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type?: "NONE" | "SINGLE_ARTWORK" | "EDITION" | "RELEASE" | "LIQUID_EDITION";
+                        /** Format: date-time */
+                        startsAt?: string;
+                        metadata?: {
+                            headline?: string;
+                            description?: string;
+                            destinationUrl?: "" | string;
+                            /** Format: uri */
+                            imageUrl?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Public drop announcement */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DropAnnouncement"];
+                        };
+                    };
+                };
+                /** @description Invalid drop input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Drop not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+
+    "/v1/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List public posts for a user */
+        get: {
+            parameters: {
+                query?: {
+                    username?: string;
+                    /** @description Checksummed Ethereum address */
+                    address?: components["schemas"]["EthereumAddress"];
+                    userId?: number;
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List public posts for a user */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPost"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a post */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        body: string;
+                        imageUrls?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Create a post */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPost"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/posts/{postId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a public post */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Get a public post */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPost"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete your own post */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete your own post */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                deleted: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/posts/{postId}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List public post comments */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                    parentCommentId?: string;
+                    afterCommentId?: string;
+                };
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List public post comments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPostComment"][];
+                            pagination: components["schemas"]["Pagination"];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Comment on a public post */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                        parentCommentId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Comment on a public post */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPostComment"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/posts/{postId}/comments/{commentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete your own comment */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                    commentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete your own comment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                deleted: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/post-favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your favorite posts */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List your favorite posts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CreatorPost"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/post-favorites/{postId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check your post favorite status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Check your post favorite status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                favorited: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        /** Favorite a post */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Favorite a post */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                favorited: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove a post from your favorites */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    postId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Remove a post from your favorites */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                favorited: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Post or comment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/nfts/{universalTokenId}/favorites/count": {
+        get: {
+            parameters: { path: { universalTokenId: string } };
+            responses: { 200: { content: { "application/json": { data: { count: number } } } } };
+        };
+    };
+    "/v1/users/followers": {
+        get: {
+            parameters: { query: { username?: string; address?: string; userId?: number; page?: number; perPage?: number } };
+            responses: {
+                200: { content: { "application/json": { data: components["schemas"]["UserProfile"][]; pagination: components["schemas"]["Pagination"] } } };
+                400: { content: { "application/json": { error: string; code: string } } };
+                404: { content: { "application/json": { error: string; code: string } } };
+                503: { content: { "application/json": { error: string; code: string } } };
+            };
+        };
+    };
+    "/v1/users/following": {
+        get: {
+            parameters: { query: { username?: string; address?: string; userId?: number; page?: number; perPage?: number } };
+            responses: {
+                200: { content: { "application/json": { data: components["schemas"]["UserProfile"][]; pagination: components["schemas"]["Pagination"] } } };
+                400: { content: { "application/json": { error: string; code: string } } };
+                404: { content: { "application/json": { error: string; code: string } } };
+                503: { content: { "application/json": { error: string; code: string } } };
+            };
+        };
+    };
+
     "/v1/liquid-editions": {
         parameters: {
             query?: never;
@@ -189,7 +1537,7 @@ export interface paths {
                     currency?: components["schemas"]["EthereumAddress"] & unknown;
                     mediaType?: "AUDIO" | "HTML" | "IMAGE" | "THREE_D" | "VIDEO";
                     tags?: string[] | string;
-                    sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "recentlySold" | "auctionEndingSoon" | "recentActivity" | "bidAsc" | "bidDesc";
+                    sortBy?: "newest" | "oldest" | "priceAsc" | "priceDesc" | "recentlySold" | "auctionEndingSoon" | "recentActivity" | "bidAsc" | "bidDesc" | "random";
                 };
                 header?: never;
                 path?: never;
@@ -755,6 +2103,58 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user
+         * @description Resolve a public user profile by username
+         */
+        get: {
+            parameters: {
+                query: { username?: string; address?: string; userId?: number };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description User profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["UserProfile"];
+                        };
+                    };
+                };
+                /** @description User not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2036,10 +3436,2083 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/messaging/public/rooms/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolveMessagingPublicRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/public/rooms/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMessagingPublicHistory"];
+        put?: never;
+        post: operations["sendMessagingPublicMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/internal/public/rooms/{conversationId}/system": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["appendMessagingSystemMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMessagingSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMessagingConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["findMessagingPeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createMessagingDirect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createMessagingRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMessagingConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMessagingChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMessagingParticipants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["executeMessagingCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createMessagingLinkPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sendMessagingMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/messages/{messageId}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["executeMessagingMessageCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/blocks/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setMessagingBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMessagingBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadMessagingImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/attachments/{attachmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["readMessagingImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize a direct resumable upload */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @default public
+                         * @enum {string}
+                         */
+                        access?: "public" | "private";
+                        contentType: string;
+                        size: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Upload capability; keep the URL private */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uri */
+                            uploadUrl: string;
+                            /** Format: date-time */
+                            expiresAt: string;
+                        };
+                    };
+                };
+                /** @description Invalid upload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload session not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload incomplete */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/uploads/{uploadId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify, hash and publish a completed upload */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    uploadId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Content-addressed asset */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key: string;
+                            contentType: string;
+                            size: number;
+                            /** @enum {string} */
+                            access: "public";
+                            /** Format: uri */
+                            url: string;
+                        } | {
+                            key: string;
+                            contentType: string;
+                            size: number;
+                            /** @enum {string} */
+                            access: "private";
+                            /** Format: uuid */
+                            uploadId: string;
+                        };
+                    };
+                };
+                /** @description Invalid upload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload session not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload incomplete */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Upload unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/messaging/conversations/{conversationId}/attachments/from-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach a completed private shared upload to a conversation
+         * @description Initial association requires an owned upload completed within its 24-hour session. The attachment remains readable under conversation permissions after the upload session expires.
+         */
+        post: operations["attachMessagingSharedUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your eligibility rules */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private creator rule list */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityRule"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an eligibility rule */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        idempotencyKey?: string;
+                        definition: {
+                            /** @enum {string} */
+                            kind: "PRIMARY_SALE" | "EVERY_SALE" | "CURRENT_HOLDER";
+                            source: {
+                                chainId: string;
+                                tokenContract: string;
+                                tokenIds?: string[];
+                            };
+                            targets: {
+                                sku: string;
+                                tokenId?: string;
+                            }[];
+                            /** Format: date-time */
+                            claimExpiresAt?: string;
+                        };
+                        /** Format: date-time */
+                        effectiveFrom?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Creator-owned eligibility rule */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityRule"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/rules/{ruleId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable an eligibility rule */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Rule disabled for new grants and checkouts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                disabled: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/rules/{ruleId}/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue historical sale claims */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sale eligibility backfill queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                queued: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your purchase eligibility claims */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                    sku?: string;
+                    ruleId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account claims, including consumption state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityClaim"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/listings/{listingDigest}/requirement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Require a claim for your Listing */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listingDigest: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        chainId: string | number;
+                        cartAddress: string;
+                        /** Format: uuid */
+                        ruleId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Listing explicitly accepts the selected eligibility rule */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                ruleId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove your Listing claim requirement */
+        delete: {
+            parameters: {
+                query: {
+                    chainId: string | number;
+                    cartAddress: string;
+                };
+                header?: never;
+                path: {
+                    listingDigest: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Listing no longer requires a claim for new checkout authorizations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                removed: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get your Order and fulfillment status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private Order details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                paymentCurrency: string | null;
+                                paymentAmount: string | null;
+                                items?: {
+                                    lineIndex: number;
+                                    listingDigest: string;
+                                    sku: string;
+                                    quantity: string;
+                                    /** @enum {string} */
+                                    fulfillmentStatus: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    title: string | null;
+                                    images: string[];
+                                    /** Format: uuid */
+                                    printDropId: string | null;
+                                }[];
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                fulfillments: {
+                                    id: string;
+                                    kind: string;
+                                    orderLineIndex: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    providerOrderId: string | null;
+                                    progress?: {
+                                        /** Format: date-time */
+                                        providerUpdatedAt: string;
+                                        /** Format: date-time */
+                                        checkedAt: string;
+                                        /** @enum {string} */
+                                        stage: "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "CANCELLED";
+                                        /** @enum {string} */
+                                        productionStatus: "UNKNOWN" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE" | "ERROR";
+                                        issueCodes: string[];
+                                        shipments: {
+                                            id: string;
+                                            /** @enum {string} */
+                                            status: "PROCESSING" | "SHIPPED" | "CANCELLED";
+                                            carrier: string | null;
+                                            trackingNumber: string | null;
+                                            /** Format: uri */
+                                            trackingUrl: string | null;
+                                            /** Format: date-time */
+                                            dispatchedAt: string | null;
+                                        }[];
+                                    } | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your Cart Orders */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account Orders */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                paymentCurrency: string | null;
+                                paymentAmount: string | null;
+                                items?: {
+                                    lineIndex: number;
+                                    listingDigest: string;
+                                    sku: string;
+                                    quantity: string;
+                                    /** @enum {string} */
+                                    fulfillmentStatus: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    title: string | null;
+                                    images: string[];
+                                    /** Format: uuid */
+                                    printDropId: string | null;
+                                }[];
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                fulfillments: {
+                                    id: string;
+                                    kind: string;
+                                    orderLineIndex: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    providerOrderId: string | null;
+                                    progress?: {
+                                        /** Format: date-time */
+                                        providerUpdatedAt: string;
+                                        /** Format: date-time */
+                                        checkedAt: string;
+                                        /** @enum {string} */
+                                        stage: "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "CANCELLED";
+                                        /** @enum {string} */
+                                        productionStatus: "UNKNOWN" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE" | "ERROR";
+                                        issueCodes: string[];
+                                        shipments: {
+                                            id: string;
+                                            /** @enum {string} */
+                                            status: "PROCESSING" | "SHIPPED" | "CANCELLED";
+                                            carrier: string | null;
+                                            trackingNumber: string | null;
+                                            /** Format: uri */
+                                            trackingUrl: string | null;
+                                            /** Format: date-time */
+                                            dispatchedAt: string | null;
+                                        }[];
+                                    } | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            }[];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders/checkout/{idempotencyKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recover your interrupted checkout without creating another Order */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    idempotencyKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Account and wallet-bound checkout recovery */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                status: "UNKNOWN" | "PREPARING" | "PREPARATION_FAILED" | "READY" | "EXECUTED" | "EXPIRED";
+                                orderId?: string;
+                                preparedPurchase?: {
+                                    /** @enum {number} */
+                                    schemaVersion: 1;
+                                    chainId: string | number;
+                                    cartAddress: string;
+                                    idempotencyKey: string;
+                                    /** Format: date-time */
+                                    preparedAt: string;
+                                    executePurchase: {
+                                        order: {
+                                            orderId: string;
+                                            paymentCurrency: string;
+                                            deadline: string;
+                                            paymentAmount: string;
+                                            orderLinesHash: string;
+                                            payoutRouteHash: string;
+                                            fulfillmentActionsHash: string;
+                                        };
+                                        lines: {
+                                            sku: string;
+                                            listingDigest: string;
+                                            fulfillmentKind: number;
+                                            quantity: string;
+                                            settlementCurrency: string;
+                                            amount: string;
+                                            paymentRecipient: string;
+                                        }[];
+                                        listings: {
+                                            listingSalt: string;
+                                            seller: string;
+                                            sku: string;
+                                            fulfillmentKind: number;
+                                            tokenContract: string;
+                                            tokenId: string;
+                                            settlementCurrency: string;
+                                            minimumUnitPrice: string;
+                                            availableQuantity: string;
+                                            paymentRecipient: string;
+                                        }[];
+                                        authorization: {
+                                            listingRoots: {
+                                                listingsRoot: string;
+                                                nonce: string;
+                                                deadline: string;
+                                            }[];
+                                            listingRootSignatures: string[];
+                                            listingRootIndexes: string[];
+                                            listingProofs: string[][];
+                                        };
+                                        route: {
+                                            commands: string;
+                                            inputs: string[];
+                                            routerValue: string;
+                                        };
+                                        actions: {
+                                            lineIndex: string;
+                                            quantity: string;
+                                            recipient: string;
+                                        }[];
+                                        platformSignature: string;
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/shipping-addresses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Shipping address deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/shipping-addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account address book */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                label: string;
+                                details: {
+                                    name: string;
+                                    /** Format: email */
+                                    email: string;
+                                    phoneNumber: string;
+                                    addressLine1: string;
+                                    /** @default  */
+                                    addressLine2: string;
+                                    townOrCity: string;
+                                    /** @default  */
+                                    stateOrCounty: string;
+                                    /** @default  */
+                                    postalOrZipCode: string;
+                                    countryCode: string;
+                                };
+                                isDefault: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @default  */
+                        label?: string;
+                        details: {
+                            name: string;
+                            /** Format: email */
+                            email: string;
+                            phoneNumber: string;
+                            addressLine1: string;
+                            /** @default  */
+                            addressLine2?: string;
+                            townOrCity: string;
+                            /** @default  */
+                            stateOrCounty?: string;
+                            /** @default  */
+                            postalOrZipCode?: string;
+                            countryCode: string;
+                        };
+                        /** @default false */
+                        makeDefault?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Saved private shipping address */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                label: string;
+                                details: {
+                                    name: string;
+                                    /** Format: email */
+                                    email: string;
+                                    phoneNumber: string;
+                                    addressLine1: string;
+                                    /** @default  */
+                                    addressLine2: string;
+                                    townOrCity: string;
+                                    /** @default  */
+                                    stateOrCounty: string;
+                                    /** @default  */
+                                    postalOrZipCode: string;
+                                    countryCode: string;
+                                };
+                                isDefault: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all delivered inbox notifications read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                markedReadCount: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark an owned notification read without marking conversation messages read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    notificationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Notification"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Notification not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count unread inbox entries */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                unreadCount: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List delivered notifications for the signed-in account */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Notification"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DropAnnouncement: {
+            id: string;
+            userId: string;
+            creatorAddress: string;
+            /** @enum {string} */
+            type: "NONE" | "SINGLE_ARTWORK" | "EDITION" | "RELEASE" | "LIQUID_EDITION";
+            startsAt: string;
+            createdAt: string;
+            updatedAt: string;
+            isCurated: boolean;
+            isFeatured: boolean;
+            metadata: {
+                headline: string;
+                description: string;
+                destinationUrl: "" | string;
+                imageObjectKey: string;
+                /** Format: uri */
+                imageUrl?: string;
+                slug?: string;
+            };
+        };
+
+        CreatorPostComment: {
+            id: string;
+            postId: string;
+            authorUserId: string;
+            parentCommentId: string | null;
+            replyCount: number;
+            body: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        CreatorPost: {
+            id: string;
+            creatorUserId: string;
+            title: string;
+            body: string;
+            imageUrls: string[];
+            commentCount: number;
+            likeCount: number;
+            publishedAt: string;
+            createdAt: string;
+            updatedAt: string;
+        };
         LiquidEdition: {
             id: string;
             chainId: string;
@@ -2576,6 +6049,15 @@ export interface components {
             ownerAddress: components["schemas"]["EthereumAddress"];
         };
         UserProfile: {
+            userId?: number;
+            bio?: string | null;
+            avatar?: string | null;
+            website?: string | null;
+            twitterlink?: string | null;
+            discordlink?: string | null;
+            instagramlink?: string | null;
+            youtubelink?: string | null;
+            masthead_universal_token_id?: string | null;
             /** @example 0xba5BDe662c17e2aDFF1075610382B9B691296350 */
             address: string;
             /** @example satoshi */
@@ -3264,7 +6746,983 @@ export interface components {
             /** @example collector@example.com */
             email?: string;
         };
-    };
+        MessagingConversation: {
+            /** @enum {string} */
+            type: "direct" | "group";
+            contextId: string | null;
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string;
+            guidelines: string;
+            /**
+             * @default private
+             * @enum {string}
+             */
+            access: "private" | "public";
+            /** @default null */
+            publicContext: {
+                /** @enum {string} */
+                type: "auction";
+                id: string;
+                universalTokenId?: string;
+            } | {
+                /** @enum {string} */
+                type: "liquid-edition";
+                chainId: number;
+                contractAddress: string;
+            } | {
+                /** @enum {string} */
+                type: "drop-announcement";
+                id: string;
+            } | unknown;
+            owner: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            } | null;
+            counterpart: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            } | null;
+            /** @enum {string} */
+            lifecycle: "open" | "paused" | "closed";
+            capabilities: {
+                read: boolean;
+                send: boolean;
+                accept: boolean;
+                reopen: boolean;
+                moderate: boolean;
+                leave: boolean;
+                /** @enum {string} */
+                state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+            };
+            /** @enum {string} */
+            notification: "all" | "mentions" | "muted";
+            unreadCount: number;
+            latestSequence: string;
+            readSequence: string;
+            changeSequence: string;
+            /** Format: date-time */
+            updatedAt: string;
+            lastMessage: string | null;
+        };
+        MessagingMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            sequence: string;
+            /** Format: uuid */
+            clientMessageId: string;
+            author: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            };
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            editedAt: string | null;
+            deleted: boolean;
+            version: number;
+            /** Format: uuid */
+            replyToId: string | null;
+            /** @default null */
+            reference: {
+                /** @enum {string} */
+                kind: "post" | "artwork";
+                id: string;
+                /** @enum {string} */
+                state: "available" | "unavailable";
+                title: string | null;
+                href: string | null;
+            } | null;
+            /** @default null */
+            linkPreview: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uri */
+                url: string;
+                domain: string;
+                title: string | null;
+                description: string | null;
+            } | null;
+            attachments: {
+                /** Format: uuid */
+                id: string;
+                contentType: string;
+                sizeBytes: number;
+                width: number;
+                height: number;
+            }[];
+            reactions: {
+                /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                emoji: string;
+                count: number;
+                reacted: boolean;
+            }[];
+            mentionUserIds: string[];
+            mentions: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            }[];
+            pinned: boolean;
+            collapsed: boolean;
+            reported: boolean;
+            canEdit: boolean;
+            canDelete: boolean;
+        };
+        MessagingPage: {
+            viewerPolicyVersion: string;
+            conversation: {
+                /** @enum {string} */
+                type: "direct" | "group";
+                contextId: string | null;
+                /** Format: uuid */
+                id: string;
+                title: string;
+                description: string;
+                guidelines: string;
+                /**
+                 * @default private
+                 * @enum {string}
+                 */
+                access: "private" | "public";
+                /** @default null */
+                publicContext: {
+                    /** @enum {string} */
+                    type: "auction";
+                    id: string;
+                    universalTokenId?: string;
+                } | {
+                    /** @enum {string} */
+                    type: "liquid-edition";
+                    chainId: number;
+                    contractAddress: string;
+                } | {
+                    /** @enum {string} */
+                    type: "drop-announcement";
+                    id: string;
+                } | unknown;
+                owner: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                counterpart: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                /** @enum {string} */
+                lifecycle: "open" | "paused" | "closed";
+                capabilities: {
+                    read: boolean;
+                    send: boolean;
+                    accept: boolean;
+                    reopen: boolean;
+                    moderate: boolean;
+                    leave: boolean;
+                    /** @enum {string} */
+                    state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                };
+                /** @enum {string} */
+                notification: "all" | "mentions" | "muted";
+                unreadCount: number;
+                latestSequence: string;
+                readSequence: string;
+                changeSequence: string;
+                /** Format: date-time */
+                updatedAt: string;
+                lastMessage: string | null;
+            };
+            messages: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                conversationId: string;
+                sequence: string;
+                /** Format: uuid */
+                clientMessageId: string;
+                author: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                };
+                body: string;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                editedAt: string | null;
+                deleted: boolean;
+                version: number;
+                /** Format: uuid */
+                replyToId: string | null;
+                /** @default null */
+                reference: {
+                    /** @enum {string} */
+                    kind: "post" | "artwork";
+                    id: string;
+                    /** @enum {string} */
+                    state: "available" | "unavailable";
+                    title: string | null;
+                    href: string | null;
+                } | null;
+                /** @default null */
+                linkPreview: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uri */
+                    url: string;
+                    domain: string;
+                    title: string | null;
+                    description: string | null;
+                } | null;
+                attachments: {
+                    /** Format: uuid */
+                    id: string;
+                    contentType: string;
+                    sizeBytes: number;
+                    width: number;
+                    height: number;
+                }[];
+                reactions: {
+                    /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                    emoji: string;
+                    count: number;
+                    reacted: boolean;
+                }[];
+                mentionUserIds: string[];
+                mentions: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                }[];
+                pinned: boolean;
+                collapsed: boolean;
+                reported: boolean;
+                canEdit: boolean;
+                canDelete: boolean;
+            }[];
+            nextCursor: string | null;
+            changeCursor: string;
+        };
+        MessagingChanges: {
+            viewerPolicyVersion: string;
+            conversation: {
+                /** @enum {string} */
+                type: "direct" | "group";
+                contextId: string | null;
+                /** Format: uuid */
+                id: string;
+                title: string;
+                description: string;
+                guidelines: string;
+                /**
+                 * @default private
+                 * @enum {string}
+                 */
+                access: "private" | "public";
+                /** @default null */
+                publicContext: {
+                    /** @enum {string} */
+                    type: "auction";
+                    id: string;
+                    universalTokenId?: string;
+                } | {
+                    /** @enum {string} */
+                    type: "liquid-edition";
+                    chainId: number;
+                    contractAddress: string;
+                } | {
+                    /** @enum {string} */
+                    type: "drop-announcement";
+                    id: string;
+                } | unknown;
+                owner: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                counterpart: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                /** @enum {string} */
+                lifecycle: "open" | "paused" | "closed";
+                capabilities: {
+                    read: boolean;
+                    send: boolean;
+                    accept: boolean;
+                    reopen: boolean;
+                    moderate: boolean;
+                    leave: boolean;
+                    /** @enum {string} */
+                    state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                };
+                /** @enum {string} */
+                notification: "all" | "mentions" | "muted";
+                unreadCount: number;
+                latestSequence: string;
+                readSequence: string;
+                changeSequence: string;
+                /** Format: date-time */
+                updatedAt: string;
+                lastMessage: string | null;
+            };
+            messages: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                conversationId: string;
+                sequence: string;
+                /** Format: uuid */
+                clientMessageId: string;
+                author: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                };
+                body: string;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                editedAt: string | null;
+                deleted: boolean;
+                version: number;
+                /** Format: uuid */
+                replyToId: string | null;
+                /** @default null */
+                reference: {
+                    /** @enum {string} */
+                    kind: "post" | "artwork";
+                    id: string;
+                    /** @enum {string} */
+                    state: "available" | "unavailable";
+                    title: string | null;
+                    href: string | null;
+                } | null;
+                /** @default null */
+                linkPreview: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uri */
+                    url: string;
+                    domain: string;
+                    title: string | null;
+                    description: string | null;
+                } | null;
+                attachments: {
+                    /** Format: uuid */
+                    id: string;
+                    contentType: string;
+                    sizeBytes: number;
+                    width: number;
+                    height: number;
+                }[];
+                reactions: {
+                    /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                    emoji: string;
+                    count: number;
+                    reacted: boolean;
+                }[];
+                mentionUserIds: string[];
+                mentions: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                }[];
+                pinned: boolean;
+                collapsed: boolean;
+                reported: boolean;
+                canEdit: boolean;
+                canDelete: boolean;
+            }[];
+            nextCursor: string;
+            hasMore: boolean;
+            resynchronize: boolean;
+        };
+        MessagingInbox: {
+            conversations: {
+                /** @enum {string} */
+                type: "direct" | "group";
+                contextId: string | null;
+                /** Format: uuid */
+                id: string;
+                title: string;
+                description: string;
+                guidelines: string;
+                /**
+                 * @default private
+                 * @enum {string}
+                 */
+                access: "private" | "public";
+                /** @default null */
+                publicContext: {
+                    /** @enum {string} */
+                    type: "auction";
+                    id: string;
+                    universalTokenId?: string;
+                } | {
+                    /** @enum {string} */
+                    type: "liquid-edition";
+                    chainId: number;
+                    contractAddress: string;
+                } | {
+                    /** @enum {string} */
+                    type: "drop-announcement";
+                    id: string;
+                } | unknown;
+                owner: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                counterpart: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                } | null;
+                /** @enum {string} */
+                lifecycle: "open" | "paused" | "closed";
+                capabilities: {
+                    read: boolean;
+                    send: boolean;
+                    accept: boolean;
+                    reopen: boolean;
+                    moderate: boolean;
+                    leave: boolean;
+                    /** @enum {string} */
+                    state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                };
+                /** @enum {string} */
+                notification: "all" | "mentions" | "muted";
+                unreadCount: number;
+                latestSequence: string;
+                readSequence: string;
+                changeSequence: string;
+                /** Format: date-time */
+                updatedAt: string;
+                lastMessage: string | null;
+            }[];
+            nextCursor: string | null;
+        };
+        MessagingParticipant: {
+            user: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            };
+            /** @enum {string} */
+            state: "invited" | "joined" | "left" | "removed";
+            owner: boolean;
+            banned: boolean;
+        };
+        MessagingUser: {
+            id: string;
+            username: string;
+            address?: string;
+            /** Format: uri */
+            avatar?: string;
+        };
+        MessagingSearchPerson: {
+            id: string;
+            username: string;
+            address?: string;
+            /** Format: uri */
+            avatar?: string;
+            followsYou: boolean;
+            blocked: boolean;
+            fullName?: string;
+        };
+        MessagingAttachment: {
+            /** Format: uuid */
+            id: string;
+            contentType: string;
+            sizeBytes: number;
+            width: number;
+            height: number;
+        };
+        MessagingDraftPreview: {
+            /** @enum {string} */
+            kind: "reference";
+            reference: {
+                /** @enum {string} */
+                kind: "post" | "artwork";
+                id: string;
+                /** @enum {string} */
+                state: "available" | "unavailable";
+                title: string | null;
+                href: string | null;
+            };
+        } | {
+            /** @enum {string} */
+            kind: "external";
+            preview: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uri */
+                url: string;
+                domain: string;
+                title: string | null;
+                description: string | null;
+            };
+        };
+        /** @description Body is trimmed before validation. A message requires nonempty trimmed text, one or more attachment IDs, or a first-party reference. At most one reference, legacy preview ID or selected preview URL is allowed. */
+        MessagingSend: {
+            /** Format: uuid */
+            clientMessageId: string;
+            body: string;
+            /** Format: uuid */
+            replyToId?: string;
+            reference?: {
+                /** @enum {string} */
+                kind: "post";
+                id: string;
+            } | {
+                /** @enum {string} */
+                kind: "artwork";
+                id: string;
+            };
+            /** Format: uuid */
+            linkPreviewId?: string;
+            /** Format: uri */
+            linkPreviewUrl?: string;
+            /** @default [] */
+            attachmentIds: string[];
+            /** @default [] */
+            mentionUserIds: string[];
+        };
+        MessagingCreateDirect: {
+            recipientUserId: string;
+            /** Format: uuid */
+            clientMessageId: string;
+            body: string;
+        };
+        MessagingCreateRoom: {
+            title: string;
+            /** @default  */
+            description: string;
+            /** @default  */
+            guidelines: string;
+            /** Format: uuid */
+            clientOperationId: string;
+            /** @enum {string} */
+            type: "group";
+            contextId?: unknown;
+            initialMessage?: {
+                /** Format: uuid */
+                clientMessageId: string;
+                body: string;
+            };
+            /** @default [] */
+            inviteeUserIds: string[];
+        };
+        MessagingCommand: {
+            /** @enum {string} */
+            action: "accept" | "decline" | "reopen" | "leave" | "close" | "pause" | "resume";
+        } | {
+            /** @enum {string} */
+            action: "invite" | "ban" | "unban" | "unbanAndInvite";
+            userId: string;
+        } | {
+            /** @enum {string} */
+            action: "preferences";
+            /** @enum {string} */
+            notification: "all" | "mentions" | "muted";
+        } | {
+            /** @enum {string} */
+            action: "settings";
+            /** Format: date-time */
+            expectedUpdatedAt?: string;
+            settings: {
+                title?: string;
+                description?: string;
+                guidelines?: string;
+            };
+        } | {
+            /** @enum {string} */
+            action: "read";
+            sequence: string;
+        };
+        MessagingMessageCommand: {
+            /** @enum {string} */
+            action: "edit";
+            body: string;
+            version?: number;
+            removePreview?: boolean;
+        } | {
+            /** @enum {string} */
+            action: "delete";
+        } | {
+            /** @enum {string} */
+            action: "pin";
+            pinned: boolean;
+        } | {
+            /** @enum {string} */
+            action: "reaction";
+            /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+            emoji: string;
+            active: boolean;
+        } | {
+            /** @enum {string} */
+            action: "report";
+            reason: string;
+            /** @default true */
+            hide: boolean;
+        };
+        MessagingPublicRoom: {
+            /** Format: uuid */
+            id: string;
+            context: {
+                /** @enum {string} */
+                type: "auction";
+                id: string;
+                universalTokenId?: string;
+            } | {
+                /** @enum {string} */
+                type: "liquid-edition";
+                chainId: number;
+                contractAddress: string;
+            } | {
+                /** @enum {string} */
+                type: "drop-announcement";
+                id: string;
+            };
+            title: string;
+            latestSequence: string;
+        };
+        MessagingPublicPage: {
+            room: {
+                /** Format: uuid */
+                id: string;
+                context: {
+                    /** @enum {string} */
+                    type: "auction";
+                    id: string;
+                    universalTokenId?: string;
+                } | {
+                    /** @enum {string} */
+                    type: "liquid-edition";
+                    chainId: number;
+                    contractAddress: string;
+                } | {
+                    /** @enum {string} */
+                    type: "drop-announcement";
+                    id: string;
+                };
+                title: string;
+                latestSequence: string;
+            };
+            messages: ({
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                conversationId: string;
+                sequence: string;
+                body: string;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: uuid */
+                replyToId: string | null;
+                reactions: {
+                    /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                    emoji: string;
+                    count: number;
+                    reacted: boolean;
+                }[];
+                collapsed: boolean;
+                reported: boolean;
+                /** @enum {string} */
+                type: "user";
+                author: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                };
+                mentions: {
+                    id: string;
+                    username: string;
+                    address?: string;
+                    /** Format: uri */
+                    avatar?: string;
+                }[];
+                replyTo: {
+                    /** Format: uuid */
+                    id: string;
+                    authorUsername: string | null;
+                    authorAddress: string;
+                    bodySnippet: string;
+                } | null;
+            } | {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                conversationId: string;
+                sequence: string;
+                body: string;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: uuid */
+                replyToId: string | null;
+                reactions: {
+                    /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                    emoji: string;
+                    count: number;
+                    reacted: boolean;
+                }[];
+                collapsed: boolean;
+                reported: boolean;
+                /** @enum {string} */
+                type: "system";
+                author: unknown;
+                system: {
+                    sourceId: string;
+                    type: string;
+                    summary: string;
+                    payload: {
+                        [key: string]: unknown;
+                    };
+                    /** Format: date-time */
+                    occurredAt: string;
+                };
+            })[];
+            /** @description When more results exist, pass this last returned sequence as after for forward pages or before for backward pages. */
+            nextCursor: string | null;
+        };
+        MessagingPublicMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            sequence: string;
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            replyToId: string | null;
+            reactions: {
+                /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                emoji: string;
+                count: number;
+                reacted: boolean;
+            }[];
+            collapsed: boolean;
+            reported: boolean;
+            /** @enum {string} */
+            type: "user";
+            author: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            };
+            mentions: {
+                id: string;
+                username: string;
+                address?: string;
+                /** Format: uri */
+                avatar?: string;
+            }[];
+            replyTo: {
+                /** Format: uuid */
+                id: string;
+                authorUsername: string | null;
+                authorAddress: string;
+                bodySnippet: string;
+            } | null;
+        } | {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            sequence: string;
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            replyToId: string | null;
+            reactions: {
+                /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                emoji: string;
+                count: number;
+                reacted: boolean;
+            }[];
+            collapsed: boolean;
+            reported: boolean;
+            /** @enum {string} */
+            type: "system";
+            author: unknown;
+            system: {
+                sourceId: string;
+                type: string;
+                summary: string;
+                payload: {
+                    [key: string]: unknown;
+                };
+                /** Format: date-time */
+                occurredAt: string;
+            };
+        };
+        MessagingPublicResolveContext: {
+            /** @enum {string} */
+            type: "auction";
+            id: string;
+            universalTokenId?: string;
+        } | {
+            /** @enum {string} */
+            type: "liquid-edition";
+            chainId: number;
+            contractAddress: string;
+        } | {
+            /** @enum {string} */
+            type: "drop-announcement";
+            id: string;
+        } | {
+            /** @enum {string} */
+            type: "auction";
+            universalTokenId: string;
+            auctionContractAddress: string;
+        };
+        MessagingPublicContext: {
+            /** @enum {string} */
+            type: "auction";
+            id: string;
+            universalTokenId?: string;
+        } | {
+            /** @enum {string} */
+            type: "liquid-edition";
+            chainId: number;
+            contractAddress: string;
+        } | {
+            /** @enum {string} */
+            type: "drop-announcement";
+            id: string;
+        };
+        MessagingPublicSend: {
+            /** Format: uuid */
+            clientMessageId: string;
+            body: string;
+            /** Format: uuid */
+            replyToId?: string;
+            /** @default [] */
+            mentionUserIds: string[];
+        };
+        MessagingSystem: {
+            sourceId: string;
+            type: string;
+            summary: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            occurredAt: string;
+        };
+            ApiError: {
+            error: string;
+            code: string;
+            details?: {
+                field: string;
+                message: string;
+            }[];
+        };
+        EligibilityRule: {
+            /** Format: uuid */
+            id: string;
+            issuerAccountId: string;
+            version: number;
+            enabled: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            definition: {
+                /** @enum {string} */
+                kind: "PRIMARY_SALE" | "EVERY_SALE" | "CURRENT_HOLDER";
+                source: {
+                    chainId: string;
+                    tokenContract: string;
+                    tokenIds?: string[];
+                };
+                targets: {
+                    sku: string;
+                    tokenId?: string;
+                }[];
+                /** Format: date-time */
+                claimExpiresAt?: string;
+            };
+        };
+        CartErrorResponse: {
+            error: {
+                code: string;
+                message: string;
+                retryable: boolean;
+                listingDigest?: string;
+                lineIndex?: number;
+            };
+        };
+        EligibilityClaim: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ruleId: string;
+            allowedSkus: string[];
+            /** @enum {string} */
+            status: "AVAILABLE" | "RESERVED" | "CONSUMED" | "REVOKED";
+            /** Format: date-time */
+            expiresAt: string | null;
+            beneficiaryAccountId: string | null;
+        };
+
+        Notification: {
+            id: string;
+            category: string;
+            notificationId: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+};
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -3272,4 +7730,3804 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    resolveMessagingPublicRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    context: {
+                        /** @enum {string} */
+                        type: "auction";
+                        id: string;
+                        universalTokenId?: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "liquid-edition";
+                        chainId: number;
+                        contractAddress: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "drop-announcement";
+                        id: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "auction";
+                        universalTokenId: string;
+                        auctionContractAddress: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingPublicRoom"];
+                };
+            };
+            /** @description Messaging request failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getMessagingPublicHistory: {
+        parameters: {
+            query?: {
+                before?: string;
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingPublicPage"];
+                };
+            };
+            /** @description Messaging request failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    sendMessagingPublicMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-messaging-request": "1";
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    clientMessageId: string;
+                    body: string;
+                    /** Format: uuid */
+                    replyToId?: string;
+                    /** @default [] */
+                    mentionUserIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingPublicMessage"];
+                };
+            };
+            /** @description Messaging request failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    appendMessagingSystemMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sourceId: string;
+                    type: string;
+                    summary: string;
+                    payload: {
+                        [key: string]: unknown;
+                    };
+                    /** Format: date-time */
+                    occurredAt: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingPublicMessage"];
+                };
+            };
+            /** @description Messaging request failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Messaging request failed */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getMessagingSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        };
+                        address: string;
+                        mediaEnabled: boolean;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listMessagingConversations: {
+        parameters: {
+            query?: {
+                search?: string;
+                cursor?: string;
+                /** @description Include subscribed public contextual rooms. Omitted retains the private conversation contract. */
+                includePublic?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        conversations: {
+                            /** @enum {string} */
+                            type: "direct" | "group";
+                            contextId: string | null;
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            description: string;
+                            guidelines: string;
+                            /**
+                             * @default private
+                             * @enum {string}
+                             */
+                            access: "private" | "public";
+                            /** @default null */
+                            publicContext: {
+                                /** @enum {string} */
+                                type: "auction";
+                                id: string;
+                                universalTokenId?: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "liquid-edition";
+                                chainId: number;
+                                contractAddress: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "drop-announcement";
+                                id: string;
+                            } | unknown;
+                            owner: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            counterpart: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            /** @enum {string} */
+                            lifecycle: "open" | "paused" | "closed";
+                            capabilities: {
+                                read: boolean;
+                                send: boolean;
+                                accept: boolean;
+                                reopen: boolean;
+                                moderate: boolean;
+                                leave: boolean;
+                                /** @enum {string} */
+                                state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                            };
+                            /** @enum {string} */
+                            notification: "all" | "mentions" | "muted";
+                            unreadCount: number;
+                            latestSequence: string;
+                            readSequence: string;
+                            changeSequence: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            lastMessage: string | null;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    findMessagingPeople: {
+        parameters: {
+            query: {
+                /** @description Leading and trailing whitespace is removed before the 2 to 100 character limit. Lookup also removes leading @ characters and surrounding whitespace; fewer than two remaining characters returns no matches. */
+                search: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        username: string;
+                        address?: string;
+                        /** Format: uri */
+                        avatar?: string;
+                        followsYou: boolean;
+                        blocked: boolean;
+                        fullName?: string;
+                    }[];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    createMessagingDirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    recipientUserId: string;
+                    /** Format: uuid */
+                    clientMessageId: string;
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "direct" | "group";
+                        contextId: string | null;
+                        /** Format: uuid */
+                        id: string;
+                        title: string;
+                        description: string;
+                        guidelines: string;
+                        /**
+                         * @default private
+                         * @enum {string}
+                         */
+                        access: "private" | "public";
+                        /** @default null */
+                        publicContext: {
+                            /** @enum {string} */
+                            type: "auction";
+                            id: string;
+                            universalTokenId?: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "liquid-edition";
+                            chainId: number;
+                            contractAddress: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "drop-announcement";
+                            id: string;
+                        } | unknown;
+                        owner: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        counterpart: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        /** @enum {string} */
+                        lifecycle: "open" | "paused" | "closed";
+                        capabilities: {
+                            read: boolean;
+                            send: boolean;
+                            accept: boolean;
+                            reopen: boolean;
+                            moderate: boolean;
+                            leave: boolean;
+                            /** @enum {string} */
+                            state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                        };
+                        /** @enum {string} */
+                        notification: "all" | "mentions" | "muted";
+                        unreadCount: number;
+                        latestSequence: string;
+                        readSequence: string;
+                        changeSequence: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                        lastMessage: string | null;
+                        /** Format: uuid */
+                        acceptedClientMessageId?: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    createMessagingRoom: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    /** @default  */
+                    description?: string;
+                    /** @default  */
+                    guidelines?: string;
+                    /** Format: uuid */
+                    clientOperationId: string;
+                    /** @enum {string} */
+                    type: "group";
+                    contextId?: unknown;
+                    initialMessage?: {
+                        /** Format: uuid */
+                        clientMessageId: string;
+                        body: string;
+                    };
+                    /** @default [] */
+                    inviteeUserIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "direct" | "group";
+                        contextId: string | null;
+                        /** Format: uuid */
+                        id: string;
+                        title: string;
+                        description: string;
+                        guidelines: string;
+                        /**
+                         * @default private
+                         * @enum {string}
+                         */
+                        access: "private" | "public";
+                        /** @default null */
+                        publicContext: {
+                            /** @enum {string} */
+                            type: "auction";
+                            id: string;
+                            universalTokenId?: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "liquid-edition";
+                            chainId: number;
+                            contractAddress: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "drop-announcement";
+                            id: string;
+                        } | unknown;
+                        owner: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        counterpart: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        /** @enum {string} */
+                        lifecycle: "open" | "paused" | "closed";
+                        capabilities: {
+                            read: boolean;
+                            send: boolean;
+                            accept: boolean;
+                            reopen: boolean;
+                            moderate: boolean;
+                            leave: boolean;
+                            /** @enum {string} */
+                            state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                        };
+                        /** @enum {string} */
+                        notification: "all" | "mentions" | "muted";
+                        unreadCount: number;
+                        latestSequence: string;
+                        readSequence: string;
+                        changeSequence: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                        lastMessage: string | null;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getMessagingConversation: {
+        parameters: {
+            query?: {
+                before?: string;
+                pinned?: "true" | "false";
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        viewerPolicyVersion: string;
+                        conversation: {
+                            /** @enum {string} */
+                            type: "direct" | "group";
+                            contextId: string | null;
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            description: string;
+                            guidelines: string;
+                            /**
+                             * @default private
+                             * @enum {string}
+                             */
+                            access: "private" | "public";
+                            /** @default null */
+                            publicContext: {
+                                /** @enum {string} */
+                                type: "auction";
+                                id: string;
+                                universalTokenId?: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "liquid-edition";
+                                chainId: number;
+                                contractAddress: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "drop-announcement";
+                                id: string;
+                            } | unknown;
+                            owner: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            counterpart: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            /** @enum {string} */
+                            lifecycle: "open" | "paused" | "closed";
+                            capabilities: {
+                                read: boolean;
+                                send: boolean;
+                                accept: boolean;
+                                reopen: boolean;
+                                moderate: boolean;
+                                leave: boolean;
+                                /** @enum {string} */
+                                state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                            };
+                            /** @enum {string} */
+                            notification: "all" | "mentions" | "muted";
+                            unreadCount: number;
+                            latestSequence: string;
+                            readSequence: string;
+                            changeSequence: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            lastMessage: string | null;
+                        };
+                        messages: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            conversationId: string;
+                            sequence: string;
+                            /** Format: uuid */
+                            clientMessageId: string;
+                            author: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            };
+                            body: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            editedAt: string | null;
+                            deleted: boolean;
+                            version: number;
+                            /** Format: uuid */
+                            replyToId: string | null;
+                            /** @default null */
+                            reference: {
+                                /** @enum {string} */
+                                kind: "post" | "artwork";
+                                id: string;
+                                /** @enum {string} */
+                                state: "available" | "unavailable";
+                                title: string | null;
+                                href: string | null;
+                            } | null;
+                            /** @default null */
+                            linkPreview: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uri */
+                                url: string;
+                                domain: string;
+                                title: string | null;
+                                description: string | null;
+                            } | null;
+                            attachments: {
+                                /** Format: uuid */
+                                id: string;
+                                contentType: string;
+                                sizeBytes: number;
+                                width: number;
+                                height: number;
+                            }[];
+                            reactions: {
+                                /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                                emoji: string;
+                                count: number;
+                                reacted: boolean;
+                            }[];
+                            mentionUserIds: string[];
+                            mentions: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            }[];
+                            pinned: boolean;
+                            collapsed: boolean;
+                            reported: boolean;
+                            canEdit: boolean;
+                            canDelete: boolean;
+                        }[];
+                        nextCursor: string | null;
+                        changeCursor: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getMessagingChanges: {
+        parameters: {
+            query: {
+                after: string;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        viewerPolicyVersion: string;
+                        conversation: {
+                            /** @enum {string} */
+                            type: "direct" | "group";
+                            contextId: string | null;
+                            /** Format: uuid */
+                            id: string;
+                            title: string;
+                            description: string;
+                            guidelines: string;
+                            /**
+                             * @default private
+                             * @enum {string}
+                             */
+                            access: "private" | "public";
+                            /** @default null */
+                            publicContext: {
+                                /** @enum {string} */
+                                type: "auction";
+                                id: string;
+                                universalTokenId?: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "liquid-edition";
+                                chainId: number;
+                                contractAddress: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "drop-announcement";
+                                id: string;
+                            } | unknown;
+                            owner: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            counterpart: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            } | null;
+                            /** @enum {string} */
+                            lifecycle: "open" | "paused" | "closed";
+                            capabilities: {
+                                read: boolean;
+                                send: boolean;
+                                accept: boolean;
+                                reopen: boolean;
+                                moderate: boolean;
+                                leave: boolean;
+                                /** @enum {string} */
+                                state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                            };
+                            /** @enum {string} */
+                            notification: "all" | "mentions" | "muted";
+                            unreadCount: number;
+                            latestSequence: string;
+                            readSequence: string;
+                            changeSequence: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            lastMessage: string | null;
+                        };
+                        messages: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            conversationId: string;
+                            sequence: string;
+                            /** Format: uuid */
+                            clientMessageId: string;
+                            author: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            };
+                            body: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            editedAt: string | null;
+                            deleted: boolean;
+                            version: number;
+                            /** Format: uuid */
+                            replyToId: string | null;
+                            /** @default null */
+                            reference: {
+                                /** @enum {string} */
+                                kind: "post" | "artwork";
+                                id: string;
+                                /** @enum {string} */
+                                state: "available" | "unavailable";
+                                title: string | null;
+                                href: string | null;
+                            } | null;
+                            /** @default null */
+                            linkPreview: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uri */
+                                url: string;
+                                domain: string;
+                                title: string | null;
+                                description: string | null;
+                            } | null;
+                            attachments: {
+                                /** Format: uuid */
+                                id: string;
+                                contentType: string;
+                                sizeBytes: number;
+                                width: number;
+                                height: number;
+                            }[];
+                            reactions: {
+                                /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                                emoji: string;
+                                count: number;
+                                reacted: boolean;
+                            }[];
+                            mentionUserIds: string[];
+                            mentions: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            }[];
+                            pinned: boolean;
+                            collapsed: boolean;
+                            reported: boolean;
+                            canEdit: boolean;
+                            canDelete: boolean;
+                        }[];
+                        nextCursor: string;
+                        hasMore: boolean;
+                        resynchronize: boolean;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listMessagingParticipants: {
+        parameters: {
+            query?: {
+                after?: string;
+                search?: string;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        participants: {
+                            user: {
+                                id: string;
+                                username: string;
+                                address?: string;
+                                /** Format: uri */
+                                avatar?: string;
+                            };
+                            /** @enum {string} */
+                            state: "invited" | "joined" | "left" | "removed";
+                            owner: boolean;
+                            banned: boolean;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    executeMessagingCommand: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "accept" | "decline" | "reopen" | "leave" | "close" | "pause" | "resume";
+                } | {
+                    /** @enum {string} */
+                    action: "invite" | "ban" | "unban" | "unbanAndInvite";
+                    userId: string;
+                } | {
+                    /** @enum {string} */
+                    action: "preferences";
+                    /** @enum {string} */
+                    notification: "all" | "mentions" | "muted";
+                } | {
+                    /** @enum {string} */
+                    action: "settings";
+                    /** Format: date-time */
+                    expectedUpdatedAt?: string;
+                    settings: {
+                        title?: string;
+                        description?: string;
+                        guidelines?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    action: "read";
+                    sequence: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "direct" | "group";
+                        contextId: string | null;
+                        /** Format: uuid */
+                        id: string;
+                        title: string;
+                        description: string;
+                        guidelines: string;
+                        /**
+                         * @default private
+                         * @enum {string}
+                         */
+                        access: "private" | "public";
+                        /** @default null */
+                        publicContext: {
+                            /** @enum {string} */
+                            type: "auction";
+                            id: string;
+                            universalTokenId?: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "liquid-edition";
+                            chainId: number;
+                            contractAddress: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "drop-announcement";
+                            id: string;
+                        } | unknown;
+                        owner: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        counterpart: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        } | null;
+                        /** @enum {string} */
+                        lifecycle: "open" | "paused" | "closed";
+                        capabilities: {
+                            read: boolean;
+                            send: boolean;
+                            accept: boolean;
+                            reopen: boolean;
+                            moderate: boolean;
+                            leave: boolean;
+                            /** @enum {string} */
+                            state: "active" | "request" | "invited" | "banned" | "left" | "closed" | "read_only" | "unavailable";
+                        };
+                        /** @enum {string} */
+                        notification: "all" | "mentions" | "muted";
+                        unreadCount: number;
+                        latestSequence: string;
+                        readSequence: string;
+                        changeSequence: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                        lastMessage: string | null;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    createMessagingLinkPreview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        kind: "reference";
+                        reference: {
+                            /** @enum {string} */
+                            kind: "post" | "artwork";
+                            id: string;
+                            /** @enum {string} */
+                            state: "available" | "unavailable";
+                            title: string | null;
+                            href: string | null;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "external";
+                        preview: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uri */
+                            url: string;
+                            domain: string;
+                            title: string | null;
+                            description: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    sendMessagingMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    clientMessageId: string;
+                    body: string;
+                    /** Format: uuid */
+                    replyToId?: string;
+                    reference?: {
+                        /** @enum {string} */
+                        kind: "post";
+                        id: string;
+                    } | {
+                        /** @enum {string} */
+                        kind: "artwork";
+                        id: string;
+                    };
+                    /** Format: uuid */
+                    linkPreviewId?: string;
+                    /** Format: uri */
+                    linkPreviewUrl?: string;
+                    /** @default [] */
+                    attachmentIds?: string[];
+                    /** @default [] */
+                    mentionUserIds?: string[];
+                } | {
+                    body: string;
+                } | {
+                    attachmentIds: unknown[];
+                } | unknown;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        conversationId: string;
+                        sequence: string;
+                        /** Format: uuid */
+                        clientMessageId: string;
+                        author: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        };
+                        body: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        editedAt: string | null;
+                        deleted: boolean;
+                        version: number;
+                        /** Format: uuid */
+                        replyToId: string | null;
+                        /** @default null */
+                        reference: {
+                            /** @enum {string} */
+                            kind: "post" | "artwork";
+                            id: string;
+                            /** @enum {string} */
+                            state: "available" | "unavailable";
+                            title: string | null;
+                            href: string | null;
+                        } | null;
+                        /** @default null */
+                        linkPreview: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uri */
+                            url: string;
+                            domain: string;
+                            title: string | null;
+                            description: string | null;
+                        } | null;
+                        attachments: {
+                            /** Format: uuid */
+                            id: string;
+                            contentType: string;
+                            sizeBytes: number;
+                            width: number;
+                            height: number;
+                        }[];
+                        reactions: {
+                            /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                            emoji: string;
+                            count: number;
+                            reacted: boolean;
+                        }[];
+                        mentionUserIds: string[];
+                        mentions: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        }[];
+                        pinned: boolean;
+                        collapsed: boolean;
+                        reported: boolean;
+                        canEdit: boolean;
+                        canDelete: boolean;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    executeMessagingMessageCommand: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                conversationId: string;
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "edit";
+                    body: string;
+                    version: number;
+                    removePreview?: boolean;
+                } | {
+                    /** @enum {string} */
+                    action: "delete";
+                } | {
+                    /** @enum {string} */
+                    action: "pin";
+                    pinned: boolean;
+                } | {
+                    /** @enum {string} */
+                    action: "reaction";
+                    /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                    emoji: string;
+                    active: boolean;
+                } | {
+                    /** @enum {string} */
+                    action: "report";
+                    reason: string;
+                    /** @default true */
+                    hide?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        conversationId: string;
+                        sequence: string;
+                        /** Format: uuid */
+                        clientMessageId: string;
+                        author: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        };
+                        body: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        editedAt: string | null;
+                        deleted: boolean;
+                        version: number;
+                        /** Format: uuid */
+                        replyToId: string | null;
+                        /** @default null */
+                        reference: {
+                            /** @enum {string} */
+                            kind: "post" | "artwork";
+                            id: string;
+                            /** @enum {string} */
+                            state: "available" | "unavailable";
+                            title: string | null;
+                            href: string | null;
+                        } | null;
+                        /** @default null */
+                        linkPreview: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uri */
+                            url: string;
+                            domain: string;
+                            title: string | null;
+                            description: string | null;
+                        } | null;
+                        attachments: {
+                            /** Format: uuid */
+                            id: string;
+                            contentType: string;
+                            sizeBytes: number;
+                            width: number;
+                            height: number;
+                        }[];
+                        reactions: {
+                            /** @description Exactly one complete Unicode emoji sequence, including supported skin-tone or joined sequences; plain text and multiple emoji are rejected. */
+                            emoji: string;
+                            count: number;
+                            reacted: boolean;
+                        }[];
+                        mentionUserIds: string[];
+                        mentions: {
+                            id: string;
+                            username: string;
+                            address?: string;
+                            /** Format: uri */
+                            avatar?: string;
+                        }[];
+                        pinned: boolean;
+                        collapsed: boolean;
+                        reported: boolean;
+                        canEdit: boolean;
+                        canDelete: boolean;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    setMessagingBlock: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    blocked: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listMessagingBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        username: string;
+                        address?: string;
+                        /** Format: uri */
+                        avatar?: string;
+                    }[];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    uploadMessagingImage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+                "content-type": "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+                "x-messaging-image-width": number;
+                "x-messaging-image-height": number;
+                /** @description Stable attachment ID reused for every attempt to upload the same image. */
+                "x-messaging-upload-id"?: string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/png": string;
+                "image/webp": string;
+                "image/gif": string;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        contentType: string;
+                        sizeBytes: number;
+                        width: number;
+                        height: number;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readMessagingImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized private image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                    "image/gif": string;
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    attachMessagingSharedUpload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required request marker for messaging mutations. */
+                "x-messaging-request": "1";
+                /** @description Reject the operation if the signed-in account no longer matches this user ID. */
+                "x-messaging-actor"?: string;
+            };
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    uploadId: string;
+                    /** Format: uuid */
+                    attachmentId?: string;
+                    width: number;
+                    height: number;
+                    /**
+                     * @default message
+                     * @enum {string}
+                     */
+                    purpose?: "message" | "conversation";
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        contentType: string;
+                        sizeBytes: number;
+                        width: number;
+                        height: number;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+}

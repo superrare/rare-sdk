@@ -187,7 +187,7 @@ async function approveReleaseMinterIfNeeded(opts: {
     return undefined;
   }
 
-  if (opts.autoApprove === false) {
+  if (opts.autoApprove !== true) {
     throw new MinterApprovalRequiredError({
       collection: opts.contract,
       minter: opts.minter,
@@ -670,12 +670,9 @@ export function createReleaseNamespace(
       const rareMinter = requireRareMinterAddress(addresses.rareMinter);
       const { walletClient, account, accountAddress } = requireWallet(config);
       const currencyAddress = params.currency === undefined ? ETH_ADDRESS : resolveCurrencyForSdk(params.currency, chain).address;
-      const currencyDecimals = currencyAddress === ETH_ADDRESS || typeof params.price === 'bigint'
-        ? null
-        : await readCurrencyDecimals(publicClient, currencyAddress, { required: true });
       const plan = planReleaseConfigure({ ...params, currency: currencyAddress }, {
         accountAddress,
-        currencyDecimals,
+        currencyDecimals: null,
         nowSeconds: currentUnixTimestamp(),
       });
 

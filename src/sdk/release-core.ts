@@ -4,8 +4,6 @@ import {
   isAddressEqual,
   isHex,
   keccak256,
-  parseEther,
-  parseUnits,
   type Address,
   type Hex,
 } from 'viem';
@@ -92,7 +90,6 @@ export type ReleaseDirectSaleMintPlan = {
   price?: AmountInput;
   proof: Hex[];
   proofProvided: boolean;
-  recipient?: Address;
   autoApprove: boolean;
 };
 
@@ -193,23 +190,11 @@ export function normalizeReleasePrice(opts: {
   amount: AmountInput;
   currencyDecimals: number | null;
 }): bigint {
-  const { currencyAddress, amount, currencyDecimals } = opts;
-
-  if (typeof amount === 'bigint') {
-    if (amount < 0n) {
-      throw new Error('price must be greater than or equal to 0.');
-    }
-    return amount;
-  }
-
-  const parsed = currencyAddress === ETH_ADDRESS
-    ? parseEther(String(amount))
-    : parseUnits(String(amount), requireCurrencyDecimals(currencyDecimals));
-
-  if (parsed < 0n) {
+  const { amount } = opts;
+  if (amount < 0n) {
     throw new Error('price must be greater than or equal to 0.');
   }
-  return parsed;
+  return amount;
 }
 
 export function resolveReleaseSplits(opts: {
@@ -316,8 +301,7 @@ export function planReleaseDirectSaleMint(params: ResolvedCurrencyParam<ReleaseM
     price: params.price,
     proof: normalizeReleaseAllowlistProof(params.proof ?? []),
     proofProvided: params.proof !== undefined,
-    recipient: params.recipient,
-    autoApprove: params.autoApprove ?? true,
+    autoApprove: params.autoApprove ?? false,
   };
 }
 
@@ -497,9 +481,6 @@ export function preflightReleaseDirectSaleMint(params: {
   }
   if (!status.configured) {
     throw new Error('RareMinter direct sale is not configured for this contract.');
-  }
-  if (plan.recipient !== undefined && !isAddressEqual(plan.recipient, buyer)) {
-    throw new Error('RareMinter direct sale mint does not support a separate recipient; it mints to the connected wallet.');
   }
   if (status.startTime > nowSeconds) {
     throw new Error(`RareMinter direct sale has not started. Starts at ${status.startTime}.`);
@@ -712,16 +693,6 @@ export function shapeReleaseStatus(opts: {
     isEth: opts.directSale.currencyAddress === ETH_ADDRESS,
     now: opts.nowSeconds,
   };
-}
-
-function requireCurrencyDecimals(decimals: number | null): number {
-  if (decimals === null) {
-    throw new Error('currencyDecimals is required to normalize ERC20 price amounts.');
-  }
-  if (!Number.isInteger(decimals) || decimals < 0) {
-    throw new Error('currencyDecimals must be a non-negative integer.');
-  }
-  return decimals;
 }
 
 function requireReleaseAccountCounter(value: bigint | null, label: string): bigint {

@@ -57,8 +57,9 @@ const scenarios: Scenario[] = [
     approval: 'erc20',
     options: { reads: { marketplaceSettings, calculateMarketplaceFee: 30_000n } },
     receiptFailure: { receiptStatus: 'reverted' },
-    confirm: (rare) => rare.auction.bid({ contract: nft, tokenId: 1n, price: 1_000_000n, currency: 'usdc' }),
+    confirm: (rare) => rare.auction.bid({ autoApprove: true, contract: nft, tokenId: 1n, price: 1_000_000n, currency: 'usdc' }),
     submit: (rare) => rare.auction.bid({
+      autoApprove: true,
       contract: nft,
       tokenId: 1n,
       price: 1_000_000n,
@@ -70,8 +71,8 @@ const scenarios: Scenario[] = [
     name: 'listing.create (NFT approval)',
     approval: 'nft',
     receiptFailure: { receiptStatus: 'reverted' },
-    confirm: (rare) => rare.listing.create({ contract: nft, tokenId: 1n, price: 1n }),
-    submit: (rare) => rare.listing.create({ contract: nft, tokenId: 1n, price: 1n, waitForReceipt: false }),
+    confirm: (rare) => rare.listing.create({ autoApprove: true, contract: nft, tokenId: 1n, price: 1n }),
+    submit: (rare) => rare.listing.create({ autoApprove: true, contract: nft, tokenId: 1n, price: 1n, waitForReceipt: false }),
   },
   {
     name: 'offer.cancel (plain write)',
@@ -134,8 +135,9 @@ const scenarios: Scenario[] = [
       })],
     },
     receiptFailure: { reads: { ownerOf: account }, receiptLogs: [] },
-    confirm: (rare) => rare.offer.batch.accept({ creator: counterparty, root, proof: [], contract: nft, tokenId: 1n }),
+    confirm: (rare) => rare.offer.batch.accept({ autoApprove: true, creator: counterparty, root, proof: [], contract: nft, tokenId: 1n }),
     submit: (rare) => rare.offer.batch.accept({
+      autoApprove: true,
       creator: counterparty,
       root,
       proof: [],
@@ -149,8 +151,8 @@ const scenarios: Scenario[] = [
     approval: 'erc20',
     options: { reads: { getFee: 10n } },
     receiptFailure: { reads: { getFee: 10n }, receiptError: new Error('receipt polling timed out') },
-    confirm: (rare) => rare.bridge.send({ destinationChain: 'base-sepolia', amount: 5n }),
-    submit: (rare) => rare.bridge.send({ destinationChain: 'base-sepolia', amount: 5n, waitForReceipt: false }),
+    confirm: (rare) => rare.bridge.send({ autoApprove: true, destinationChain: 'base-sepolia', amount: 5n }),
+    submit: (rare) => rare.bridge.send({ autoApprove: true, destinationChain: 'base-sepolia', amount: 5n, waitForReceipt: false }),
   },
   {
     name: 'collection.mint (receipt-derived values)',
@@ -234,6 +236,7 @@ const scenarios: Scenario[] = [
     approval: 'erc20',
     receiptFailure: { receiptError: new Error('receipt polling timed out') },
     confirm: (rare) => rare.swap.sellToken({
+      autoApprove: true,
       route: 'raw',
       token: nft,
       amountIn: 1n,
@@ -242,6 +245,7 @@ const scenarios: Scenario[] = [
       inputs: ['0x'],
     }),
     submit: (rare) => rare.swap.sellToken({
+      autoApprove: true,
       route: 'raw',
       token: nft,
       amountIn: 1n,
@@ -314,6 +318,7 @@ describe('waitForReceipt: false around approvals', () => {
     });
 
     const submission = connect(chain).auction.bid({
+      autoApprove: true,
       contract: nft,
       tokenId: 1n,
       price: 1_000_000n,
@@ -407,7 +412,6 @@ describe('waitForReceipt: false with caller-owned params', () => {
     };
 
     const submitted = await connect(chain).collection.mint(params);
-    // eslint-disable-next-line functional/immutable-data -- the scenario is a caller mutating its own params
     params.contract = counterparty;
 
     await expect(submitted.wait()).resolves.toMatchObject({ tokenId: 7n });

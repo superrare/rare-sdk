@@ -17,7 +17,7 @@ import { createRareClient } from '../src/sdk/client.js';
 import type {
   BatchAuctionCreateParams,
   RareClient,
-  TokenTradeQuoteParams,
+  SellTokenParams,
 } from '../src/sdk/index.js';
 import {
   account,
@@ -61,6 +61,7 @@ const orderingScenarios: OrderingScenario[] = [
     name: 'auction.bid (ERC20 approval)',
     options: { reads: { marketplaceSettings, calculateMarketplaceFee: 30_000n } },
     submit: (rare) => rare.auction.bid({
+      autoApprove: true,
       contract: nft,
       tokenId: 1n,
       price: 1_000_000n,
@@ -70,7 +71,7 @@ const orderingScenarios: OrderingScenario[] = [
   },
   {
     name: 'listing.create (NFT approval)',
-    submit: (rare) => rare.listing.create({ contract: nft, tokenId: 1n, price: 1n, waitForReceipt: false }),
+    submit: (rare) => rare.listing.create({ autoApprove: true, contract: nft, tokenId: 1n, price: 1n, waitForReceipt: false }),
   },
 ];
 
@@ -95,6 +96,7 @@ const batchTokenList = buildBatchTokenTreeArtifact({
 });
 
 const batchAuctionCreate: BatchAuctionCreateParams = {
+  autoApprove: true,
   artifact: batchTokenList,
   root: batchTokenList.root,
   price: 1n,
@@ -204,7 +206,7 @@ function connectWithUniswap(chain: ChainDouble): RareClient {
   });
 }
 
-const uniswapSell: TokenTradeQuoteParams = { token: soldToken, amountIn: 1_000n, route: 'uniswap' };
+const uniswapSell: SellTokenParams = { token: soldToken, amountIn: 1_000n, route: 'uniswap', autoApprove: true };
 const uniswapSellChain: ChainDoubleOptions = { reads: { decimals: 18 } };
 
 describe('swap.sellToken through the Uniswap API with an allowance reset and waitForReceipt: false', () => {

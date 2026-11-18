@@ -1,3 +1,5 @@
+import type { RareAccountClient, RareAccountFeatures, RareAccountTransport, RareAccountSessionStore } from './account.js';
+import type { RareApi } from '../api.js';
 import type { Address, PublicClient, WalletClient } from 'viem';
 import type {
   LiquidEdition,
@@ -14,6 +16,8 @@ import type {
   PinMetadataParams,
   SearchPageResponse,
   UserProfile,
+  UserSelector,
+  UserListOptions,
 } from '../api.js';
 import type { NftIdentityParams } from '../nft-core.js';
 import type { SupportedChain } from '../../contracts/addresses.js';
@@ -26,7 +30,9 @@ import type { ListingNamespace } from './listing.js';
 import type { OfferNamespace } from './offer.js';
 import type { SwapNamespace } from './swap.js';
 import type { TokenNamespace } from './token.js';
-import type { UtilsNamespace } from './utils.js';
+import type { CartNamespace } from './cart.js';
+import type { PrintsNamespace } from './prints.js';
+import type { RareUtilsNamespace } from './utils.js';
 
 /**
  * Configuration for {@link createRareClient}.
@@ -94,6 +100,9 @@ export type RareClientContracts = {
   liquidFactory?: Address;
   swapRouter?: Address;
   v4Quoter?: Address;
+  cart?: Address;
+  cartLens?: Address;
+  cartHashes?: Address;
 }
 
 export type SearchNamespace = {
@@ -104,11 +113,14 @@ export type SearchNamespace = {
 }
 
 export type NftNamespace = {
+  favoriteCount: (params: RareClientNftGetParams) => Promise<number>;
   get: (params: RareClientNftGetParams) => Promise<Nft>;
 }
 
 export type UserNamespace = {
-  get: (address: string) => Promise<UserProfile>;
+  get: (address: string | UserSelector) => Promise<UserProfile>;
+  followers: { list: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>> };
+  following: { list: (input: UserSelector | string, options?: UserListOptions) => Promise<SearchPageResponse<UserProfile>> };
 }
 
 export type IpfsNamespace = {
@@ -134,7 +146,7 @@ export type CurrencyNamespace = {
 /**
  * Chain-bound RARE SDK surface returned by {@link createRareClient}.
  */
-export type RareClient = {
+export type RareChainFeatures = {
   /**
    * Supported RARE chain inferred from the viem public client.
    */
@@ -153,16 +165,57 @@ export type RareClient = {
   auction: AuctionNamespace;
   offer: OfferNamespace;
   listing: ListingNamespace;
-  utils: UtilsNamespace;
+  utils: RareUtilsNamespace;
   search: SearchNamespace;
   nft: NftNamespace;
   collection: CollectionNamespace;
   ipfs: IpfsNamespace;
+  drops: { list: RareApi['getDrops']; get: RareApi['getDrop'] };
+  posts: { list: RareApi['getPosts']; get: RareApi['getPost']; comments: RareApi['getPostComments'] };
   user: UserNamespace;
   media: MediaNamespace;
   import: ImportNamespace;
   token: TokenNamespace;
   currency: CurrencyNamespace;
+  cart: CartNamespace;
+  prints: PrintsNamespace;
 }
 
 export type { IntegerInput };
+
+
+/** Public Rare API methods available without a blockchain RPC client. */
+export type RarePublicFeatures = {
+  utils: RareUtilsNamespace;
+  token: Pick<TokenNamespace, 'getPrice'>;
+  search: {
+    liquidEditions: RareApi['searchLiquidEditions'];
+    nfts: RareApi['searchNfts'];
+    collections: RareApi['searchCollections'];
+    events: RareApi['searchEvents'];
+  };
+  nft: {
+    get: (params: NftIdentityParams) => Promise<Nft>;
+    favoriteCount: (params: NftIdentityParams) => Promise<number>;
+  };
+  collection: { get: RareApi['getCollection'] };
+  liquidEdition: { get: (params: Omit<NftIdentityParams, 'tokenId'>) => Promise<LiquidEdition> };
+  user: UserNamespace;
+  drops: { list: RareApi['getDrops']; get: RareApi['getDrop'] };
+  posts: { list: RareApi['getPosts']; get: RareApi['getPost']; comments: RareApi['getPostComments'] };
+  messaging: { public: RareApi['messaging'] };
+  ipfs: IpfsNamespace;
+  media: MediaNamespace;
+  import: { erc721: RareApi['importErc721'] };
+};
+
+export type RareApiClient = RarePublicFeatures & RareAccountClient;
+export type RareExternalApiClient = RarePublicFeatures & RareAccountFeatures;
+export type RareClient = RareChainFeatures & RareAccountClient & { messaging: RareAccountClient['messaging'] & { public: RareApi['messaging'] } };
+export type RareExternalClient = RareChainFeatures & RareAccountFeatures & { messaging: RareAccountFeatures['messaging'] & { public: RareApi['messaging'] } };
+
+/** API and account operations need no publicClient or blockchain RPC. */
+export type RareApiClientConfig = { apiBaseUrl?: string; apiFetch?: typeof fetch; sessionStore?: RareAccountSessionStore; publicClient?: never; walletClient?: never };
+export type RareExternalApiClientConfig = Omit<RareApiClientConfig, 'sessionStore'> & { transport: RareAccountTransport };
+export type RareManagedClientConfig = RareClientConfig & { sessionStore?: RareAccountSessionStore };
+export type RareExternalClientConfig = RareClientConfig & { transport: RareAccountTransport };

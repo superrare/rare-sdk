@@ -1,0 +1,467 @@
+import type { PrintsNamespace } from './types/prints.js';
+import { printBatchInputDigest } from './prints-batch-core.js';
+import { parsePrintListingTerms } from './prints-core.js';
+import type { CartListingPublishParams, CartListingPublishResult, CartPrintListingPublishParams } from './types/cart.js';
+import { erc20Abi, getAddress, isAddressEqual, parseEventLogs, type Address, type Hash, type Hex, type PublicClient, type TransactionReceipt } from 'viem';
+import { cartAbi } from '../contracts/abis/cart.js';
+import { cartLensAbi } from '../contracts/abis/cart-lens.js';
+import { ETH_ADDRESS, type SupportedChain } from '../contracts/addresses.js';
+import { approvalAbi, NftApprovalRequiredError, runWithApprovalSideEffectAlert, waitForApprovalState } from './approvals-shell.js';
+import { buildCartListingRootArtifact, cartDomain, cartMaximumCheckoutGas, planCartCheckoutGas, hashCartListing, hashCartListingRoot, hashCartOrder, parseCartListingRootArtifact, validateCartCheckoutIntent, validateCartCheckoutPreparationForPurchase, validateCartListingIntent, validateCartSettledOrderLines, validateCartApprovedSwapOutputs } from './cart-core.js';
+import { assertSufficientPaymentBalance, PaymentApprovalRequiredError, preparePaymentAmountForSpender } from './payments-shell.js';
+import { waitForSuccessfulTransactionReceipt } from './transaction-receipt.js';
+import type { RareClientConfig } from './types/client.js';
+import type { CartApiPreparedPurchase, CartCheckoutIntent, CartCheckoutPreparation, CartCheckoutQuote } from './types/cart-api.js';
+import { cartFulfillmentKinds, type CartCheckoutAuthorization, type CartCheckoutParams, type CartListing, type CartNamespace, type CartPurchaseParams, type CartPurchaseResult } from './types/cart.js';
+import { requireWallet } from './wallet-shell.js';
+import { validateCartListingPublication } from './cart-listing-publication-core.js';
+import { createCartApiNamespace } from './cart-api.js';
+import { createCartRoutingNamespace } from './cart-routing.js';
+import { createEligibilityNamespace } from './eligibility.js';
+
+export type * from './types/cart.js';
+export type * from './types/cart-api.js';
+export type * from './types/cart-routing.js';
+
+export class CartPreparationError extends Error {
+  readonly code: string;
+  readonly details: unknown;
+  constructor(code: string, message: string, details?: unknown) {
+    super(message); this.name = 'CartPreparationError'; this.code = code; this.details = details;
+  }
+}
+export class CartVerificationError extends Error {
+  readonly txHash: Hex; readonly orderId: Hex; readonly cart: Address;
+  constructor(message: string, context: { txHash: Hex; orderId: Hex; cart: Address }) {
+    super(message); this.name = 'CartVerificationError'; this.txHash = context.txHash;
+    this.orderId = context.orderId; this.cart = context.cart;
+  }
+}
+export class CartExecutionError extends Error {
+  readonly orderId: Hex; readonly cart: Address;
+  constructor(message: string, context: { orderId: Hex; cart: Address; cause: unknown }) {
+    super(message, { cause: context.cause }); this.name = 'CartExecutionError'; this.orderId = context.orderId; this.cart = context.cart;
+  }
+}
+
+export function createCartNamespace(
+  publicClient: PublicClient,
+  config: RareClientConfig,
+  chain: SupportedChain,
+  chainId: number,
+  addresses: { cart?: Address; cartLens?: Address },
+  getPrintPreparation: PrintsNamespace['listings']['getPreparation'],
+  authenticatedFetch?: typeof globalThis.fetch,
+): Omit<CartNamespace, 'orders'> {
+  const api = createCartApiNamespace({ baseUrl: config.apiBaseUrl, fetch: config.apiFetch }, { chainId, cartAddress: addresses.cart }, authenticatedFetch);
+  const requireCart = (): Address => {
+    if (!addresses.cart) throw new Error(`Cart is not deployed on "${chain}". Available on: sepolia.`);
+    return addresses.cart;
+  };
+  const writeSimple = async (functionName: 'cancelListing' | 'cancelListingRoot' | 'invalidateListingNonce', args: readonly Hex[] = []) => {
+    const cart = requireCart(); const { walletClient, account } = requireWallet(config);
+    const txHash = await walletClient.writeContract({ address: cart, abi: cartAbi, functionName, args, account, chain: undefined } as Parameters<typeof walletClient.writeContract>[0]);
+    const receipt = await waitForSuccessfulTransactionReceipt(publicClient, { txHash, operation: `cart ${functionName}`, marketplace: cart });
+    return { txHash, receipt };
+  };
+  const setApproval = async (tokenContract: Address, approved: boolean) => {
+    const cart = requireCart();
+    const { walletClient, account, accountAddress } = requireWallet(config);
+    const currentApproval = await publicClient.readContract({
+      address: tokenContract,
+      abi: approvalAbi,
+      functionName: 'isApprovedForAll',
+      args: [accountAddress, cart],
+    });
+    if (currentApproval === approved) return { txHash: undefined };
+
+    const txHash = await walletClient.writeContract({
+      address: tokenContract,
+      abi: approvalAbi,
+      functionName: 'setApprovalForAll',
+      args: [cart, approved],
+      account,
+      chain: undefined,
+    });
+    const receipt = await waitForSuccessfulTransactionReceipt(publicClient, {
+      txHash,
+      operation: approved ? 'approve collection for Cart' : 'revoke collection approval for Cart',
+      marketplace: tokenContract,
+    });
+    await waitForApprovalState(publicClient, tokenContract, accountAddress, cart, approved);
+    return { txHash, receipt };
+  };
+
+  async function publishListing(params: CartListingPublishParams): Promise<CartListingPublishResult>;
+  async function publishListing(params: CartPrintListingPublishParams): Promise<Omit<CartListingPublishResult, 'preparation'>>;
+  async function publishListing(params: CartListingPublishParams | CartPrintListingPublishParams) {
+    const { walletClient, account, accountAddress } = requireWallet(config);
+    const cart = requireCart();
+    const input = 'preparation' in params ? structuredClone(params.preparation)
+      : params.printPreparationId === undefined ? structuredClone(params.printPreparations)
+      : await getPrintPreparation(params.printPreparationId);
+    if ('printPreparationId' in params && params.printPreparationId !== undefined && ('artifact' in input || Array.isArray(input) || !('id' in input) || input.id !== params.printPreparationId)) {
+      throw new Error('Rare API returned a different print preparation.');
+    }
+    const preparation = 'artifact' in input ? input : undefined;
+    const printPreparations = 'artifact' in input ? [] : Array.isArray(input) ? input : [input];
+    const printTerms = printPreparations.map((print) => {
+      const terms = parsePrintListingTerms(print);
+      if (String(chainId) !== print.chain_id || !isAddressEqual(cart, getAddress(print.cart_address)) ||
+        !isAddressEqual(accountAddress, terms.listing.seller) ||
+        hashCartListing(terms.listing, chainId, cart) !== print.listing_digest) {
+        throw new Error('Print preparation does not match its Listing, seller or Cart deployment.');
+      }
+      return terms;
+    });
+    if (preparation === undefined && (printTerms.length < 1 || printTerms.length > 10_000 ||
+        new Set(printPreparations.map(({ id }) => id)).size !== printPreparations.length)) {
+      throw new Error('Publish between 1 and 10,000 distinct print preparations.');
+    }
+    const recovery = 'preparation' in params ? undefined : params.recovery;
+    const recoveryKey = `publish:${printBatchInputDigest([chainId, cart, accountAddress, printPreparations.map(({ id }) => id)])}`;
+    const saved = await recovery?.read(recoveryKey);
+    const savedArtifact = saved === undefined ? undefined : parseCartListingRootArtifact(saved);
+    if (savedArtifact !== undefined && params.signedArtifact !== undefined) throw new Error('Use either saved print recovery or an explicit signed artifact.');
+    const retainedArtifact = savedArtifact === undefined
+      ? (params.signedArtifact === undefined ? undefined : structuredClone(params.signedArtifact))
+      : { ...savedArtifact, signature: requirePrintPublicationSignature(savedArtifact.signature) };
+    const deadline = printTerms.reduce<bigint | undefined>((minimum, terms) =>
+      minimum === undefined || terms.deadline < minimum ? terms.deadline : minimum, undefined);
+    const artifact = preparation?.artifact ?? buildCartListingRootArtifact({
+      listings: printTerms.map(({ listing }) => listing), chainId, cart,
+      nonce: retainedArtifact === undefined
+        ? await publicClient.readContract({ address: cart, abi: cartAbi, functionName: 'listingNonces', args: [accountAddress] })
+        : BigInt(retainedArtifact.root.nonce),
+      deadline: deadline ?? 0n,
+    });
+    if (preparation === undefined && BigInt(artifact.root.deadline) <= BigInt(Math.floor(Date.now() / 1000))) {
+      throw new Error('Print Listing terms have expired. Prepare fresh terms before publishing.');
+    }
+    validateCartListingPublication(preparation ?? { artifact, intent: { seller: accountAddress, deadline: BigInt(artifact.root.deadline) } },
+      retainedArtifact, { chainId, cart, seller: accountAddress });
+    if (!isAddressEqual(artifact.seller, accountAddress)) throw new Error('Listing Root signer does not match the connected seller.');
+    const requiredApprovals = requiredCartApprovals(artifact.entries.map((entry) => ({
+      ...entry.listing,
+      tokenId: BigInt(entry.listing.tokenId),
+      minimumUnitPrice: BigInt(entry.listing.minimumUnitPrice),
+      availableQuantity: BigInt(entry.listing.availableQuantity),
+    })));
+    const approvalStates = await Promise.all(requiredApprovals.map(async (tokenContract) => ({
+      tokenContract,
+      approved: await publicClient.readContract({ address: tokenContract, abi: approvalAbi,
+        functionName: 'isApprovedForAll', args: [accountAddress, requireCart()] }),
+    })));
+    const missingApprovals = approvalStates.filter(({ approved }) => !approved).map(({ tokenContract }) => tokenContract);
+    if (missingApprovals.length > 0 && params.autoApprove !== true) {
+      throw new NftApprovalRequiredError({ nftAddress: missingApprovals[0]!, operator: requireCart() });
+    }
+    const approvals = await missingApprovals.reduce(async (pending, tokenContract) => {
+      const previous = await pending;
+      const approval = await setApproval(tokenContract, true);
+      return approval.txHash === undefined || approval.receipt === undefined
+        ? previous
+        : [...previous, { txHash: approval.txHash, receipt: approval.receipt }];
+    }, Promise.resolve([] as Array<{ txHash: Hash; receipt: TransactionReceipt }>));
+    const root = { listingsRoot: artifact.root.listingsRoot, nonce: BigInt(artifact.root.nonce), deadline: BigInt(artifact.root.deadline) };
+    const signature = retainedArtifact?.signature ?? await walletClient.signTypedData({ account, domain: cartDomain(artifact.chainId, artifact.cart), primaryType: 'ListingRoot', types: { ListingRoot: [
+      { name: 'listingsRoot', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
+    ] }, message: root });
+    const signedArtifact = { ...artifact, signature };
+    if (recovery !== undefined && saved === undefined)
+      await recovery.save(recoveryKey, JSON.stringify(signedArtifact));
+    await params.onSigned?.(structuredClone(signedArtifact));
+    const publishedRoot = preparation === undefined
+      ? await api.listing.publishPrintPreparations(printPreparations.map(({ id }) => id), signedArtifact)
+      : await api.listing.publish(preparation.intent, signedArtifact);
+    return { ...(preparation === undefined ? {} : { preparation }), signedArtifact, publishedRoot,
+      approvalTxHashes: approvals.map(({ txHash }) => txHash),
+      approvalReceipts: approvals.map(({ receipt }) => receipt) };
+  }
+
+  const preparations = new WeakMap<CartCheckoutQuote, CartCheckoutPreparation>();
+  const prepareCheckout = (intent: CartCheckoutIntent) => {
+    const validation = validateCartCheckoutIntent(intent);
+    if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'Cart checkout intent is invalid.', validation.issues);
+    const defaultRecipient = config.account ?? config.walletClient?.account?.address;
+    const items = validation.value.items.map((item) => {
+      if (item.kind !== 'swap' || item.recipient !== undefined) return item;
+      if (defaultRecipient === undefined) throw new CartPreparationError('invalid_intent', 'Swap checkout requires an explicit recipient or a configured wallet account.');
+      return { ...item, recipient: defaultRecipient };
+    });
+    return api.checkout.preview({ ...validation.value, items });
+  };
+
+  return {
+    purchaseEligibility: createEligibilityNamespace(config, { chainId: chainId.toString(), cartAddress: requireCart }, authenticatedFetch),
+    catalog: { products: api.catalog.products, variants: api.catalog.variants },
+    approval: {
+      status({ contract: tokenContract, owner }) {
+        return publicClient.readContract({
+          address: tokenContract,
+          abi: approvalAbi,
+          functionName: 'isApprovedForAll',
+          args: [owner, requireCart()],
+        });
+      },
+      approve({ contract: tokenContract }) { return setApproval(tokenContract, true); },
+      revoke({ contract: tokenContract }) { return setApproval(tokenContract, false); },
+    },
+    routing: createCartRoutingNamespace(config, chain, addresses.cart),
+    listing: {
+      async prepare(intent) {
+        const validation = validateCartListingIntent(intent);
+        if (!validation.isValid) throw new CartPreparationError('invalid_listing_intent', 'Cart Listing intent is invalid.', validation.issues);
+        const cart = requireCart();
+        const listings = await api.listing.preview(validation.value);
+        const nonce = await publicClient.readContract({ address: cart, abi: cartAbi, functionName: 'listingNonces', args: [intent.seller] });
+        const artifact = buildCartListingRootArtifact({ listings, chainId, cart, nonce, deadline: intent.deadline });
+        return { intent, artifact, requiredApprovals: requiredCartApprovals(listings) };
+      },
+      publish: publishListing,
+      search: api.listing.search,
+      get: api.listing.get,
+      invalidate: api.listing.invalidate,
+      cancel(listingDigest) { return writeSimple('cancelListing', [listingDigest]); },
+      cancelRoot(rootDigest) { return writeSimple('cancelListingRoot', [rootDigest]); },
+      invalidateNonce() { return writeSimple('invalidateListingNonce'); },
+    },
+    checkout: {
+      async quote(intent, options) {
+        const preparation = await prepareCheckout(intent);
+        const quote = preparation.quote;
+        if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
+        preparations.set(quote, preparation);
+        options?.onPrepared?.(preparation);
+        return quote;
+      },
+      async pay(params) {
+        const preparation = preparations.get(params.quote);
+        if (preparation === undefined) {
+          throw new CartPreparationError('invalid_preparation', 'Use a quote from this Cart client.');
+        }
+        if (Date.parse(preparation.expiresAt) <= Date.now()) {
+          throw new CartPreparationError('quote_changed', 'The checkout quote expired. Review a fresh quote before paying.');
+        }
+        const generatedAttemptId = preparation.idempotencyKey ?? preparation.preparationReference;
+        if (params.method === 'card') {
+          const attemptId = params.attemptId ?? generatedAttemptId;
+          await params.onAttempt?.(attemptId);
+          const session = await api.checkout.payment({
+            method: 'card', preparation: { ...preparation, idempotencyKey: attemptId }, email: params.email,
+          });
+          return { method: 'card', attemptId, session };
+        }
+        const attemptId = generatedAttemptId;
+        await params.onAttempt?.(attemptId);
+        const purchase = await purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, {
+          preparation, autoApprove: params.autoApprove,
+          onAuthorized: params.onAuthorized,
+        });
+        return { method: 'wallet', attemptId, purchase };
+      },
+      async resume(attemptId) {
+        const { status, orderId } = await api.checkout.recover(attemptId);
+        if (status !== 'EXECUTED' || orderId === undefined) return { status, orderId };
+        return { status, orderId, receipt: await api.checkout.receipt(orderId) };
+      },
+      receipt: api.checkout.receipt,
+      recover: api.checkout.recover,
+      authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
+      payment: api.checkout.payment,
+      paymentMethods: api.checkout.paymentMethods,
+      card: api.checkout.card,
+      prepare: prepareCheckout,
+      purchase(params) { return purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, params); },
+      execute(params) { return executeCartCheckout(publicClient, config, chainId, requireCart(), addresses.cartLens, params); },
+    },
+  };
+}
+
+function requiredCartApprovals(listings: readonly CartListing[]): Address[] {
+  return listings.reduce<Address[]>((contracts, listing) => {
+    if (listing.fulfillmentKind !== cartFulfillmentKinds.erc721Transfer &&
+      listing.fulfillmentKind !== cartFulfillmentKinds.erc1155Transfer) return contracts;
+    const tokenContract = getAddress(listing.tokenContract);
+    return contracts.some((contract) => isAddressEqual(contract, tokenContract)) ? contracts : [...contracts, tokenContract];
+  }, []);
+}
+
+async function purchaseCartCheckout(
+  publicClient: PublicClient,
+  config: RareClientConfig,
+  api: ReturnType<typeof createCartApiNamespace>,
+  chainId: number,
+  cart: Address,
+  lens: Address | undefined,
+  params: CartPurchaseParams & {
+    onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void>;
+  },
+): Promise<CartPurchaseResult> {
+  const validation = validateCartCheckoutPreparationForPurchase(params.preparation, { chainId: BigInt(chainId), cart });
+  if (!validation.isValid) {
+    throw new CartPreparationError('invalid_preparation', 'Cart checkout preparation cannot be purchased.', validation.issues);
+  }
+
+  const { accountAddress } = requireWallet(config);
+  const paymentCurrency = params.preparation.intent.paymentCurrency;
+  await assertSufficientPaymentBalance(publicClient, {
+    account: accountAddress,
+    currency: paymentCurrency,
+    requiredAmount: params.preparation.paymentAmount,
+  });
+  if (!isAddressEqual(paymentCurrency, ETH_ADDRESS)) {
+    const allowance = await publicClient.readContract({
+      address: paymentCurrency,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [accountAddress, cart],
+    });
+    if (allowance < params.preparation.paymentAmount && params.autoApprove !== true) {
+      throw new PaymentApprovalRequiredError({ requiredAmount: params.preparation.paymentAmount, spenderAddress: cart });
+    }
+  }
+
+  const preparedPurchase = await authorizeCartCheckout(api, chainId, cart, params.preparation);
+  await params.onAuthorized?.(preparedPurchase);
+  const execution = await executeCartCheckout(publicClient, config, chainId, cart, lens, {
+    ...preparedPurchase.executePurchase,
+    autoApprove: params.autoApprove,
+  });
+  return { ...execution, preparation: params.preparation, preparedPurchase };
+}
+
+async function authorizeCartCheckout(
+  api: ReturnType<typeof createCartApiNamespace>, chainId: number, cart: Address,
+  preparation: CartCheckoutAuthorization,
+) {
+  if (!('schemaVersion' in preparation)) {
+    if ('preparationReference' in preparation) {
+      if (preparation.preparationReference.trim().length === 0 || preparation.preparationReference.length > 512) {
+        throw new CartPreparationError('invalid_preparation', 'Use the original checkout preparation reference.');
+      }
+      return api.checkout.prepare(preparation.preparationReference);
+    }
+    const validation = validateCartCheckoutIntent(preparation);
+    if (!validation.isValid) throw new CartPreparationError('invalid_intent', 'The saved checkout draft is invalid.', validation.issues);
+    return api.checkout.prepare(preparation);
+  }
+  const validation = validateCartCheckoutPreparationForPurchase(preparation, { chainId: BigInt(chainId), cart });
+  if (!validation.isValid) throw new CartPreparationError('invalid_preparation', 'Cart checkout preparation cannot be authorized.', validation.issues);
+  const delivery = preparation.intent.delivery;
+  const idempotencyKey = preparation.idempotencyKey;
+  if (delivery !== undefined && idempotencyKey === undefined) {
+    throw new CartPreparationError('invalid_preparation', 'Delivery checkout requires its original idempotency key.');
+  }
+  const preparedPurchase = await api.checkout.prepare(delivery === undefined || idempotencyKey === undefined
+    ? preparation.preparationReference
+    : { ...preparation.intent, delivery, idempotencyKey });
+  if (preparedPurchase.executePurchase.order.paymentAmount > preparation.paymentAmount) {
+    throw new CartPreparationError('quote_changed', 'The checkout total increased. Review a fresh quote before purchasing.');
+  }
+
+  const swapValidation = validateCartApprovedSwapOutputs(preparation.lines, preparedPurchase.executePurchase.lines);
+  if (!swapValidation.isValid) {
+    throw new CartPreparationError('quote_changed', 'The quoted token outputs changed. Review a fresh quote before purchasing.', swapValidation.issues);
+  }
+  return preparedPurchase;
+}
+
+async function executeCartCheckout(publicClient: PublicClient, config: RareClientConfig, chainId: number, cart: Address, lens: Address | undefined, params: CartCheckoutParams) {
+  const { walletClient, account, accountAddress } = requireWallet(config);
+  await assertSufficientPaymentBalance(publicClient, {
+    account: accountAddress,
+    currency: params.order.paymentCurrency,
+    requiredAmount: params.order.paymentAmount,
+  });
+  if (lens) {
+    const results = await readCartLensPreflight(publicClient, lens, chainId, cart, params);
+    if (!results.envelope.valid) throw new CartPreparationError(`lens_${results.envelope.code}`, 'Cart Lens rejected the Purchase Order.', results.envelope);
+    const invalidListing = results.listings.find((result) => !result.valid);
+    if (invalidListing) throw new CartPreparationError(`lens_${invalidListing.code}`, 'Cart Lens rejected a Listing authorization.', invalidListing);
+  }
+  const payment = await preparePaymentAmountForSpender({ publicClient, walletClient, account, accountAddress,
+    spenderAddress: cart, currency: params.order.paymentCurrency, requiredAmount: params.order.paymentAmount, autoApprove: params.autoApprove });
+  return runWithApprovalSideEffectAlert({ operation: 'cart checkout', approvals: [{ type: 'erc20', approvalTxHash: payment.approvalTxHash,
+    target: params.order.paymentCurrency, spender: cart }], run: async () => {
+      const simulation = await simulateCartCheckout(publicClient, cart, accountAddress, payment.value, params, 'Cart checkout simulation failed.');
+      const txHash = await walletClient.writeContract({ ...simulation.request, account, chain: undefined });
+      const receipt = await waitForSuccessfulTransactionReceipt(publicClient, { txHash, operation: 'cart checkout', marketplace: cart });
+      const purchaseLogs = parseEventLogs({ abi: cartAbi, logs: receipt.logs, eventName: 'PurchaseExecuted' }).filter((log) => log.args.orderId === params.order.orderId);
+      const lineLogs = parseEventLogs({ abi: cartAbi, logs: receipt.logs, eventName: 'OrderLineSettled' }).filter((log) => log.args.orderId === params.order.orderId);
+      const actionLogs = parseEventLogs({ abi: cartAbi, logs: receipt.logs, eventName: 'FulfillmentActionExecuted' }).filter((log) => log.args.orderId === params.order.orderId);
+      const executed = await publicClient.readContract({ address: cart, abi: cartAbi, functionName: 'executedOrderIds', args: [params.order.orderId] });
+      const expectedActionEvents = params.actions.reduce((count, action) =>
+        count + (params.lines[Number(action.lineIndex)]?.fulfillmentKind === 4 ? Number(action.quantity) : 1), 0);
+      if (purchaseLogs.length !== 1 || lineLogs.length !== params.lines.length || actionLogs.length !== expectedActionEvents || !executed) {
+        throw new CartVerificationError('Cart checkout receipt or post-write state did not match the signed Purchase Order.', { txHash, orderId: params.order.orderId, cart });
+      }
+      const settledLines = validateCartSettledOrderLines(params.lines, lineLogs.map((log) => ({
+        lineIndex: log.args.lineIndex,
+        sku: log.args.sku,
+        listingDigest: log.args.listingDigest,
+        fulfillmentKind: log.args.fulfillmentKind,
+        quantity: log.args.quantity,
+        settlementCurrency: log.args.settlementCurrency,
+        amount: log.args.amount,
+        paymentRecipient: log.args.paymentRecipient,
+      })));
+      if (!settledLines.isValid) {
+        throw new CartVerificationError('OrderLineSettled values did not match the signed Purchase Order.', {
+          txHash, orderId: params.order.orderId, cart,
+        });
+      }
+      const purchase = purchaseLogs[0]!;
+      if (!isAddressEqual(purchase.args.payer, accountAddress) || !isAddressEqual(purchase.args.paymentCurrency, params.order.paymentCurrency) || purchase.args.paymentAmount !== params.order.paymentAmount) {
+        throw new CartVerificationError('PurchaseExecuted values did not match the checkout plan.', { txHash, orderId: params.order.orderId, cart });
+      }
+      return { txHash, receipt, ...(payment.approvalTxHash === undefined ? {} : { approvalTxHash: payment.approvalTxHash }),
+        orderId: params.order.orderId, payer: accountAddress,
+        paymentCurrency: params.order.paymentCurrency, paymentAmount: params.order.paymentAmount,
+        lineCount: lineLogs.length, actionCount: actionLogs.length };
+    } });
+}
+
+async function readCartLensPreflight(publicClient: PublicClient, lens: Address, chainId: number, cart: Address, params: CartCheckoutParams) {
+  const envelope = await publicClient.readContract({ address: lens, abi: cartLensAbi, functionName: 'validatePurchaseEnvelope',
+    args: [cart, params.order, params.lines, params.route, params.actions, params.platformSignature] });
+  const listings = await Promise.all(params.listings.map(async (listing, listingIndex) => {
+    const rootIndex = Number(params.authorization.listingRootIndexes[listingIndex]);
+    const root = params.authorization.listingRoots[rootIndex];
+    const rootSignature = params.authorization.listingRootSignatures[rootIndex];
+    const proof = params.authorization.listingProofs[listingIndex];
+    if (!root || !rootSignature || !proof) throw new CartPreparationError('invalid_listing_authorization',
+      `Listing authorization at index ${listingIndex} is incomplete.`);
+    const digest = hashCartListing(listing, chainId, cart);
+    const requestedQuantity = params.lines.find((line) => line.listingDigest === digest)?.quantity ?? 0n;
+    return publicClient.readContract({ address: lens, abi: cartLensAbi, functionName: 'validateListing',
+      args: [cart, listing, root, rootSignature, proof, requestedQuantity] });
+  }));
+  return { envelope, listings };
+}
+
+async function simulateCartCheckout(publicClient: PublicClient, cart: Address, account: Address, value: bigint,
+  params: CartCheckoutParams, message: string) {
+  try {
+    const estimatedGas = await publicClient.estimateContractGas({ address: cart, abi: cartAbi, functionName: 'executePurchase',
+      args: [params.order, params.lines, params.listings, params.authorization, params.route, params.actions, params.platformSignature],
+      account, value });
+    const gasPlan = planCartCheckoutGas(estimatedGas);
+    if (!gasPlan.isValid) throw new CartPreparationError('resource_limit_exceeded', 'Cart checkout must use at most 12,000,000 gas.', gasPlan.issues);
+    const simulation = await publicClient.simulateContract({ address: cart, abi: cartAbi, functionName: 'executePurchase',
+      args: [params.order, params.lines, params.listings, params.authorization, params.route, params.actions, params.platformSignature],
+      account, value, gas: cartMaximumCheckoutGas });
+    // Do not require the wallet to fund the entire policy ceiling for a small checkout.
+    return { ...simulation, request: { ...simulation.request,
+      gas: gasPlan.value } };
+  } catch (cause) {
+    throw new CartExecutionError(message, { orderId: params.order.orderId, cart, cause });
+  }
+}
+
+export const cartDigestHelpers = { hashCartListingRoot, hashCartOrder };
+
+function requirePrintPublicationSignature(signature: Hex | undefined): Hex {
+  if (signature === undefined) throw new Error('Saved print publication has no seller signature.');
+  return signature;
+}

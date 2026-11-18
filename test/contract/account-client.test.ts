@@ -1,0 +1,735 @@
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { once } from 'node:events';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest';
+import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import { createSiweMessage } from 'viem/siwe';
+import { createRareClient } from '../../src/sdk/client.js';
+import type { RareApiClient, RareClient, RareClientConfig } from '../../src/sdk/types/client.js';
+import { createAccountOperations } from '../../src/sdk/account-operations.js';
+import { createMemoryAccountSessionStore } from '../../src/sdk/account-session-store.js';
+import type { RareAccountSession, RareDeviceAuthorization } from '../../src/sdk/types/account.js';
+import type { CartOrder } from '../../src/sdk/types/orders.js';
+
+// Controlled HTTP responses cover client edge cases; deployed-service coverage is separate.
+const account = privateKeyToAccount('0x0123456789012345678901234567890123456789012345678901234567890123');
+const profile = { accountId: '42', address: account.address.toLowerCase(), username: 'artist', email: null,
+  profile: { fullName: null, bio: 'Hello', avatar: null } };
+type Handler = (request: IncomingMessage, response: ServerResponse, body: string) => Promise<void>;
+// eslint-disable-next-line functional/no-let
+let origin = '';
+// eslint-disable-next-line functional/no-let
+let handler: Handler;
+const server = createServer(async (request, response) => {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    // eslint-disable-next-line functional/immutable-data
+    chunks.push(Buffer.from(chunk));
+  }
+  await handler(request, response, Buffer.concat(chunks).toString());
+});
+const reply = (response: ServerResponse, value: unknown, status = 200) => {
+  response.writeHead(status, { 'Content-Type': 'application/json' });
+  response.end(JSON.stringify(value));
+};
+const tokens = { access_token: 'access-2', refresh_token: 'refresh-2', token_type: 'Bearer', expires_in: 300, scope: 'rare:account offline_access' };
+const session = (expiresAt = Date.now() + 300000): RareAccountSession => ({
+  revision: 'first-session', authBaseUrl: `${origin}/auth/v2`, apiBaseUrl: origin, clientId: 'rare-sdk',
+  accessToken: 'access-1', refreshToken: 'refresh-1', expiresAt, scope: tokens.scope,
+});
+const device = (extra: Partial<RareDeviceAuthorization> = {}): RareDeviceAuthorization => ({
+  sessionRevision: null, authBaseUrl: `${origin}/auth/v2`, apiBaseUrl: origin, clientId: 'rare-sdk',
+  deviceCode: 'device-secret', userCode: 'ABCD-EFGH', verificationUri: `${origin}/device`,
+  expiresAt: Date.now() + 600000, interval: 5, nextPollAt: Date.now() - 1, ...extra,
+});
+const client = (storage = createMemoryAccountSessionStore()) => createRareClient({
+  apiBaseUrl: origin, sessionStore: storage,
+});
+
+beforeEach(async () => {
+  handler = async (_request, response) => { reply(response, { error: 'unexpected_request' }, 500); };
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  if (address === null || typeof address === 'string') throw new Error('Missing test address');
+  origin = `http://127.0.0.1:${address.port}`;
+});
+afterEach(async () => {
+  server.closeAllConnections();
+  await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+});
+
+describe('account authentication over HTTP', () => {
+  it.each(['managed-api', 'managed-chain', 'application-api', 'application-chain'])('composes following reads and mutations for %s clients', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const transport = (path: string, init: RequestInit) => fetch(`${origin}${path}`, init);
+    const sdk = mode === 'managed-api' ? client(storage)
+      : mode === 'managed-chain' ? createRareClient({ apiBaseUrl: origin, sessionStore: storage, publicClient })
+      : mode === 'application-api' ? createRareClient({ transport })
+      : createRareClient({ transport, publicClient });
+    handler = async (request, response) => {
+      const url = new URL(request.url ?? '', origin);
+      expect(url.searchParams.get('userId')).toBe('7');
+      if (request.method === 'GET') {
+        expect(request.headers.authorization).toBeUndefined();
+        return reply(response, { data: [], pagination: { page: 1, perPage: 20, totalCount: 0, totalPages: 0 } });
+      }
+      expect(url.pathname).toBe('/v1/me/following');
+      expect(request.headers.authorization).toBe(mode.startsWith('managed') ? 'Bearer access-1' : undefined);
+      return reply(response, { data: { following: request.method === 'POST' } });
+    };
+    expect(await sdk.user.followers.list({ userId: 7 })).toMatchObject({ data: [] });
+    expect(await sdk.user.following.list({ userId: 7 })).toMatchObject({ data: [] });
+    await sdk.user.following.add({ userId: 7 });
+    await sdk.user.following.delete({ userId: 7 });
+    expect(sdk.user.followers).not.toHaveProperty('add');
+    expect(sdk).not.toHaveProperty('following');
+  });
+
+  it('separates post comment data and notification pagination from request controls', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const sdk = client(storage);
+    const postId = '7';
+    handler = async (request, response, body) => {
+      if (request.url === '/v1/me/notifications?page=2&perPage=3') return reply(response, { data: [], pagination: { page: 2, perPage: 3, totalCount: 0, totalPages: 0 } });
+      expect(request.url).toBe(`/v1/posts/${postId}/comments`);
+      expect(JSON.parse(body)).toEqual({ body: 'A comment', parentCommentId: '8' });
+      return reply(response, { code: 'fixture_rejection' }, 400);
+    };
+    expect(await sdk.notifications.list({ page: 2, perPage: 3 }, { signal: AbortSignal.timeout(5000) })).toMatchObject({ data: [] });
+    await expect(sdk.posts.comment(postId, { body: 'A comment', parentCommentId: '8' }, { signal: AbortSignal.timeout(5000) })).rejects.toMatchObject({ code: 'fixture_rejection' });
+  });
+
+
+
+  it('keeps public messaging anonymous unless authenticated visibility is explicitly requested', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const sdk = client(storage);
+    const roomId = '11111111-1111-4111-8111-111111111111';
+    const headers: Array<string | undefined> = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      headers.push(request.headers.authorization);
+      expect(request.url).toBe(`/v1/messaging/public/rooms/${roomId}/messages?limit=5`);
+      reply(response, { room: { id: roomId, context: { type: 'auction', id: 'fixture' }, title: 'Room', latestSequence: '0' }, messages: [], nextCursor: null });
+    };
+    await sdk.messaging.public.history(roomId, { limit: 5 });
+    await sdk.messaging.public.history(roomId, { limit: 5 }, { authenticated: true });
+    expect(headers).toEqual([undefined, 'Bearer access-1']);
+    expect(sdk.user).not.toHaveProperty('resolve');
+    expect(sdk.messaging).not.toHaveProperty('historyPublic');
+    expect(sdk.messaging).not.toHaveProperty('sendPublic');
+  });
+
+  it('maps camelCase profile fields in both request and response over HTTP', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    handler = async (_request, response, body) => {
+      expect(JSON.parse(body)).toEqual({ profile: { twitterlink: '', masthead_universal_token_id: '1-0xabc-2' } });
+      reply(response, { data: { ...profile, profile: { ...profile.profile, twitterlink: '', masthead_universal_token_id: '1-0xabc-2' } } });
+    };
+    expect((await client(storage).profile.update({ profile: { twitterLink: '', mastheadUniversalTokenId: '1-0xabc-2' } })).profile).toMatchObject({ twitterLink: '', mastheadUniversalTokenId: '1-0xabc-2' });
+  });
+
+
+  it.each(['bearer', 'application'])('uses typed creator catalog methods through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const sdk = mode === 'bearer'
+      ? createRareClient({ apiBaseUrl: origin, publicClient, sessionStore: storage })
+      : createRareClient({ publicClient, transport: (path, init) => fetch(`${origin}${path}`, init) });
+    const product = { id: 'catalog-product', userId: '42', status: 'DRAFT', slug: 'catalog-fixture',
+      metadata: {}, variants: [], createdAt: '2026-10-27T00:00:00Z', updatedAt: '2026-10-27T00:00:00Z' };
+    const attachment = { sku: `0x${'12'.repeat(32)}`, position: 0, metadata: {} };
+    const requests: string[] = [];
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      expect(request.method).toBe('POST');
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      if (request.url === '/v1/cart/products/catalog-product/skus') {
+        expect(JSON.parse(body)).toEqual(attachment);
+        return reply(response, { data: { ...attachment, id: 'attachment', productId: product.id, isHidden: false,
+          createdAt: product.createdAt, updatedAt: product.updatedAt } });
+      }
+      if (request.url === '/v1/cart/products') expect(JSON.parse(body)).toEqual({ slug: product.slug, metadata: {} });
+      if (request.url === '/v1/cart/products/catalog-product/variants') expect(JSON.parse(body)).toEqual({ variants: [{ metadata: { type: 'ERC721', tokenId: '0' } }] });
+      return reply(response, { data: { ...product, status: request.url?.endsWith('/publish') ? 'PUBLISHED' : 'DRAFT' } });
+    };
+    expect((await sdk.cart.catalog.products.create({ slug: product.slug, metadata: {} })).id).toBe(product.id);
+    expect((await sdk.cart.catalog.products.attachSku(product.id, attachment)).sku).toBe(attachment.sku);
+    await sdk.cart.catalog.variants.add(product.id, { variants: [{ metadata: { type: 'ERC721', tokenId: '0' } }] });
+    expect((await sdk.cart.catalog.products.publish(product.id)).status).toBe('PUBLISHED');
+    expect(requests).toEqual(['/v1/cart/products', '/v1/cart/products/catalog-product/skus', '/v1/cart/products/catalog-product/variants', '/v1/cart/products/catalog-product/publish']);
+  });
+
+  it.each(['bearer', 'application'])('resumes Product preparation and preserves planned NFT identity through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const sdk = mode === 'bearer'
+      ? createRareClient({ apiBaseUrl: origin, publicClient, sessionStore: storage })
+      : createRareClient({ publicClient, transport: (path, init) => fetch(`${origin}${path}`, init) });
+    const product = { id: 'planned-product', userId: '42', status: 'DRAFT', slug: 'planned-artwork',
+      metadata: { releaseDraftId: 'release-draft' }, variants: [], createdAt: '2026-10-27T00:00:00Z', updatedAt: '2026-10-27T00:00:00Z' };
+    const plannedNft = { chainId: '11155111', contract: '0x1111111111111111111111111111111111111111', tokenId: '1' };
+    const requests: string[] = [];
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(`${request.method} ${request.url}`);
+      if (request.url?.startsWith('/v1/cart/products/mine?')) {
+        expect(new URL(request.url, origin).searchParams.get('releaseDraftId')).toBe('release-draft');
+        return reply(response, { data: [product], hasNextPage: false });
+      }
+      if (request.url === '/v1/cart/products/planned-product/variants') {
+        expect(JSON.parse(body)).toEqual({ variants: [{ metadata: { title: 'Artwork one' }, plannedNft }] });
+      }
+      if (request.url === '/v1/cart/products/planned-product/variants/variant-1') expect(JSON.parse(body)).toEqual({ isHidden: true });
+      if (request.url === '/v1/cart/products/planned-product') expect(JSON.parse(body)).toEqual({ metadata: { ...product.metadata, title: 'Artwork one' } });
+      return reply(response, { data: product });
+    };
+    expect((await sdk.cart.catalog.products.listMine({ releaseDraftId: 'release-draft' })).data[0]?.id).toBe(product.id);
+    expect((await sdk.cart.catalog.products.getMine(product.id)).id).toBe(product.id);
+    await sdk.cart.catalog.products.update(product.id, { metadata: { ...product.metadata, title: 'Artwork one' } });
+    await sdk.cart.catalog.variants.add(product.id, { variants: [{ metadata: { title: 'Artwork one' }, plannedNft }] });
+    await sdk.cart.catalog.variants.setVisibility(product.id, 'variant-1', { isHidden: true });
+    expect(requests).toEqual([
+      'GET /v1/cart/products/mine?releaseDraftId=release-draft',
+      'GET /v1/cart/products/mine/planned-product',
+      'PATCH /v1/cart/products/planned-product',
+      'POST /v1/cart/products/planned-product/variants',
+      'PATCH /v1/cart/products/planned-product/variants/variant-1',
+    ]);
+  });
+
+  it('keeps authenticated requests internal to the unified client', () => {
+    expectTypeOf<RareApiClient>().not.toHaveProperty('authenticatedFetch');
+    expectTypeOf<RareClient>().not.toHaveProperty('authenticatedFetch');
+    expectTypeOf<RareClientConfig>().not.toHaveProperty('accountClient');
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const transport = (path: string, init: RequestInit) => fetch(`${origin}${path}`, init);
+    for (const sdk of [client(), createRareClient({ apiBaseUrl: origin, publicClient }),
+      createRareClient({ transport }), createRareClient({ transport, publicClient })]) {
+      expect(sdk).not.toHaveProperty('authenticatedFetch');
+    }
+    expect(() => createRareClient({ apiBaseUrl: origin, ...{ accountClient: client() } })).toThrow('accountClient is no longer supported');
+
+  });
+
+
+  it.each(['bearer', 'application'])('preserves JSON headers for account writes through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const sdk = mode === 'bearer' ? client(storage) : createRareClient({
+      transport: (path, init) => fetch(`${origin}${path}`, init),
+    });
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      if (request.headers['content-type'] !== 'application/json') return reply(response, { error: 'invalid_request' }, 400);
+      expect(JSON.parse(body)).toEqual({ profile: { bio: 'Updated bio' } });
+      reply(response, { data: { ...profile, profile: { ...profile.profile, bio: 'Updated bio' } } });
+    };
+    expect(await sdk.profile.update({ profile: { bio: 'Updated bio' } })).toMatchObject({ profile: { bio: 'Updated bio' } });
+  });
+
+  it.each(['bearer', 'application'])('shares address and order methods through %s authentication', async (mode) => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const sdk = mode === 'bearer' ? client(storage) : createRareClient({
+      transport: (path, init) => fetch(`${origin}${path}`, {
+        ...init, headers: { ...Object.fromEntries(new Headers(init.headers)), Cookie: 'sr-session=application-owned' },
+      }),
+    });
+    const details = { name: 'SDK fixture', email: 'sdk@example.test', phoneNumber: '+12025550100', addressLine1: '123 Test Street',
+      townOrCity: 'New York', postalOrZipCode: '10001', countryCode: 'US' };
+    const input = { id: '11111111-1111-4111-8111-111111111111', label: 'Studio', details, makeDefault: false };
+    const order = { id: 'fixture-order', status: 'CONFIRMED', paymentCurrency: null, paymentAmount: '0',
+      createdAt: '2026-10-23T00:00:00Z', updatedAt: '2026-10-23T00:00:00Z', fulfillments: [],
+      items: [{ lineIndex: 0, listingDigest: `0x${'11'.repeat(32)}`, sku: `0x${'22'.repeat(32)}`,
+        quantity: '2', fulfillmentStatus: 'SUBMITTED', title: 'Print edition', images: ['https://images.example.test/preview.png'], printDropId: 'fixture-print',
+        printProduct: { id: 'GLOBAL-FAP-8X12', paper: 'Enhanced matte art paper · 200gsm', size: '8 × 12 in',
+          widthInches: 8, heightInches: 12, sizeCategory: 'small', format: 'rectangular' } },
+      { lineIndex: 1, listingDigest: `0x${'33'.repeat(32)}`, sku: `0x${'44'.repeat(32)}`,
+        quantity: '1', fulfillmentStatus: 'SHIPPED', title: 'Historical print', images: [], printDropId: 'historical-print' }] } satisfies CartOrder;
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe(mode === 'bearer' ? 'Bearer access-1' : undefined);
+      expect(request.headers.cookie).toBe(mode === 'application' ? 'sr-session=application-owned' : undefined);
+      if (request.url === '/v1/account/orders?page=1&perPage=2') return reply(response, { data: [order], pagination: { page: 1, perPage: 2, totalCount: 1, totalPages: 1 } });
+      if (request.url === '/v1/account/orders/fixture-order') return reply(response, { data: order });
+      if (request.url === '/v1/account/shipping-addresses') {
+        if (request.method === 'PUT') {
+          // Match the deployed API: a JSON body without its media type is not
+          // parsed as JSON, even if JSON.parse would accept the raw bytes.
+          if (request.headers['content-type'] !== 'application/json') {
+            return reply(response, { error: { code: 'invalid_request', message: 'Check your shipping details.' } }, 400);
+          }
+          expect(JSON.parse(body)).toEqual(input);
+          return reply(response, { data: { id: input.id, label: input.label, details, isDefault: true } });
+        }
+        else expect(request.method).toBe('GET');
+        return reply(response, { data: [] });
+      }
+      expect(request.url).toBe('/v1/account/shipping-addresses/fixture');
+      expect(request.method).toBe('DELETE');
+      response.writeHead(204); response.end();
+    };
+    expect(await sdk.shippingAddresses.list()).toEqual([]);
+    expect(await sdk.shippingAddresses.save(input)).toEqual({ id: input.id, label: input.label, details, isDefault: true });
+    expect(await sdk.shippingAddresses.delete('fixture')).toBeUndefined();
+    expect((await sdk.cart.orders.list({ perPage: 2 })).data[0]?.items).toEqual(order.items);
+    const fetchedOrder = await sdk.cart.orders.get(order.id);
+    expect(fetchedOrder.items).toEqual(order.items);
+    expect(fetchedOrder.items?.[0]?.printProduct).toEqual(order.items[0]?.printProduct);
+    expect(fetchedOrder.items?.[1]).not.toHaveProperty('printProduct');
+    expect('orders' in sdk).toBe(false);
+  });
+
+  it('shares unified-client refresh and session locking with Cart, keeping public reads anonymous', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 1));
+    const received: string[] = [];
+    handler = async (request, response) => {
+      if (request.url === '/auth/v2/token') {
+        // eslint-disable-next-line functional/immutable-data
+        received.push('refresh');
+        return reply(response, tokens);
+      }
+      if (request.url?.startsWith('/v1/cart/listings/search')) {
+        expect(request.headers.authorization).toBe(request.url.includes('eligibility=eligible') ? 'Bearer access-2' : undefined);
+        return reply(response, { data: [], pagination: {} });
+      }
+      if (request.url === '/v1/account/orders?page=1&perPage=20') {
+        expect(request.headers.authorization).toBe('Bearer access-2');
+        return reply(response, { data: [], pagination: { page: 1, perPage: 20, totalCount: 0, totalPages: 0 } });
+      }
+      expect(request.url?.includes('/invalidate')).toBe(true);
+      expect(request.headers.authorization).toBe('Bearer access-2');
+      // eslint-disable-next-line functional/immutable-data
+      received.push('preview');
+      return reply(response, { data: { listings: [] } });
+    };
+    const rare = createRareClient({
+      publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: origin,
+      sessionStore: storage,
+    });
+    await rare.cart.listing.search();
+    await rare.cart.listing.search({ eligibility: 'eligible' });
+    await Promise.all([rare.cart.listing.invalidate(`0x${'12'.repeat(32)}`), rare.cart.listing.invalidate(`0x${'13'.repeat(32)}`)]);
+    expect(await rare.cart.orders.list()).toEqual({ data: [], pagination: { page: 1, perPage: 20, totalCount: 0, totalPages: 0 } });
+    expect(received).toEqual(['refresh', 'preview', 'preview']);
+  });
+
+  it('rejects an authenticated Cart API origin mismatch before reading or refreshing its session', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 1));
+    const rare = createRareClient({
+      publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: 'https://different.example', sessionStore: storage,
+    });
+    await expect(rare.cart.listing.invalidate(`0x${'11'.repeat(32)}`)).rejects.toMatchObject({ code: 'session_authority_mismatch' });
+    expect(await storage.get()).toEqual(expect.objectContaining({ refreshToken: 'refresh-1' }));
+  });
+
+  it('does not forward credentials across API base paths or redirects, or replay unauthorized Cart mutations', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set({ ...session(), apiBaseUrl: `${origin}/api`, authBaseUrl: `${origin}/api/auth/v2` });
+    const { authenticatedFetch } = createAccountOperations({ apiBaseUrl: `${origin}/api`, sessionStore: storage });
+    await expect(authenticatedFetch(`${origin}/api-other/v1/cart/checkout/prepare`)).rejects.toMatchObject({ code: 'request_authority_mismatch' });
+    const received: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      received.push(request.url ?? '');
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      if (request.url === '/api/redirect') {
+        response.writeHead(307, { Location: `${origin}/outside` }); response.end(); return;
+      }
+      reply(response, { code: 'authentication_required' }, 401);
+    };
+    await expect(authenticatedFetch(`${origin}/api/redirect`, { method: 'POST' })).rejects.toThrow();
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: `${origin}/api`, sessionStore: storage });
+    await expect(rare.cart.listing.invalidate(`0x${'11'.repeat(32)}`)).rejects.toMatchObject({ status: 401 });
+    expect(received).toHaveLength(2);
+    expect(received.every(path => path.startsWith('/api/'))).toBe(true);
+  });
+
+  it('lists purchase eligibility under Cart with released pagination and shared authentication', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const pagination = { page: 2, perPage: 10, totalCount: 11, totalPages: 2 };
+    handler = async (request, response) => {
+      expect(request.url).toBe('/v1/eligibility/claims?page=2&perPage=10');
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      reply(response, { data: [], pagination });
+    };
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }),
+      apiBaseUrl: origin, sessionStore: storage });
+    expect(rare).not.toHaveProperty('eligibility');
+    expect(rare.cart).not.toHaveProperty('api');
+    expect(await rare.cart.purchaseEligibility.claims.list({ page: 2, perPage: 10 })).toEqual({ data: [], pagination });
+    await expect(rare.cart.purchaseEligibility.rules.list({ page: 0 })).rejects.toThrow();
+  });
+
+  it('authorizes saved references and delivery drafts without changing their checkout identities', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
+    const address = '0x0000000000000000000000000000000000000000';
+    const digest = `0x${'11'.repeat(32)}`;
+    const idempotencyKey = '11111111-1111-4111-8111-111111111111';
+    const wire = { schemaVersion: 1, chainId: String(sepolia.id), cartAddress: rare.contracts.cart, preparedAt: new Date().toISOString(),
+      executePurchase: { order: { orderId: digest, paymentCurrency: address, deadline: '9999999999', paymentAmount: '1', spreadRecipient:'0x0000000000000000000000000000000000001234',
+        orderLinesHash: digest, payoutRouteHash: digest, fulfillmentActionsHash: digest },
+        lines: [], listings: [], authorization: { listingRoots: [], listingRootSignatures: [], listingRootIndexes: [], listingProofs: [] },
+        route: { commands: '0x', inputs: [], routerValue: '0' }, actions: [], platformSignature: '0x00' } };
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      const data: unknown = JSON.parse(body);
+      if (request.url?.startsWith('/v1/cart/checkout/preview')) {
+        reply(response, { data: {
+          preparation: wire, preparationReference: 'original-reference',
+          quote: { currency: address, total: '1', expiresAt: '2027-01-01T00:00:00Z',
+            lines: [{ kind: 'listing', amount: '1' }] },
+          breakdown: { displayPrices: [{ currency: address, amount: '25000000000000000' }],
+            production: '1400000', shipping: '600000' },
+        } });
+        return;
+      }
+      if (request.headers['idempotency-key'] === undefined) expect(data).toEqual({ preparationReference: 'original-reference' });
+      else {
+        expect(request.headers['idempotency-key']).toBe(idempotencyKey);
+        expect(data).toMatchObject({ items: [{ quantity: '1' }], delivery: { savedAddressId: idempotencyKey } });
+      }
+      reply(response, { data: wire });
+    };
+    expect((await rare.cart.checkout.authorize({ preparationReference: 'original-reference' })).executePurchase.order.orderId).toBe(digest);
+    expect((await rare.cart.checkout.authorize({ idempotencyKey, paymentCurrency: '0x0000000000000000000000000000000000000000',
+      items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }], delivery: { savedAddressId: idempotencyKey } })).executePurchase.order.orderId).toBe(digest);
+    await expect(rare.cart.checkout.authorize({ preparationReference: '' })).rejects.toThrow();
+    const preview = await rare.cart.checkout.prepare({ paymentCurrency: address,
+      items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }],
+      delivery: { savedAddressId: idempotencyKey } });
+    expect(preview.paymentAmount).toBe(1n);
+    expect(preview.quote).toMatchObject({ total: 1n, currency: address });
+    expect(preview.breakdown).toEqual({
+      displayPrices: [{ currency: address, amount: 25000000000000000n }],
+      production: 1400000n, shipping: 600000n,
+    });
+
+  });
+
+  it('uses one payment entry for a digital checkout and reads server-owned card capabilities', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
+    const preparationId = '11111111-1111-4111-8111-111111111111';
+    const preparation: import('../../src/sdk/types/cart-api.js').CartCheckoutPreparation = {
+      schemaVersion: 1, chainId: 11155111n, cartAddress: rare.contracts.cart ?? '0x0000000000000000000000000000000000000000',
+      preparedAt: '2026-11-02T00:00:00Z', expiresAt: '2026-11-02T01:00:00Z', preparationReference: preparationId,
+      intent: { paymentCurrency: '0x0000000000000000000000000000000000000000', items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }] },
+      paymentAmount: 1n, fees: [], settlements: [], lines: [], route: { commands: '0x', inputs: [], routerValue: 0n },
+    };
+    handler = async (request, response, body) => {
+      const url = new URL(request.url ?? '', origin);
+      if (request.method === 'GET') {
+        expect(url.pathname).toBe('/v1/cart/checkout/coinflow/config');
+        expect(url.searchParams.get('chainId')).toBe('11155111');
+        reply(response, { data: { enabled: false, paymentCurrency: null, minimumCents: 1050, maximumCentsExclusive: 500000 } });
+      } else {
+        expect(url.pathname).toBe('/v1/cart/checkout/coinflow');
+        expect(request.headers.authorization).toBe('Bearer access-1');
+        expect(request.headers['idempotency-key']).toBe(preparationId);
+        expect(JSON.parse(body)).toEqual({ preparationReference: preparationId, email: 'buyer@example.com' });
+        reply(response, { error: 'captured' }, 409);
+      }
+    };
+    expect(await rare.cart.checkout.paymentMethods()).toEqual({ enabled: false, paymentCurrency: null, minimumCents: 1050, maximumCentsExclusive: 500000 });
+    await expect(rare.cart.checkout.payment({ method: 'card', preparation, email: 'buyer@example.com' })).rejects.toMatchObject({ status: 409 });
+    expect(rare.cart.checkout).not.toHaveProperty('coinflow');
+  });
+
+  it('reads backend-created purchase chat destinations and participant-scoped cards without an insertion method', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = client(storage);
+    const orderId = `0x${'ab'.repeat(32)}`;
+    const conversationId = '11111111-1111-4111-8111-111111111111';
+    const destination = { id: orderId, buyerUserId: '42', sellerUserId: '43', lineIndexes: [0], conversationId, messageId: conversationId, sequence: '1' };
+    const card = { chainId: 11155111, order: { id: orderId, status: 'CONFIRMED', paymentCurrency: null, paymentAmount: null,
+      createdAt: '2026-11-02T00:00:00Z', updatedAt: '2026-11-02T00:00:00Z', items: [], fulfillments: [] } };
+    handler = async (request, response) => {
+      expect(request.method).toBe('GET');
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      if (request.url === `/v1/messaging/orders/${orderId}/conversations`) reply(response, [destination]);
+      else {
+        expect(request.url).toBe(`/v1/messaging/conversations/${conversationId}/orders/${orderId}`);
+        reply(response, card);
+      }
+    };
+    expect(await rare.messaging.orderConversations(orderId)).toEqual([destination]);
+    expect(await rare.messaging.orderCard(conversationId, orderId)).toEqual(card);
+    expect(rare.messaging).not.toHaveProperty('attachPrintOrder');
+  });
+
+  it('serializes print mint associations consistently for preview, authorization and card checkout', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
+    const preparationId = '11111111-1111-4111-8111-111111111111';
+    const listingDigest = `0x${'11'.repeat(32)}` as const;
+    const mintSelections = [{ preparationId, listingDigest, unitIndexes: [0] }];
+    const intent = { paymentCurrency: '0x0000000000000000000000000000000000000000',
+      items: [{ kind: 'listing', listingDigest, quantity: 1n }],
+      delivery: { savedAddressId: preparationId, mintSelections } } satisfies import('../../src/sdk/types/cart-api.js').CartCheckoutIntent;
+    const requests: unknown[] = [];
+    handler = async (request, response, body) => {
+      expect(request.headers.authorization).toBe('Bearer access-1');
+      // eslint-disable-next-line functional/immutable-data -- Capture requests sent through the real HTTP client.
+      requests.push(JSON.parse(body));
+      reply(response, { error: 'checkout_captured' }, 409);
+    };
+    await expect(rare.cart.checkout.prepare(intent)).rejects.toMatchObject({ status: 409 });
+    await expect(rare.cart.checkout.authorize({ ...intent, idempotencyKey: preparationId })).rejects.toMatchObject({ status: 409 });
+    const preparation: import('../../src/sdk/types/cart-api.js').CartCheckoutPreparation = {
+      schemaVersion: 1, chainId: 11155111n, cartAddress: rare.contracts.cart ?? '0x0000000000000000000000000000000000000000',
+      preparedAt: '2026-11-02T00:00:00Z', expiresAt: '2026-11-02T01:00:00Z', preparationReference: preparationId,
+      idempotencyKey: preparationId, intent, paymentAmount: 1n, fees: [], settlements: [], lines: [], route: { commands: '0x', inputs: [], routerValue: 0n },
+    };
+    await expect(rare.cart.checkout.payment({ method: 'card', preparation, email: 'buyer@example.com' })).rejects.toMatchObject({ status: 409 });
+    expect(requests).toHaveLength(3);
+    for (const request of requests) expect(request).toEqual({
+      paymentCurrency: intent.paymentCurrency,
+      items: [{ kind: 'listing', listingDigest, quantity: '1' }],
+      delivery: { savedAddressId: preparationId, mintSelections },
+    });
+  });
+
+  it.each(['cartOrderConfirmed', 'cartSaleReceived'] as const)('reads %s notifications with saved print product details', async category => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const printProduct = { id: 'GLOBAL-FAP-8X8', paper: 'Enhanced matte art paper', size: '8 × 8 in',
+      widthInches: 8, heightInches: 8, sizeCategory: 'small', format: 'square' };
+    const notification = { id: '1', notificationId: 'cart-print-test', category, readAt: null, createdAt: '2026-11-02T12:00:00.000Z',
+      payload: { orderId: `0x${'11'.repeat(32)}`, chainId: 11155111,
+        items: [{ sku: `0x${'22'.repeat(32)}`, quantity: '1', title: 'Print', printProduct }], amounts: [] } };
+    handler = async (_request, response) => {
+      reply(response, { data: [notification], pagination: { page: 1, perPage: 20, totalCount: 1, totalPages: 1 } });
+    };
+    expect((await client(storage).notifications.list()).data).toEqual([notification]);
+  });
+
+  it('defaults to the production API and rejects the removed separate auth URL', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await createRareClient({ sessionStore: storage }).auth.clearSession();
+    expect(await storage.get()).toMatchObject({ apiBaseUrl: 'https://api.superrare.com', authBaseUrl: 'https://api.superrare.com/auth/v2' });
+    expect(() => createRareClient({ apiBaseUrl: origin, ...{ authBaseUrl: 'https://auth.example/auth/v2' } })).toThrow('auth_url_not_supported');
+    expect(await createRareClient().auth.getSession()).toBeNull();
+  });
+
+  it('does not reuse a session issued by the old direct auth endpoint', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set({ ...session(), authBaseUrl: 'https://auth.example/auth/v2' });
+    await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'session_authority_mismatch' });
+  });
+
+  it('signs a bound wallet challenge and persists the token response', async () => {
+    const sdk = client();
+    const message = createSiweMessage({ address: account.address, chainId: 1, domain: new URL(origin).host,
+      uri: origin, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) });
+    handler = async (request, response, body) => {
+      if (request.url?.endsWith('/wallet/challenge')) {
+        expect(JSON.parse(body)).toEqual({ client_id: 'rare-sdk', address: account.address, chain_id: 1, origin });
+        reply(response, { challenge_id: 'challenge', message, expires_in: 300 });
+      } else {
+        const form = new URLSearchParams(body);
+        expect(form.get('message')).toBe(message);
+        expect(form.get('signature')).toBe(await account.signMessage({ message }));
+        expect(form.get('grant_type')).toBe('urn:superrare:params:oauth:grant-type:siwe');
+        reply(response, tokens);
+      }
+    };
+    await sdk.auth.loginWithWallet({ address: account.address, chainId: 1, signMessage: message => account.signMessage({ message }) });
+    expect((await sdk.auth.getSession())?.refreshToken).toBe('refresh-2');
+  });
+
+  it('rejects malformed challenge dates before asking the wallet to sign', async () => {
+    const message = createSiweMessage({ address: account.address, chainId: 1, domain: new URL(origin).host,
+      uri: origin, version: '1', nonce: 'abcdefgh1234', issuedAt: new Date(), expirationTime: new Date(Date.now() + 299000) })
+      .replace(/Issued At: .*/, 'Issued At: invalid').replace(/Expiration Time: .*/, 'Expiration Time: invalid');
+    handler = async (_request, response) => { reply(response, { challenge_id: 'challenge', message }); };
+    await expect(client().auth.loginWithWallet({ address: account.address, chainId: 1,
+      signMessage: async () => { throw new Error('SIGNER MUST NOT RUN'); } })).rejects.toMatchObject({ code: 'invalid_challenge_binding' });
+  });
+
+  it('persists polling cadence after slow_down and skips premature requests', async () => {
+    const requests: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      reply(response, { error: 'slow_down' }, 400);
+    };
+    const sdk = client();
+    const result = await sdk.auth.pollDeviceAuthorization(device());
+    expect(result.status).toBe('slow_down');
+    if (result.status === 'authorized') throw new Error('Expected pending');
+    expect(result.authorization.interval).toBe(10);
+    const second = await sdk.auth.pollDeviceAuthorization(result.authorization);
+    expect(second.status).toBe('pending');
+    expect(requests).toHaveLength(1);
+  });
+
+  it('starts device authorization with standard forms and absolute expiry', async () => {
+    handler = async (request, response, body) => {
+      expect(request.url).toBe('/auth/v2/device/authorization');
+      expect(new URLSearchParams(body).get('scope')).toBe(tokens.scope);
+      reply(response, { device_code: 'secret', user_code: 'CODE', verification_uri: `${origin}/device`,
+        verification_uri_complete: `${origin}/device?user_code=CODE`, expires_in: 600, interval: 5 });
+    };
+    const result = await client().auth.startDeviceAuthorization();
+    expect(result.deviceCode).toBe('secret');
+    expect(result.nextPollAt).toBeGreaterThan(Date.now());
+    expect(result.expiresAt).toBeGreaterThan(result.nextPollAt);
+  });
+
+  it('refreshes once for concurrent expired-session profile requests', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 100));
+    const requests: string[] = [];
+    handler = async (request, response, body) => {
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      if (request.url?.endsWith('/token')) {
+        expect(new URLSearchParams(body).get('refresh_token')).toBe('refresh-1');
+        expect(await storage.get()).toMatchObject({ refreshBlocked: true });
+        reply(response, tokens);
+      } else {
+        expect(request.headers.authorization).toBe('Bearer access-2');
+        reply(response, { data: profile });
+      }
+    };
+    const first = client(storage);
+    const second = client(storage);
+    expect(await Promise.all([first.profile.get(), second.profile.get()])).toEqual([profile, profile]);
+    expect(requests.filter(path => path.endsWith('/token'))).toHaveLength(1);
+    expect((await first.auth.getSession())?.revision).toBe('first-session');
+  });
+
+  it('does not replay a refresh after the authority consumes it but drops the response', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session(Date.now() - 100));
+    const requests: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      response.destroy();
+    };
+    await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'reauthentication_required' });
+    await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'reauthentication_required' });
+    expect(requests).toHaveLength(1);
+    expect((await client(storage).auth.getSession())?.refreshBlocked).toBe(true);
+  });
+
+  it('retains credentials after failed logout, removes them after confirmed revocation', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    handler = async (_request, response) => { reply(response, { error: 'server_error' }, 503); };
+    const sdk = client(storage);
+    await expect(sdk.auth.logout()).rejects.toMatchObject({ status: 503 });
+    expect(await sdk.auth.getSession()).not.toBeNull();
+    handler = async (_request, response, body) => {
+      expect(new URLSearchParams(body).get('token')).toBe('refresh-1');
+      response.writeHead(200); response.end();
+    };
+    await sdk.auth.logout();
+    expect(await sdk.auth.getSession()).toBeNull();
+    expect(await storage.get()).not.toHaveProperty('refreshToken');
+  });
+
+  it('does not resurrect login when another client logs out during device wait', async () => {
+    const storage = createMemoryAccountSessionStore();
+    const sdk = client(storage);
+    const pending = sdk.auth.waitForDeviceAuthorization(device({ nextPollAt: Date.now() + 60 }));
+    await client(storage).auth.logout();
+    handler = async (_request, response) => { reply(response, tokens); };
+    await expect(pending).rejects.toMatchObject({ code: 'session_superseded' });
+    expect(await sdk.auth.getSession()).toBeNull();
+  });
+
+  it('cancels waiting without a network request', async () => {
+    const controller = new AbortController();
+    const pending = client().auth.waitForDeviceAuthorization(device({ nextPollAt: Date.now() + 5000 }), { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: 'cancelled' });
+  });
+
+  it('does not follow redirects with credentials or replay a rejected profile mutation', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set(session());
+    const requests: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      response.writeHead(307, { Location: `${origin}/leak` }); response.end();
+    };
+    await expect(client(storage).profile.update({ profile: { bio: 'Updated bio' } })).rejects.toMatchObject({ code: 'transport_error' });
+    expect(requests).toEqual(['/v1/me']);
+  });
+
+  it('rejects authority mismatch and unexpected profile update fields before HTTP', async () => {
+    const storage = createMemoryAccountSessionStore();
+    await storage.set({ ...session(), apiBaseUrl: 'https://other.example' });
+    await expect(client(storage).profile.get()).rejects.toMatchObject({ code: 'session_authority_mismatch' });
+    expect(() => client().profile.update(JSON.parse('{"accountId":"other"}'))).toThrow('invalid_profile_patch');
+    expect(() => client().profile.update(JSON.parse('{"profile":{"bio":null}}'))).toThrow('invalid_profile_patch');
+  });
+  it('saves an approved device session before making authenticated profile calls', async () => {
+    const sdk = client();
+    handler = async (request, response) => {
+      if (request.url?.endsWith('/token')) reply(response, tokens);
+      else {
+        expect(request.headers.authorization).toBe('Bearer access-2');
+        reply(response, { data: profile });
+      }
+    };
+    expect((await sdk.auth.pollDeviceAuthorization(device())).status).toBe('authorized');
+    expect(await sdk.profile.get()).toEqual(profile);
+  });
+
+  it('backs off a dropped device response and makes no premature resumed request', async () => {
+    const requests: string[] = [];
+    handler = async (request, response) => {
+      // eslint-disable-next-line functional/immutable-data
+      requests.push(request.url ?? '');
+      response.destroy();
+    };
+    const result = await client().auth.pollDeviceAuthorization(device());
+    expect(result.status).toBe('retry');
+    if (result.status === 'authorized') throw new Error('Expected retry');
+    expect(result.authorization.interval).toBe(10);
+    expect((await client().auth.pollDeviceAuthorization(result.authorization)).status).toBe('pending');
+    expect(requests).toHaveLength(1);
+  });
+
+  it('does not transmit refresh if its write-ahead state cannot be saved', async () => {
+    const memory = createMemoryAccountSessionStore();
+    await memory.set(session(Date.now() - 100));
+    const store = { ...memory, set: async () => { throw new Error('disk full'); } };
+    await expect(client(store).profile.get()).rejects.toMatchObject({ code: 'session_persistence_failed' });
+    // The default HTTP handler would fail if invoked; no token request has been made.
+    expect(await memory.get()).toMatchObject({ refreshToken: 'refresh-1', revision: 'first-session' });
+  });
+
+  it('rejects cross-environment pending grants before transmitting the device secret', async () => {
+    await expect(client().auth.pollDeviceAuthorization(device({ authBaseUrl: 'https://other.example' })))
+      .rejects.toMatchObject({ code: 'device_authority_mismatch' });
+  });
+
+});
