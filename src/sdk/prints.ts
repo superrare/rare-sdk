@@ -4,7 +4,7 @@ import { favoritePageQuery } from './favorites-core.js';
 import type { RareClientConfig } from './types/client.js';
 import type { PrintsNamespace, PrintDropInput, PrintListingInput, CreatePrintDrop, PrintDropCreation, PrintBatchItem, PrintBatchOptions, PrintBatchResult,
   PrintOptionConfiguration, PrintOption, PreparePrintListing, PrintListingPreparation } from './types/prints.js';
-import { createConciergePrintRequest, createPrintDropRequest, createPrintListingRequest } from './print-request-shell.js';
+import { createPrintDropRequest, createPrintListingRequest } from './print-request-shell.js';
 import { runPrintWrite } from './print-write-shell.js';
 import { isPrintBatch } from './prints-batch-core.js';
 import { runPrintBatch } from './prints-batch-shell.js';
@@ -53,12 +53,6 @@ export function createPrintsNamespace(config: RareClientConfig, authenticatedFet
     return isPrintBatch<PreparePrintListing>(input) ? runPrintBatch(input, options, operation) : operation(createPrintListingRequest(input));
   }
   return {
-    concierge: {
-      createDraft: (input, options) => {
-        const body = structuredClone(createConciergePrintRequest(input));
-        return runPrintWrite(request => client.POST('/v1/prints/concierge/drafts', { ...request, body }), options);
-      },
-    },
     async quote(input, options = {}) {
       const validation = validatePrintQuote(input);
       if (!validation.success) throw new Error('Provide a print product ID, positive copy count and two-letter destination country code.');
