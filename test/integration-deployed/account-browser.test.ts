@@ -49,12 +49,12 @@ const applicationPage = async (browser: Browser, local: boolean, second = false)
 };
 
 const browserFetch = (page: Page): typeof fetch => async (input, init = {}) => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  if (init.body !== undefined && init.body !== null && typeof init.body !== 'string' && !(init.body instanceof URLSearchParams)) throw new Error('Browser auth integration supports text request bodies');
+  const request = new Request(input, init);
+  const body = request.body === null ? undefined : await request.text();
   const result = await page.evaluate(async ({ url, method, headers, body }) => {
     const response = await fetch(url, { method, headers, ...(body === undefined ? {} : { body }), credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(30_000) });
     return { status: response.status, headers: Array.from(response.headers.entries()), body: await response.text() };
-  }, { url, method: init.method ?? 'GET', headers: Array.from(new Headers(init.headers).entries()), body: init.body == null ? undefined : String(init.body) });
+  }, { url: request.url, method: request.method, headers: Array.from(request.headers.entries()), body });
   return new Response(result.status === 204 ? null : result.body, { status: result.status, headers: result.headers });
 };
 
@@ -154,7 +154,15 @@ describe('real-browser third-party wallet authentication', () => {
         expect((await grant(request, value, tampered)).status).toBe(400);
       }
       const value = await challenge(request, first.origin);
-      expect((await grant(browserFetch(second.page), value)).status).toBe(400);
+      const redeemFromSecond = browserFetch(second.page);
+      const rebound = await grant(redeemFromSecond, value);
+      if (rebound.ok) {
+        const tokens: unknown = await rebound.json();
+        if (tokens && typeof tokens === 'object' && 'refresh_token' in tokens && typeof tokens.refresh_token === 'string') {
+          await revoke(redeemFromSecond, tokens.refresh_token);
+        }
+      }
+      expect(rebound.status).toBe(400);
       // A new challenge avoids assuming whether a rejected proof consumes it.
       const fresh = await challenge(request, first.origin);
       const issued = await grant(request, fresh);
