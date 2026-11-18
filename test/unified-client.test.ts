@@ -76,8 +76,9 @@ describe('one primary SDK factory', () => {
     expect(client.chainId).toBe(1);
     expect(client.listing.status).toBeTypeOf('function');
     expect(client.profile.get).toBeTypeOf('function');
-    expect(client.nft.events).toBeTypeOf('function');
-    expect(client.collection.events).toBeTypeOf('function');
+    expect(client.search.events).toBeTypeOf('function');
+    expect('events' in client.nft).toBe(false);
+    expect('events' in client.collection).toBe(false);
     expect(client.drops.create).toBeTypeOf('function');
     expect(client.drops.list).toBeTypeOf('function');
     expect(client.messaging.public.history).toBeTypeOf('function');
