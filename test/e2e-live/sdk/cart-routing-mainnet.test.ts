@@ -13,6 +13,7 @@ import { resolveCurrency } from '../../../src/contracts/addresses.js';
 import {
   buildCartRoutingQuoteResult,
   cartRoutingDefaultSlippageBps,
+  cartRoutingProviderOutput,
   planCartRoutingQuote,
   protectCartRoutingExactInput,
   resolveCartRoutingMaximumInput,
@@ -83,10 +84,15 @@ describeLive('SDK Cart mainnet route discovery integration', () => {
     expect(size(result.route.commands)).toBe(result.route.inputs.length);
   }, 60_000);
 
+});
+
+// Hooked-pool availability is a provider probe. The commerce compiler cases
+// above cover supported settlement currencies without depending on this pool.
+describe.skipIf(!apiKey || process.env.RARE_SDK_PROBE_LIQUID_EDITION_ROUTES !== '1')('Uniswap Mainnet Liquid Edition route availability', () => {
   it.each([
     { name: 'ETH', paymentCurrency: eth },
     { name: 'USDC', paymentCurrency: usdc },
-  ])('discovers an exact-output Liquid Edition route from $name and compiles it for Cart', async ({ paymentCurrency }) => {
+  ])('quotes the configured Liquid Edition from $name', async ({ paymentCurrency }) => {
     const amount = 1_000_000_000_000_000_000n;
     const quoteResponse = await quote(paymentCurrency, liquidEdition, amount, 'EXACT_OUTPUT');
     const hops = quoteResponse.quote.route.flat();
@@ -97,33 +103,6 @@ describeLive('SDK Cart mainnet route discovery integration', () => {
     expect(hops.some((hop) => hop.type === 'v4-pool')).toBe(true);
     expect(hops.some((hop) => isAddressEqual(hop.tokenOut.address, liquidEdition))).toBe(true);
 
-    const swapResponse = await requestUniswapSwap({
-      apiKey,
-      quote: quoteResponse.quote,
-      deadline: Math.floor(Date.now() / 1_000) + 60,
-      permit2Disabled: false,
-      simulateTransaction: false,
-    });
-    const obligation = { settlementCurrency: liquidEdition, amount };
-    const plan: CartRoutingPlan = {
-      chain,
-      chainId,
-      cart: prospectiveCart,
-      paymentCurrency,
-      mode: 'exact-output',
-      directPaymentInput: 0n,
-      settlements: [{ settlementCurrency: liquidEdition, amount, routed: true }],
-      foreignObligations: [obligation],
-    };
-    const result = buildCartRoutingQuoteResult(plan, swapResponse.swap.to, [{
-      ...obligation,
-      exactOutputResponse: quoteResponse,
-      executionResponse: quoteResponse,
-      swapResponse,
-    }], Date.now());
-    expect(result.evidence.source).toBe('uniswap-api');
-    expect(size(result.route.commands)).toBe(result.route.inputs.length);
-    expect(result.route.inputs.length).toBeGreaterThan(0);
   }, 60_000);
 });
 
@@ -139,11 +118,12 @@ async function discoverCartRoute(
     mode,
   });
   const obligation = plan.foreignObligations[0]!;
-  const exactOutputResponse = await quote(paymentCurrency, settlementCurrency, amount, 'EXACT_OUTPUT');
+  const outputCurrency = cartRoutingProviderOutput(plan, settlementCurrency);
+  const exactOutputResponse = await quote(paymentCurrency, outputCurrency, amount, 'EXACT_OUTPUT');
   const maximumInput = resolveCartRoutingMaximumInput(plan, obligation, exactOutputResponse);
   const executionResponse = mode === 'exact-output'
     ? exactOutputResponse
-    : await quote(paymentCurrency, settlementCurrency, protectCartRoutingExactInput(maximumInput), 'EXACT_INPUT');
+    : await quote(paymentCurrency, outputCurrency, protectCartRoutingExactInput(maximumInput), 'EXACT_INPUT');
   const swapResponse = await requestUniswapSwap({
     apiKey,
     quote: executionResponse.quote,
