@@ -4,6 +4,7 @@ import { getCartAddress } from '../../../src/contracts/addresses.js';
 import {
   assertCartRoutingQuoteFresh,
   buildCartRoutingQuoteResult,
+  cartRoutingProviderOutput,
   CartRoutingCoreError,
   planCartRoutingQuote,
   protectCartRoutingExactInput,
@@ -96,6 +97,22 @@ describe('Cart routing functional core', () => {
     expect(result.directPaymentInput).toBe(300n);
     expect(result.expectedPaymentInput).toBe(2300n);
     expect(result.maximumPaymentInput).toBe(2500n);
+  });
+
+  it('quotes wrapped ETH while preserving the signed native settlement in a mixed Cart', () => {
+    const plan = planCartRoutingQuote(chain, cart, {
+      paymentCurrency: usdc,
+      obligations: [{ settlementCurrency: eth, amount: 500n }, { settlementCurrency: rare, amount: 750n }],
+    });
+    const obligations = plan.foreignObligations.map(obligation => quoted(plan, obligation));
+    expect(obligations.map(obligation => obligation.exactOutputResponse.quote.output.token)).toEqual([weth, rare]);
+    const result = buildCartRoutingQuoteResult(plan, router, obligations, 1_800_000_000_000);
+    expect(result.evidence.exactOutputs).toEqual([
+      { settlementCurrency: eth, amount: 500n },
+      { settlementCurrency: rare, amount: 750n },
+    ]);
+    const [, inputs] = decodeAbiParameters(parseAbiParameters('bytes,bytes[]'), result.route.inputs[0]!);
+    expect(decodeAbiParameters(parseAbiParameters('address,uint256'), inputs[2]!)).toEqual([weth, 500n]);
   });
 
   it('returns an empty program when every obligation is direct', () => {
@@ -266,7 +283,7 @@ function quote(
       output: {
         amount: tradeType === 'EXACT_INPUT' ? '550' : obligation.amount.toString(),
         minimumAmount: obligation.amount.toString(),
-        token: obligation.settlementCurrency,
+        token: cartRoutingProviderOutput(plan, obligation.settlementCurrency),
         recipient: plan.cart,
       },
       swapper: plan.cart,
@@ -297,7 +314,7 @@ function swap(
 
 function compiledInputs(plan: CartRoutingPlan, obligation: CartRoutingForeignObligation): Hex[] {
   const input = plan.paymentCurrency;
-  const output = obligation.settlementCurrency;
+  const output = cartRoutingProviderOutput(plan, obligation.settlementCurrency);
   const zeroForOne = BigInt(input) < BigInt(output);
   const pool = zeroForOne ? [input, output] as const : [output, input] as const;
   const swap = encodeAbiParameters(parseAbiParameters('((address,address,uint24,int24,address),bool,uint128,uint128,bytes)'),
