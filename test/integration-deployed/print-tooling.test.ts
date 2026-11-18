@@ -107,9 +107,11 @@ describe('print tooling through deployed Rare API', () => {
       await rare.prints.drops.update(draft.id, { specificationId: specification.id, name: 'Prepared artwork print',
         images: [preview.url], description: 'Prepared before the NFT is minted.', tags: ['sdk-integration'] });
       await rare.prints.options.configure({ dropId: draft.id, input: { displayPriceUsdCents: '1000' } });
-      const productBeforeArchive = await rare.cart.catalog.products.publish(product.id);
-      const publicProduct = await rare.cart.catalog.products.get(product.id);
-      expect(publicProduct.variants.find(variant => variant.sku === preparedVariant.sku)).toMatchObject({ isHidden: true });
+      await expect(rare.cart.catalog.products.publish(product.id)).rejects.toMatchObject({ status: 409 });
+      const productBeforeArchive = await rare.cart.catalog.products.getMine(product.id);
+      expect(productBeforeArchive.status).toBe('DRAFT');
+      expect(productBeforeArchive.variants.find(variant => variant.sku === preparedVariant.sku)).toMatchObject({ isHidden: true });
+      await expect(rare.cart.catalog.products.get(product.id)).rejects.toMatchObject({ status: 404 });
       await expect(unmintedOwner()).rejects.toThrow(/nonexistent|invalid|reverted/iu);
       await rare.prints.drops.archive(draft.id);
       draftId = undefined;
