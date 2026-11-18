@@ -113,7 +113,6 @@ export type SearchNamespace = {
 }
 
 export type NftNamespace = {
-  events: (params: RareClientNftGetParams, options?: Parameters<RareApi['getNftEvents']>[1]) => ReturnType<RareApi['getNftEvents']>;
   favoriteCount: (params: RareClientNftGetParams) => Promise<number>;
   get: (params: RareClientNftGetParams) => Promise<Nft>;
 }
@@ -198,9 +197,8 @@ export type RarePublicFeatures = {
   nft: {
     get: (params: NftIdentityParams) => Promise<Nft>;
     favoriteCount: (params: NftIdentityParams) => Promise<number>;
-    events: (params: NftIdentityParams, options?: Parameters<RareApi['getNftEvents']>[1]) => ReturnType<RareApi['getNftEvents']>;
   };
-  collection: { get: RareApi['getCollection']; events: RareApi['getCollectionEvents'] };
+  collection: { get: RareApi['getCollection'] };
   liquidEdition: { get: (params: Omit<NftIdentityParams, 'tokenId'>) => Promise<LiquidEdition> };
   user: UserNamespace;
   drops: { list: RareApi['getDrops']; get: RareApi['getDrop'] };
@@ -213,8 +211,8 @@ export type RarePublicFeatures = {
 
 export type RareApiClient = RarePublicFeatures & RareAccountClient;
 export type RareExternalApiClient = RarePublicFeatures & RareAccountFeatures;
-export type RareClient = RareChainFeatures & RareAccountClient & { collection: CollectionNamespace & { events: RareApi['getCollectionEvents'] }; messaging: RareAccountClient['messaging'] & { public: RareApi['messaging'] } };
-export type RareExternalClient = RareChainFeatures & RareAccountFeatures & { collection: CollectionNamespace & { events: RareApi['getCollectionEvents'] }; messaging: RareAccountFeatures['messaging'] & { public: RareApi['messaging'] } };
+export type RareClient = RareChainFeatures & RareAccountClient & { messaging: RareAccountClient['messaging'] & { public: RareApi['messaging'] } };
+export type RareExternalClient = RareChainFeatures & RareAccountFeatures & { messaging: RareAccountFeatures['messaging'] & { public: RareApi['messaging'] } };
 
 /** API and account operations need no publicClient or blockchain RPC. */
 export type RareApiClientConfig = { apiBaseUrl?: string; apiFetch?: typeof fetch; sessionStore?: RareAccountSessionStore; publicClient?: never; walletClient?: never };
