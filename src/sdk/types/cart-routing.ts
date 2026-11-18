@@ -12,6 +12,8 @@ export type CartRoutingQuoteParams = {
   paymentCurrency: Address;
   obligations: readonly CartSettlementObligation[];
   mode?: CartRoutingMode;
+  /** Request an independently compiled candidate from the configured on-chain pools. */
+  source?: 'known-pool-rpc';
 };
 
 export type CartRoutingInputQuoteParams = {
