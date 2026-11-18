@@ -97,7 +97,9 @@ export function createCartRoutingNamespace(
         return buildCartRoutingQuoteResult(plan, zeroAddress, [], Date.now());
       }
 
-      const apiKey = config.uniswapApiKey ?? await config.resolveUniswapApiKey?.();
+      const apiKey = params.source === 'known-pool-rpc'
+        ? undefined
+        : config.uniswapApiKey ?? await config.resolveUniswapApiKey?.();
       if (!apiKey) {
         try {
           const local = await buildKnownPoolCartRoutingQuote(config.publicClient, plan);
@@ -105,7 +107,7 @@ export function createCartRoutingNamespace(
         } catch (cause) {
           throw toCartRoutingError(cause, plan.paymentCurrency);
         }
-        throw new CartRoutingError('quote_unavailable', 'No configured Cart routing source supports these currencies.',
+        throw new CartRoutingError(params.source === 'known-pool-rpc' ? 'no_route' : 'quote_unavailable', 'No configured Cart routing source supports these currencies.',
           { paymentCurrency: plan.paymentCurrency });
       }
       try {
