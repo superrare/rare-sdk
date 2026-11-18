@@ -1528,7 +1528,11 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        displayPriceUsdCents: string;
+                        price?: {
+                            currency: string;
+                            amount: string;
+                        };
+                        displayPriceUsdCents?: string;
                     };
                 };
             };
@@ -2156,11 +2160,15 @@ export interface paths {
                                     };
                                 };
                                 breakdown: {
-                                    displayPrice: string;
+                                    displayPrice?: string;
+                                    displayPrices?: {
+                                        currency: string;
+                                        amount: string;
+                                    }[];
                                     production: string;
                                     shipping: string;
-                                    networkFee: string;
-                                    total: string;
+                                    networkFee?: string;
+                                    total?: string;
                                 };
                             };
                         };

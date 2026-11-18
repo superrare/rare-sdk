@@ -263,7 +263,14 @@ export type CartCheckoutIntent = {
   delivery?: ({ recipientDetails: ShippingDetails } | { savedAddressId: string }) & CartDeliverySelection;
 };
 export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
-export type CartCheckoutBreakdown = { displayPrice: bigint; production: bigint; shipping: bigint; networkFee: bigint; total: bigint };
+export type CartCheckoutBreakdown = {
+  displayPrice?: bigint;
+  displayPrices?: readonly { currency: Address; amount: bigint }[];
+  production: bigint;
+  shipping: bigint;
+  networkFee?: bigint;
+  total?: bigint;
+};
 export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' | 'preparedPurchase'> & {
   orderId?: Hex;
   preparedPurchase?: CartApiPreparedPurchase;
@@ -355,7 +362,14 @@ export type CartCheckoutPreviewWire = {
   };
   preparationReference: string;
   preparation: CartApiPreparedPurchaseWire;
-  breakdown?: { displayPrice: string; production: string; shipping: string; networkFee: string; total: string };
+  breakdown?: {
+    displayPrice?: string;
+    displayPrices?: readonly { currency: Address; amount: string }[];
+    production: string;
+    shipping: string;
+    networkFee?: string;
+    total?: string;
+  };
 };
 
 export type CartApiPreparedPurchaseWire = {

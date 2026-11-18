@@ -393,6 +393,16 @@ describe('account authentication over HTTP', () => {
     handler = async (request, response, body) => {
       expect(request.headers.authorization).toBe('Bearer access-1');
       const data: unknown = JSON.parse(body);
+      if (request.url?.startsWith('/v1/cart/checkout/preview')) {
+        reply(response, { data: {
+          preparation: wire, preparationReference: 'original-reference',
+          quote: { currency: address, total: '1', expiresAt: '2027-01-01T00:00:00Z',
+            lines: [{ kind: 'listing', amount: '1' }] },
+          breakdown: { displayPrices: [{ currency: address, amount: '25000000000000000' }],
+            production: '1400000', shipping: '600000' },
+        } });
+        return;
+      }
       if (request.headers['idempotency-key'] === undefined) expect(data).toEqual({ preparationReference: 'original-reference' });
       else {
         expect(request.headers['idempotency-key']).toBe(idempotencyKey);
@@ -404,6 +414,16 @@ describe('account authentication over HTTP', () => {
     expect((await rare.cart.checkout.authorize({ idempotencyKey, paymentCurrency: '0x0000000000000000000000000000000000000000',
       items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }], delivery: { savedAddressId: idempotencyKey } })).executePurchase.order.orderId).toBe(digest);
     await expect(rare.cart.checkout.authorize({ preparationReference: '' })).rejects.toThrow();
+    const preview = await rare.cart.checkout.prepare({ paymentCurrency: address,
+      items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }],
+      delivery: { savedAddressId: idempotencyKey } });
+    expect(preview.paymentAmount).toBe(1n);
+    expect(preview.quote).toMatchObject({ total: 1n, currency: address });
+    expect(preview.breakdown).toEqual({
+      displayPrices: [{ currency: address, amount: 25000000000000000n }],
+      production: 1400000n, shipping: 600000n,
+    });
+
   });
 
   it('uses one payment entry for a digital checkout and reads server-owned card capabilities', async () => {
