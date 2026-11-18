@@ -9,7 +9,8 @@ import {
   type Address,
 } from 'viem';
 import { mainnet } from 'viem/chains';
-import { resolveCurrency } from '../../../src/contracts/addresses.js';
+import { uniswapV4QuoterAbi } from '../../../src/contracts/abis/uniswap-v4-quoter.js';
+import { getV4QuoterAddress, resolveCurrency } from '../../../src/contracts/addresses.js';
 import {
   buildCartRoutingQuoteResult,
   cartRoutingDefaultSlippageBps,
@@ -17,7 +18,6 @@ import {
   planCartRoutingQuote,
   protectCartRoutingExactInput,
   resolveCartRoutingMaximumInput,
-  type CartRoutingPlan,
 } from '../../../src/sdk/cart-routing-core.js';
 import {
   requestUniswapQuote,
@@ -39,19 +39,44 @@ const usdc = resolveCurrency('usdc', chain);
 const rare = resolveCurrency('rare', chain);
 const liquidEdition = getAddress('0x26f99499094004Eba714b8bc11cAa7556b760B02');
 const liquidEditionHooks = getAddress('0x7dD3F8fe4AdD16c0d297D5DC1813fe4a5f4020cc');
-const publicClient = createPublicClient({ chain: mainnet, transport: http() });
+const publicClient = createPublicClient({
+  chain: mainnet,
+  transport: http(process.env.RARE_SDK_MAINNET_RPC_URL),
+});
 
-describeLive('SDK Cart mainnet route discovery integration', () => {
-  it('reads the canonical hooked RARE pool from the Liquid Edition', async () => {
-    await expect(getLiquidEditionPoolKey(publicClient, liquidEdition)).resolves.toEqual({
+describe('Mainnet Liquid Edition on-chain quotes', () => {
+  it('quotes buying and selling through the canonical hooked RARE pool', async () => {
+    const poolKey = await getLiquidEditionPoolKey(publicClient, liquidEdition);
+    expect(poolKey).toEqual({
       currency0: liquidEdition,
       currency1: rare,
       fee: 0,
       tickSpacing: 60,
       hooks: liquidEditionHooks,
     });
-  }, 30_000);
+    if (!poolKey) throw new Error('Liquid Edition has no canonical pool.');
 
+    const address = getV4QuoterAddress(chain);
+    const [buy, sell] = await Promise.all([
+      publicClient.simulateContract({
+        address,
+        abi: uniswapV4QuoterAbi,
+        functionName: 'quoteExactOutputSingle',
+        args: [{ poolKey, zeroForOne: false, exactAmount: 1_000_000_000_000_000_000n, hookData: '0x' }],
+      }),
+      publicClient.simulateContract({
+        address,
+        abi: uniswapV4QuoterAbi,
+        functionName: 'quoteExactInputSingle',
+        args: [{ poolKey, zeroForOne: true, exactAmount: 10_000_000_000_000_000n, hookData: '0x' }],
+      }),
+    ]);
+    expect(buy.result[0]).toBeGreaterThan(0n);
+    expect(sell.result[0]).toBeGreaterThan(0n);
+  }, 30_000);
+});
+
+describeLive('SDK Cart mainnet route discovery integration', () => {
   it.each([
     { name: 'USDC to ETH', paymentCurrency: usdc, settlementCurrency: eth, amount: 5_000_000_000_000_000n },
     { name: 'ETH to RARE', paymentCurrency: eth, settlementCurrency: rare, amount: 1_000_000_000_000_000_000_000n },
@@ -72,7 +97,6 @@ describeLive('SDK Cart mainnet route discovery integration', () => {
     expect(result.route.inputs.length).toBeGreaterThan(0);
     expect(Date.parse(result.expiresAt)).toBeGreaterThan(Date.parse(result.quotedAt));
   }, 60_000);
-
   it('discovers an exact-input route that still guarantees a fixed RARE settlement', async () => {
     const amount = 1_000_000_000_000_000_000_000n;
     const result = await discoverCartRoute(usdc, rare, amount, 'exact-input');
@@ -86,8 +110,7 @@ describeLive('SDK Cart mainnet route discovery integration', () => {
 
 });
 
-// Hooked-pool availability is a provider probe. The commerce compiler cases
-// above cover supported settlement currencies without depending on this pool.
+// Hosted routing through this hook depends on Uniswap Labs' routing eligibility.
 describe.skipIf(!apiKey || process.env.RARE_SDK_PROBE_LIQUID_EDITION_ROUTES !== '1')('Uniswap Mainnet Liquid Edition route availability', () => {
   it.each([
     { name: 'ETH', paymentCurrency: eth },
@@ -102,7 +125,6 @@ describe.skipIf(!apiKey || process.env.RARE_SDK_PROBE_LIQUID_EDITION_ROUTES !== 
     expect(hops.length).toBeGreaterThan(0);
     expect(hops.some((hop) => hop.type === 'v4-pool')).toBe(true);
     expect(hops.some((hop) => isAddressEqual(hop.tokenOut.address, liquidEdition))).toBe(true);
-
   }, 60_000);
 });
 
