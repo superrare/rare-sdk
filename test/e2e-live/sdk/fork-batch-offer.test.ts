@@ -125,6 +125,7 @@ describeFork('SDK fork integration write paths', () => {
         endTime: expiry,
       });
       const accepted = await seller.rare.offer.batch.accept({
+        autoApprove: true,
         creator: buyer.account,
         root: proof.root,
         proof: proof.proof,
@@ -284,6 +285,7 @@ describeFork('SDK fork integration write paths', () => {
       });
 
       const createdForCancel = await seller.rare.auction.batch.create({
+        autoApprove: true,
         root: cancelTree.root,
         artifact: cancelTree,
         price: 1_000_000_000_000n,
@@ -322,6 +324,7 @@ describeFork('SDK fork integration write paths', () => {
 
       const settleAuctionDurationSeconds = 10;
       await seller.rare.auction.batch.create({
+        autoApprove: true,
         root: settleTree.root,
         artifact: settleTree,
         price: 1_000_000_000_000n,
