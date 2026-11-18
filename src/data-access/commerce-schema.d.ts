@@ -1528,7 +1528,11 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        displayPriceUsdCents: string;
+                        price?: {
+                            currency: string;
+                            amount: string;
+                        };
+                        displayPriceUsdCents?: string;
                     };
                 };
             };
