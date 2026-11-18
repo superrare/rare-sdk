@@ -7,6 +7,7 @@ import {
   buildCartRoutingQuoteResult,
   CartRoutingCoreError,
   cartRoutingDefaultSlippageBps,
+  cartRoutingProviderOutput,
   planCartRoutingQuote,
   protectCartRoutingExactInput,
   resolveCartRoutingMaximumInput,
@@ -114,11 +115,12 @@ export function createCartRoutingNamespace(
           functionName: 'universalRouter',
         }));
         const quoted = await Promise.all(plan.foreignObligations.map(async (obligation) => {
+          const outputCurrency = cartRoutingProviderOutput(plan, obligation.settlementCurrency);
           const exactOutputResponse = await requestUniswapQuote({
             apiKey,
             chainId: plan.chainId,
             tokenIn: plan.paymentCurrency,
-            tokenOut: obligation.settlementCurrency,
+            tokenOut: outputCurrency,
             amount: obligation.amount,
             swapper: plan.cart,
             slippageBps: cartRoutingDefaultSlippageBps,
@@ -131,7 +133,7 @@ export function createCartRoutingNamespace(
                 apiKey,
                 chainId: plan.chainId,
                 tokenIn: plan.paymentCurrency,
-                tokenOut: obligation.settlementCurrency,
+                tokenOut: outputCurrency,
                 amount,
                 swapper: plan.cart,
                 slippageBps: cartRoutingDefaultSlippageBps,

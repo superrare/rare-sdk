@@ -8,6 +8,7 @@ import {
   type Hex,
 } from 'viem';
 import { ETH_ADDRESS, chainIds, type SupportedChain } from '../contracts/addresses.js';
+import { getWrappedEthAddress } from '../swap/known-pools.js';
 import type { UniswapQuoteResponse, UniswapSwapResponse } from '../swap/uniswap-api.js';
 import { appendCartNativeRefund, normalizeCartRouterProgram } from './cart-router-program-core.js';
 import { applyCartQuoteSpread } from './cart-core.js';
@@ -130,6 +131,13 @@ export function planCartRoutingQuote(
     settlements,
     foreignObligations,
   };
+}
+
+/** Cart can unwrap WETH at payout. Quote it directly so the router can return custody to Cart. */
+export function cartRoutingProviderOutput(plan: CartRoutingPlan, settlementCurrency: Address): Address {
+  if (!isAddressEqual(settlementCurrency, ETH_ADDRESS) || isAddressEqual(plan.paymentCurrency, ETH_ADDRESS)) return settlementCurrency;
+  const wrapped = getWrappedEthAddress(plan.chain);
+  return wrapped !== null && !isAddressEqual(plan.paymentCurrency, wrapped) ? wrapped : settlementCurrency;
 }
 
 export function resolveCartRoutingMaximumInput(
@@ -305,7 +313,7 @@ function validateQuoteEnvelope(
   const quote = response.quote;
   if (quote.chainId !== plan.chainId ||
     !isAddressEqual(quote.input.token, plan.paymentCurrency) ||
-    !isAddressEqual(quote.output.token, obligation.settlementCurrency) ||
+    !isAddressEqual(quote.output.token, cartRoutingProviderOutput(plan, obligation.settlementCurrency)) ||
     !isAddressEqual(quote.swapper, plan.cart) ||
     !isAddressEqual(quote.output.recipient, plan.cart)) {
     throw new CartRoutingCoreError('invalid_response', 'Uniswap quote endpoints, recipient, or chain do not match the Cart request.', obligation.settlementCurrency);
