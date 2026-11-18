@@ -3977,6 +3977,1494 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/eligibility/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your eligibility rules */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private creator rule list */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityRule"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an eligibility rule */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        idempotencyKey?: string;
+                        definition: {
+                            /** @enum {string} */
+                            kind: "PRIMARY_SALE" | "EVERY_SALE" | "CURRENT_HOLDER";
+                            source: {
+                                chainId: string;
+                                tokenContract: string;
+                                tokenIds?: string[];
+                            };
+                            targets: {
+                                sku: string;
+                                tokenId?: string;
+                            }[];
+                            /** Format: date-time */
+                            claimExpiresAt?: string;
+                        };
+                        /** Format: date-time */
+                        effectiveFrom?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Creator-owned eligibility rule */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityRule"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/rules/{ruleId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable an eligibility rule */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Rule disabled for new grants and checkouts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                disabled: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/rules/{ruleId}/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue historical sale claims */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sale eligibility backfill queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                queued: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your purchase eligibility claims */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                    sku?: string;
+                    ruleId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account claims, including consumption state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EligibilityClaim"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/eligibility/listings/{listingDigest}/requirement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Require a claim for your Listing */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listingDigest: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        chainId: string | number;
+                        cartAddress: string;
+                        /** Format: uuid */
+                        ruleId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Listing explicitly accepts the selected eligibility rule */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                ruleId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove your Listing claim requirement */
+        delete: {
+            parameters: {
+                query: {
+                    chainId: string | number;
+                    cartAddress: string;
+                };
+                header?: never;
+                path: {
+                    listingDigest: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Listing no longer requires a claim for new checkout authorizations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {boolean} */
+                                removed: true;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid eligibility request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Eligibility request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Account authentication unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get your Order and fulfillment status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private Order details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                paymentCurrency: string | null;
+                                paymentAmount: string | null;
+                                items?: {
+                                    lineIndex: number;
+                                    listingDigest: string;
+                                    sku: string;
+                                    quantity: string;
+                                    /** @enum {string} */
+                                    fulfillmentStatus: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    title: string | null;
+                                    images: string[];
+                                    /** Format: uuid */
+                                    printDropId: string | null;
+                                }[];
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                fulfillments: {
+                                    id: string;
+                                    kind: string;
+                                    orderLineIndex: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    providerOrderId: string | null;
+                                    progress?: {
+                                        /** Format: date-time */
+                                        providerUpdatedAt: string;
+                                        /** Format: date-time */
+                                        checkedAt: string;
+                                        /** @enum {string} */
+                                        stage: "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "CANCELLED";
+                                        /** @enum {string} */
+                                        productionStatus: "UNKNOWN" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE" | "ERROR";
+                                        issueCodes: string[];
+                                        shipments: {
+                                            id: string;
+                                            /** @enum {string} */
+                                            status: "PROCESSING" | "SHIPPED" | "CANCELLED";
+                                            carrier: string | null;
+                                            trackingNumber: string | null;
+                                            /** Format: uri */
+                                            trackingUrl: string | null;
+                                            /** Format: date-time */
+                                            dispatchedAt: string | null;
+                                        }[];
+                                    } | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your Cart Orders */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account Orders */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                paymentCurrency: string | null;
+                                paymentAmount: string | null;
+                                items?: {
+                                    lineIndex: number;
+                                    listingDigest: string;
+                                    sku: string;
+                                    quantity: string;
+                                    /** @enum {string} */
+                                    fulfillmentStatus: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    title: string | null;
+                                    images: string[];
+                                    /** Format: uuid */
+                                    printDropId: string | null;
+                                }[];
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                fulfillments: {
+                                    id: string;
+                                    kind: string;
+                                    orderLineIndex: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "FULFILLED" | "FAILED" | "CANCELLED";
+                                    providerOrderId: string | null;
+                                    progress?: {
+                                        /** Format: date-time */
+                                        providerUpdatedAt: string;
+                                        /** Format: date-time */
+                                        checkedAt: string;
+                                        /** @enum {string} */
+                                        stage: "SUBMITTED" | "IN_PRODUCTION" | "PARTIALLY_SHIPPED" | "SHIPPED" | "CANCELLED";
+                                        /** @enum {string} */
+                                        productionStatus: "UNKNOWN" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE" | "ERROR";
+                                        issueCodes: string[];
+                                        shipments: {
+                                            id: string;
+                                            /** @enum {string} */
+                                            status: "PROCESSING" | "SHIPPED" | "CANCELLED";
+                                            carrier: string | null;
+                                            trackingNumber: string | null;
+                                            /** Format: uri */
+                                            trackingUrl: string | null;
+                                            /** Format: date-time */
+                                            dispatchedAt: string | null;
+                                        }[];
+                                    } | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            }[];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/orders/checkout/{idempotencyKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recover your interrupted checkout without creating another Order */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    idempotencyKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Account and wallet-bound checkout recovery */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                status: "UNKNOWN" | "PREPARING" | "PREPARATION_FAILED" | "READY" | "EXECUTED" | "EXPIRED";
+                                orderId?: string;
+                                preparedPurchase?: {
+                                    /** @enum {number} */
+                                    schemaVersion: 1;
+                                    chainId: string | number;
+                                    cartAddress: string;
+                                    idempotencyKey: string;
+                                    /** Format: date-time */
+                                    preparedAt: string;
+                                    executePurchase: {
+                                        order: {
+                                            orderId: string;
+                                            paymentCurrency: string;
+                                            deadline: string;
+                                            paymentAmount: string;
+                                            orderLinesHash: string;
+                                            payoutRouteHash: string;
+                                            fulfillmentActionsHash: string;
+                                        };
+                                        lines: {
+                                            sku: string;
+                                            listingDigest: string;
+                                            fulfillmentKind: number;
+                                            quantity: string;
+                                            settlementCurrency: string;
+                                            amount: string;
+                                            paymentRecipient: string;
+                                        }[];
+                                        listings: {
+                                            listingSalt: string;
+                                            seller: string;
+                                            sku: string;
+                                            fulfillmentKind: number;
+                                            tokenContract: string;
+                                            tokenId: string;
+                                            settlementCurrency: string;
+                                            minimumUnitPrice: string;
+                                            availableQuantity: string;
+                                            paymentRecipient: string;
+                                        }[];
+                                        authorization: {
+                                            listingRoots: {
+                                                listingsRoot: string;
+                                                nonce: string;
+                                                deadline: string;
+                                            }[];
+                                            listingRootSignatures: string[];
+                                            listingRootIndexes: string[];
+                                            listingProofs: string[][];
+                                        };
+                                        route: {
+                                            commands: string;
+                                            inputs: string[];
+                                            routerValue: string;
+                                        };
+                                        actions: {
+                                            lineIndex: string;
+                                            quantity: string;
+                                            recipient: string;
+                                        }[];
+                                        platformSignature: string;
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Unable to access Orders */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Unable to access Orders */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/shipping-addresses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Shipping address deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/account/shipping-addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Private account address book */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                label: string;
+                                details: {
+                                    name: string;
+                                    /** Format: email */
+                                    email: string;
+                                    phoneNumber: string;
+                                    addressLine1: string;
+                                    /** @default  */
+                                    addressLine2: string;
+                                    townOrCity: string;
+                                    /** @default  */
+                                    stateOrCounty: string;
+                                    /** @default  */
+                                    postalOrZipCode: string;
+                                    countryCode: string;
+                                };
+                                isDefault: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @default  */
+                        label?: string;
+                        details: {
+                            name: string;
+                            /** Format: email */
+                            email: string;
+                            phoneNumber: string;
+                            addressLine1: string;
+                            /** @default  */
+                            addressLine2?: string;
+                            townOrCity: string;
+                            /** @default  */
+                            stateOrCounty?: string;
+                            /** @default  */
+                            postalOrZipCode?: string;
+                            countryCode: string;
+                        };
+                        /** @default false */
+                        makeDefault?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Saved private shipping address */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                label: string;
+                                details: {
+                                    name: string;
+                                    /** Format: email */
+                                    email: string;
+                                    phoneNumber: string;
+                                    addressLine1: string;
+                                    /** @default  */
+                                    addressLine2: string;
+                                    townOrCity: string;
+                                    /** @default  */
+                                    stateOrCounty: string;
+                                    /** @default  */
+                                    postalOrZipCode: string;
+                                    countryCode: string;
+                                };
+                                isDefault: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid shipping details */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all delivered inbox notifications read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                markedReadCount: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark an owned notification read without marking conversation messages read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    notificationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Notification"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Notification not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count unread inbox entries */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                unreadCount: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+        "/v1/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List delivered notifications for the signed-in account */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    perPage?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Notification"][];
+                            pagination: components["schemas"]["Pagination"];
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account required or access forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6176,7 +7664,65 @@ export interface components {
                 message: string;
             }[];
         };
-    };
+        EligibilityRule: {
+            /** Format: uuid */
+            id: string;
+            issuerAccountId: string;
+            version: number;
+            enabled: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            definition: {
+                /** @enum {string} */
+                kind: "PRIMARY_SALE" | "EVERY_SALE" | "CURRENT_HOLDER";
+                source: {
+                    chainId: string;
+                    tokenContract: string;
+                    tokenIds?: string[];
+                };
+                targets: {
+                    sku: string;
+                    tokenId?: string;
+                }[];
+                /** Format: date-time */
+                claimExpiresAt?: string;
+            };
+        };
+        CartErrorResponse: {
+            error: {
+                code: string;
+                message: string;
+                retryable: boolean;
+                listingDigest?: string;
+                lineIndex?: number;
+            };
+        };
+        EligibilityClaim: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ruleId: string;
+            allowedSkus: string[];
+            /** @enum {string} */
+            status: "AVAILABLE" | "RESERVED" | "CONSUMED" | "REVOKED";
+            /** Format: date-time */
+            expiresAt: string | null;
+            beneficiaryAccountId: string | null;
+        };
+
+        Notification: {
+            id: string;
+            category: string;
+            notificationId: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+};
     responses: never;
     parameters: never;
     requestBodies: never;

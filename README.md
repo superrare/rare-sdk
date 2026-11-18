@@ -14,6 +14,16 @@ CLI-only dependencies).
 npm install @rareprotocol/rare-sdk viem
 ```
 
+The SDK supports Node.js 22 and newer. It publishes ESM and CommonJS builds;
+browser applications may use the ESM entry points when their bundler provides
+the wallet, RPC, and file capabilities required by the methods they call.
+
+## Client configuration
+
+`createRareClient` accepts a viem public client for reads and simulation. Add a
+wallet client for write operations. Use `apiBaseUrl` for non-production Rare
+API access and `uniswapApiKey` only for hosted Uniswap routing.
+
 ## Usage
 
 Start with one client for public reads and account features. No RPC connection is needed:
@@ -45,17 +55,261 @@ const status = await rare.listing.status({
 });
 ```
 
-Subpath exports mirror the ones previously published by the CLI package:
+Features are grouped by intent under `rare.listing`, `rare.offer`,
+`rare.auction`, `rare.collection`, `rare.liquidEdition`, `rare.bridge`,
+`rare.swap`, `rare.search`, `rare.nft`, `rare.token`, and `rare.utils`.
+Batch listings and release configuration are available through
+`rare.listing.batch` and `rare.listing.release`; ERC-1155 collection,
+listing, and offer behavior is nested under its corresponding intent namespace.
+
+See [Eligibility client](docs/eligibility.md) for creator rules, SKU claims, and Listing requirements.
+For frontend implementation, use [Build SuperRare cart features through the SDK](docs/superrare-com-cart-handoff.md).
+
+Cart commerce is grouped under `rare.cart.catalog`, `rare.cart.listing`, and
+`rare.cart.checkout`. Sellers select a Rare API-generated SKU from the public
+catalogue, prepare and publish Listings, and buyers prepare and purchase a
+fixed quote. The payer is always the transaction sender and may be a collector,
+processor, or another third party.
+Each Listing carries a client-generated `listingSalt`; its complete EIP-712
+`listingDigest` is the immutable public identity referenced by Order Lines,
+Merkle artifacts, cancellation, fill state, and order-book APIs.
+
+Protected Cart requests reuse the unified client's account authentication. Use
+your existing session store without changing the transaction signing wallet.
+
+```ts
+const rare = createRareClient({ publicClient, walletClient, apiBaseUrl, sessionStore });
+```
+
+Listing preparation, publication, invalidation, and signed checkout preparation
+send the account's bearer token. Public catalog reads, Listing reads, and checkout
+quotes remain anonymous. Authenticated requests stay internal to the SDK and
+share the unified client's session and renewal lock. They refuse other API
+origins or base paths, omit cookies, follow no redirects, and do not replay a
+mutation after a failure. For application-owned sessions,
+pass `transport` instead. The application owns authentication and session renewal.
+
+```ts
+const variants = await rare.cart.catalog.variants.search({
+  nft: { contract: collectionAddress, tokenId },
+});
+const sku = variants.data[0]!.sku;
+
+// Listing preparation resolves SKU fulfillment through Rare API, reads the
+// current seller nonce, and builds an unsigned, non-durable batch artifact.
+const listingPreparation = await rare.cart.listing.prepare({
+  seller: sellerAddress,
+  listings: [{ sku, unitPrice, settlementCurrency, quantity }],
+  deadline,
+});
+const published = await rare.cart.listing.publish({
+  preparation: listingPreparation,
+  autoApprove: true,
+});
+
+// Rare API can also request a wallet-independent route for exact settlement
+// obligations. Exact-output is the default; exact-input remains available for
+// compatible Universal Router execution plans.
+const routingQuote = await rare.cart.routing.quote({
+  paymentCurrency,
+  obligations: settlementObligations,
+  mode: 'exact-output',
+});
+rare.cart.routing.assertFresh(routingQuote);
+
+// Preparation is wallet-independent and creates no signature, approval,
+// persistence, or transaction.
+const preparation = await rare.cart.checkout.prepare({
+  paymentCurrency,
+  items: [{ kind: 'listing', listingDigest, quantity: 1n, recipient: buyerAddress }],
+});
+
+// Purchase revalidates, obtains the platform-signed immutable order, performs
+// preflight, optionally approves, executes, and verifies the receipt.
+const purchase = await rare.cart.checkout.purchase({ preparation, autoApprove: true });
+
+// Listing-less swaps use the same quote, signing, and purchase flow.
+// exact-input fixes the spending budget; exact-output fixes the tokens received.
+const swap = await rare.cart.checkout.prepare({ paymentCurrency,
+  items: [{ kind: 'swap', mode: 'exact-input', outputCurrency,
+    inputAmount: 1_000_000n, recipient: buyerAddress }],
+});
+// Both quote directions produce fixed signed input and output amounts.
+// Execution movement changes protocol spread, not the promised token output.
+const swapPurchase = await rare.cart.checkout.purchase({ preparation: swap, autoApprove: true });
+```
+
+`autoApprove` defaults to `false`. Cart collects the exact platform-signed
+`paymentAmount`; settlement recipients receive their exact signed Order Line
+amounts, while favorable routing variance is protocol spread. The signed route
+also carries the exact native `routerValue` forwarded to Universal Router.
+Pure portable Listing Root, authorization, order, route, hashing, and Merkle
+builders are available from `@rareprotocol/rare-sdk/utils` for advanced use.
+Cart routing uses the client-level `uniswapApiKey` (or
+`resolveUniswapApiKey`) and requires no wallet, account, approval, or write.
+It asks Uniswap for the protected quote and compiled `/swap` transaction,
+extracts the opaque Universal Router program, and validates only the Cart
+command-family policy and transaction envelope. Universal Router remains the
+authority for paths, pools, recipients, payer flags, exact-input/output
+semantics, refunds, and internal V4 actions. Existing Liquid Editions routing
+continues to use its established SDK flow.
+The result contains JSON-safe exact settlements, expected and protected input
+amounts, expiration, and normalized quote evidence. Once the platform accepts
+and signs the route, execution never requotes or substitutes it.
+Methods return structured results and reject on RPC, API, wallet, or validation
+failure.
+
+Sellers can later remove the collection-wide authorization with
+`rare.cart.approval.revoke(collectionAddress)`.
+
+Backend integrations can use the same `utils` entry point for Cart protocol
+hashing and verification: `buildCartEip712Domain`, `hashCartListing`,
+`hashCartListingRoot`, `hashCartPurchaseOrder`, `hashCartOrderLines`,
+`hashCartPayoutRoute`, `hashCartFulfillmentActions`,
+`deriveCartListingMerkleLeaf`, `computeCartListingMerkleRoot`, and
+`verifyCartListingMerkleProof`. Chain-bound helpers accept safe numeric chain
+IDs or bigint chain IDs without numeric coercion.
+
+The package intentionally exposes only these supported entry points:
 
 | Import | Contents |
 | --- | --- |
 | `@rareprotocol/rare-sdk` (or `./client`) | `createRareClient` + SDK namespaces |
 | `@rareprotocol/rare-sdk/contracts` | contract addresses + ABIs per chain |
 | `@rareprotocol/rare-sdk/utils` | public helpers |
+| `@rareprotocol/rare-sdk/data-access` | typed Rare API client and errors |
+| `@rareprotocol/rare-sdk/wallet` | compatible viem wallet client for direct writes |
+
+Implementation modules, including planners, shell helpers, individual ABI
+files, and data-access internals, are private. Consumers should use only the
+documented root, `client`, `contracts`, `utils`, `data-access`, and `wallet` entry points.
+
+For direct viem writes outside SDK namespaces, `createRareWalletClient` from
+`@rareprotocol/rare-sdk/wallet` applies the same Reown wallet compatibility
+handling used internally by `createRareClient`:
+
+```ts
+import { createRareWalletClient } from '@rareprotocol/rare-sdk/wallet';
+
+const compatibleWallet = createRareWalletClient({ publicClient, walletClient });
+```
+
+Pass the original wallet to `createRareClient`. High-level SDK writes already
+apply this handling. The adapter retries only the recognized CAIP chain-ID
+conversion error through `wallet_sendCalls`, not ordinary failures or rejections.
+
+Catchable approval errors, including `MinterApprovalRequiredError`, are exported
+from the root package and `@rareprotocol/rare-sdk/client`.
+
+### Transaction approvals
+
+Write methods do not send ERC-20 allowance, NFT operator, or collection minter
+approval transactions unless the caller explicitly passes `autoApprove: true`.
+When an approval is required, the default behavior is to reject with the
+corresponding exported `PaymentApprovalRequiredError`,
+`NftApprovalRequiredError`, or `MinterApprovalRequiredError`. This lets an
+application obtain user consent before retrying:
+
+```ts
+try {
+  await rare.listing.create(params);
+} catch (error) {
+  if (error instanceof NftApprovalRequiredError) {
+    // Ask the user for consent, then retry intentionally.
+    await rare.listing.create({ ...params, autoApprove: true });
+  }
+}
+```
+
+Callers that intentionally want the previous one-call behavior can pass
+`autoApprove: true` on approval-capable writes, including swap token sells and
+liquid-edition deployment with initial RARE liquidity.
+
+### Lazy ERC-721 deployment variants
+
+`rare.collection.deploy.lazyErc721` exposes the implementation choice as
+`variant`: `standard`, `royalty-guard`, or `deadman-royalty-guard`. The former
+public `contractType` field and its `lazy-*` values are not accepted.
+
+```ts
+await rare.collection.deploy.lazyErc721({
+  name: 'Release Collection',
+  symbol: 'REL',
+  maxTokens: 1000,
+  variant: 'royalty-guard',
+});
+```
+
+### Crypto values use bigint base units
+
+Public SDK prices, payment amounts, swap inputs, liquid-edition supplies, and
+royalty sale prices accept `bigint` base units only. Convert user-facing
+decimal values before calling the SDK; for example, use viem's `parseEther` or
+`parseUnits` with the selected ERC-20 currency's decimals.
+
+```ts
+import { parseEther, parseUnits } from 'viem';
+
+await rare.listing.create({
+  contract: '0x…',
+  tokenId: 1n,
+  price: parseEther('0.5'),
+});
+
+await rare.offer.create({
+  contract: '0x…',
+  tokenId: 1n,
+  currency: 'usdc',
+  price: parseUnits('12.50', 6),
+});
+```
+
+Serialized batch-listing artifacts retain string amounts because JSON cannot
+represent bigint values; live SDK method inputs are bigint-only.
+
+### Batch marketplace creation
+
+Batch listing, auction, and offer creation use the same token-tree artifact
+produced by `rare.utils.tree.build`. Marketplace terms stay in the method
+parameters instead of being embedded in a listing-specific registration
+artifact:
+
+```ts
+await rare.listing.batch.create({
+  artifact: tokenTreeArtifact,
+  price: parseEther('0.012'),
+  currency: 'eth',
+  splitAddresses,
+  splitRatios,
+});
+```
+
+The previous mixed batch-listing root artifact is not accepted by the V2
+create method. Portable token-tree artifacts remain reusable across listing,
+auction, and offer creation.
+
+Liquid-edition curve configuration helpers are available both as standalone
+utilities and on a configured client:
+
+```ts
+import { getCurvePresetDefinition, parseCurveConfig } from '@rareprotocol/rare-sdk/utils';
+
+const preset = getCurvePresetDefinition('medium-demand');
+const segments = parseCurveConfig(curveJson, '1000000', 60);
+
+const samePreset = rare.utils.liquidCurve.getPresetDefinition('medium-demand');
+const sameSegments = rare.utils.liquidCurve.parseConfig({
+  value: curveJson,
+  totalCurveSupplyTokens: '1000000',
+  tickSpacing: 60,
+});
+```
 
 ## Regenerating the Rare API types
 
-Generate endpoint and response types from the production Rare API:
+The generator reads `RARE_API_BASE_URL` from the process environment, then from
+a local `.env`, and otherwise uses `https://api.superrare.com`. Values are parsed
+as data rather than evaluated by a shell.
 
 ```bash
 npm run generate:types
@@ -309,17 +563,11 @@ and can apply their own Imgix source or other image service.
 
 Run `npm run test:integration:uploads` manually against a deployed dev API with
 `RARE_ACCOUNT_TEST_API_URL`, `RARE_ACCOUNT_TEST_PRIVATE_KEY`, and
-`RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` configured. This
-suite uses real storage and requires authenticated `gcloud` access on
-`superrare-dev` to delete its unique test objects from both upload buckets.
-It verifies concurrent deduplication, first-writer metadata, public byte-for-byte
-downloads, avatar attachment and clearing, unchanged unrelated profile fields,
-and HTTP rejection of anonymous, forged, empty, oversized and unexpected-field
-requests. Object hashes are registered before requests so cleanup also runs after
-an ambiguous upload failure. It also verifies private references, anonymous download
-denial, separate bucket storage, private cache metadata, a 33 MiB multi-chunk upload,
-private staging, unfinished-upload rejection, and account-bound repeat finalization. The dev API must use
-`rare-api-public-upload-dev` and `rare-api-private-upload-dev`. It is not a CI job.
+`RARE_ACCOUNT_TEST_SECOND_PRIVATE_KEY` configured. Use a dev API backed by
+`rare-api-public-upload-dev` and `rare-api-private-upload-dev`. The suite checks
+public downloads, private upload isolation, account-bound finalization, and a
+33 MiB multi-chunk upload. It also checks avatar updates, deduplication, and
+invalid requests. Test uploads remain in the dev buckets.
 
 Avatar uploads accept PNG, JPEG or GIF, up to 5 MiB. The upload method saves the
 returned URL to your profile. If the upload succeeds but saving fails,
@@ -511,9 +759,7 @@ or follow the first account from the second. The first/third pair is used for an
 accepted direct conversation. Blocking is restored afterward. Public messages and
 transient direct replies are deleted. Request seed messages remain for repeatable
 runs, and new groups are closed with their durable history retained.
-Set `RARE_MESSAGING_TEST_PRIVATE_BUCKET` to the deployment's private messaging
-bucket and authenticate `gcloud` for `superrare-dev` so attachment fixtures can be
-removed. These tests verify private bytes through authenticated downloads and
+These tests verify private bytes through authenticated downloads and
 verify revocation after bans and message deletion. They are excluded from the
 standard test command and do not run in CI.
 
@@ -540,18 +786,10 @@ variables plus `RARE_MESSAGING_TEST_PUBLIC_CONTEXTS`, a JSON array containing on
 existing context of each type: `auction` with `id`, `liquid-edition` with `chainId`
 and `contractAddress`, and `drop-announcement` with `id`. Use dedicated fixture rooms
 where the test account is not already subscribed. The suite deletes its messages
-and leaves each room afterward. Set `RARE_MESSAGING_TEST_PIPELINES_DIR` to the
-monorepo's `services/pipelines` directory and `RARE_MESSAGING_TEST_DATABASE_URL`
-to the matching non-production deployment database connection. System fixtures
-invoke the production Pipelines writer directly; no internal HTTP producer key is used. Public delivery tests
-verify delivery for all three room types, default subscriptions in a new room, mentions-only and muted
-preferences, and actual app-inbox delivery. A positive control confirms that the
-worker is running during muted-delivery checks. System-message fixtures use a new
-temporary drop room, then verify anonymous thread reads, producer retry deduplication,
-one notification per event, and rejection of user writes/edits/deletes. The SDK does
-not expose a system-message write endpoint. Deleting the fixture drop leaves its
-unadvertised durable system history; tests do not put synthetic events into an
-existing auction or liquid-edition history.
+and leaves each room afterward. Public delivery tests verify app-inbox delivery
+for all three room types, default subscriptions, and mentions-only and muted
+preferences. They also check that ordinary callers cannot write trusted system
+messages. A separate unmuted room verifies delivery during the muted-room check.
 
 For public history, `nextCursor` is the last sequence in a truncated page. While
 polling forward, request `history(room.id, { after, limit: 100 })`, drain every
@@ -607,14 +845,17 @@ Feature methods keep the same request and response types. This client has no `au
 methods and never acquires or refreshes an SDK bearer session.
 
 ```ts
-const account = createRareClient({
+const rare = createRareClient({
   transport: (path, init) => fetch(`/api/rare${path}`, {
     ...init,
     credentials: 'same-origin',
     redirect: 'error',
   }),
 });
-const inbox = await account.messaging.inbox();
+const inbox = await rare.messaging.inbox();
+const master = await rare.upload(printFile, 'master.tiff', { access: 'private' });
+const addresses = await rare.shippingAddresses.list();
+const orders = await rare.cart.orders.list();
 ```
 
 The transport receives API-relative paths such as `/v1/messaging/conversations`,
@@ -627,6 +868,9 @@ JavaScript. Authenticated API errors retain the SDK's normal error handling.
 
 Signed storage uploads bypass this API transport and use the optional `apiFetch`
 implementation with `credentials: 'omit'`, without authentication headers.
+Use this same `rare.upload` method for production files and public
+display images. SuperRare's existing session belongs in the application transport;
+there is no separate print uploader or upload-specific login.
 Without a transport, `createRareClient` retains its existing bearer-token
 login, session storage and refresh behavior.
 
@@ -691,3 +935,114 @@ a deployed Rare API with the arbitrary-origin Auth update.
 ### Request controls
 
 New API-backed methods keep operation data separate from request controls. For example, `rare.notifications.list({ page: 1, perPage: 20 }, { signal })` and `rare.posts.comment(postId, { body, parentCommentId }, { signal })`. Methods with no operation input accept request controls directly, such as `rare.profile.get({ signal })`. Public messaging reads remain anonymous by default; use `rare.messaging.public.history(roomId, { limit: 20 }, { authenticated: true, signal })` for viewer-specific visibility. Upload metadata stays in the third argument; cancellation controls go in the fourth: `rare.upload(file, filename, { access: 'private' }, { signal })`.
+## Reference documentation
+
+Generate API reference Markdown directly from the public SDK source:
+
+```bash
+npm run docs:build
+```
+
+The generated reference is written to `docs/reference/`.
+
+## Print authoring and delivery checkout
+
+`rare.prints` exposes creator-owned drops, supported print products, production
+quotes, frozen Listing preparations, and public print reads. It uses Rare API
+directly and shares the account session configured through `createRareClient`.
+
+Print products are public reads: `await rare.prints.products.list({ signal })` and
+`await rare.prints.products.get("GLOBAL-FAP-8X12", { signal })`. The catalog has eight
+Enhanced matte art paper presets in rectangular and square sizes. `printAreas`
+contains provider recommended pixel dimensions, not upload minimums. Orientation
+is automatic. `fileRequirements` reports accepted content types and maximum bytes.
+Use the selected product `id` in the existing draft `specificationId`
+field. Product responses omit prices, shipping and destination country lists.
+
+Validate an owned private upload before configuring a print:
+
+```ts
+const input = { productionUploadKey: upload.key, specificationId: "GLOBAL-FAP-8X12" };
+const validation = await rare.prints.files.validate(input, { signal });
+const preview = await rare.prints.mockups.create(input, { signal });
+const current = await rare.prints.mockups.get(preview.id, { signal });
+```
+
+Validation returns `valid`, `status`, and issues with codes, messages, and severity.
+Mockup creation starts an asynchronous job. Read its status until `completed` or
+`failed`; a completed job includes `result.url`, `widthPx`, and `heightPx`.
+These methods use your account session and require no signing wallet. They accept
+an owned upload key and curated specification, never a production URL or provider
+asset ID. A mockup ID belongs to your Rare account.
+
+Run `npm run test:integration:print-products` against a deployment containing the
+product endpoints for a read-only catalog check. This check requires only
+`RARE_API_BASE_URL`.
+
+Upload print masters with `rare.upload(file, filename, { access:
+'private' })`. Pass the returned `key` as `print.productionUploadKey` when creating
+a standalone drop. Upload supplemental display images with public access and use
+their URLs in `print.images`. Every draft requires an explicit `chainId` and
+`print` details, including a supported `print.specificationId`. Optional
+`print.sourceUniversalTokenId` attributes a creator-owned NFT and appears in
+`drop.metadata.sourceUniversalTokenId`. The SDK does not publish master download URLs.
+
+Prepare seller terms with `rare.prints.listings.prepare`, then call
+`rare.cart.listing.publish({ printPreparations: preparation })` to sign and publish the frozen
+terms. This helper checks the chain, configured Cart contract, seller, and Listing
+digest before requesting the wallet signature.
+
+Use `rare.prints.drops.update` for presentation edits and production-file
+replacement, including after pricing or publication. Upload a replacement
+privately and call `rare.prints.drops.update(dropId, { productionUploadKey: upload.key })`.
+Future orders use the new master; existing authorized and paid orders keep their
+original production snapshots. Specification changes still require an
+unconfigured draft or a replacement drop and SKU.
+
+Purchases use `rare.cart.checkout`. Add `delivery: { savedAddressId }` or
+`delivery: { recipientDetails }` to the usual checkout intent. The returned
+preparation includes an idempotency key and an optional price breakdown. Retain
+that preparation for retries. `purchase({ preparation })` submits the delivery
+draft through generic Cart checkout. `rare.cart.checkout.payment({ method: 'card', preparation, email })`
+prepares a card session for digital, physical, or mixed merchandise. Read card
+availability with `rare.cart.checkout.paymentMethods()`.
+
+Saving an address is a separate, explicit operation. Use
+`rare.shippingAddresses.list`, `save`, and `delete`. Checkout does not
+implicitly save delivery details. `save` accepts an address UUID and `makeDefault`
+to create or replace an entry and select the default.
+
+`rare.cart.orders.list` returns `{ data, nextCursor }` for account-owned
+Cart orders, including NFT-only, swap-only, print, and mixed purchases.
+`rare.cart.orders.get(cartOrderId)` returns payment and fulfillment
+status without private address data. Orders use `PENDING`, `CONFIRMED`,
+`FULFILLED`, `FAILED`, and `CANCELLED`. On-chain items are fulfilled when execution
+is indexed; mixed orders stay confirmed while physical delivery is outstanding.
+Item `fulfillmentStatus` and provider records distinguish `PENDING`, `SUBMITTED`,
+`SHIPPED`, `FULFILLED`, `FAILED`, and `CANCELLED`. `SUBMITTED` means provider
+acceptance, not delivery. These methods do not include legacy NFT purchase history.
+
+Run `npm run test:integration:prints` against a non-production feature deployment.
+The test requires `RARE_ACCOUNT_TEST_API_URL` or `RARE_API_BASE_URL`, plus a registered
+test account in `RARE_ACCOUNT_TEST_PRIVATE_KEY` or `E2E_SELLER_PRIVATE_KEYS`. It saves
+and removes a fixture address, uploads reusable images, publishes and archives a
+test Listing, and quotes delivery. It prepares an idempotent unpaid Cart order
+but does not send a payment or submit a physical order.
+
+The focused commerce OpenAPI types come from the backend source document. Regenerate
+them with `npm run generate:commerce-types -- /path/to/openapi.json`. Keep these
+types separate from the existing generated discovery types to avoid unrelated
+schema changes while the API migration is in progress.
+
+## Development and releases
+
+Use Node 22 or newer and install the lockfile with `npm ci`. Before opening a
+pull request or preparing a release, run:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run docs:build
+npm run package:check
+```

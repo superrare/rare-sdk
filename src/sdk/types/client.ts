@@ -30,7 +30,9 @@ import type { ListingNamespace } from './listing.js';
 import type { OfferNamespace } from './offer.js';
 import type { SwapNamespace } from './swap.js';
 import type { TokenNamespace } from './token.js';
-import type { UtilsNamespace } from './utils.js';
+import type { CartNamespace } from './cart.js';
+import type { PrintsNamespace } from './prints.js';
+import type { RareUtilsNamespace } from './utils.js';
 
 /**
  * Configuration for {@link createRareClient}.
@@ -98,6 +100,9 @@ export type RareClientContracts = {
   liquidFactory?: Address;
   swapRouter?: Address;
   v4Quoter?: Address;
+  cart?: Address;
+  cartLens?: Address;
+  cartHashes?: Address;
 }
 
 export type SearchNamespace = {
@@ -160,7 +165,7 @@ export type RareChainFeatures = {
   auction: AuctionNamespace;
   offer: OfferNamespace;
   listing: ListingNamespace;
-  utils: UtilsNamespace;
+  utils: RareUtilsNamespace;
   search: SearchNamespace;
   nft: NftNamespace;
   collection: CollectionNamespace;
@@ -172,6 +177,8 @@ export type RareChainFeatures = {
   import: ImportNamespace;
   token: TokenNamespace;
   currency: CurrencyNamespace;
+  cart: CartNamespace;
+  prints: PrintsNamespace;
 }
 
 export type { IntegerInput };
@@ -179,7 +186,7 @@ export type { IntegerInput };
 
 /** Public Rare API methods available without a blockchain RPC client. */
 export type RarePublicFeatures = {
-  utils: UtilsNamespace;
+  utils: RareUtilsNamespace;
   token: Pick<TokenNamespace, 'getPrice'>;
   search: {
     liquidEditions: RareApi['searchLiquidEditions'];

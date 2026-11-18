@@ -1,0 +1,509 @@
+import type { RareAuthRequestOptions } from './account.js';
+import type { CartSplit } from './cart.js';
+import type { Address, Hex } from 'viem';
+import type { IntegerInput } from './common.js';
+import type { AccountCheckoutRecoveryWire } from './orders.js';
+import type { ShippingDetails } from './shipping-addresses.js';
+import type {
+  CartFulfillmentKind,
+  CartSellerFulfillmentKind,
+  CartListing,
+  CartListingAuthorizationBundle,
+  CartOrderLine,
+  CartPayoutRoute,
+  CartSignedOrder,
+  CartListingRootArtifact,
+} from './cart.js';
+
+export type CartApiCatalogMetadata = Record<string, unknown>;
+export type CartCheckoutReceipt = import('../../data-access/cart-schema.js').components['schemas']['CartReceipt'];
+
+export type CartApiProduct = {
+  id: string;
+  userId: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  slug: string | null;
+  metadata: CartApiCatalogMetadata;
+  variants: CartApiProductVariant[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CartApiProductVariant = {
+  id: string;
+  productId: string;
+  sku: Hex;
+  universalTokenId: string | null;
+  position: number;
+  isHidden: boolean;
+  metadata: CartApiCatalogMetadata;
+};
+
+export type CartCatalogVariant = {
+  id: string;
+  sku: Hex;
+  universalTokenId: string | null;
+  metadata: CartApiCatalogMetadata;
+  products: Array<{
+    associationId: string;
+    productId: string;
+    position: number;
+    metadata: CartApiCatalogMetadata;
+    product: {
+      id: string;
+      creatorUserId: string;
+      slug: string | null;
+      metadata: CartApiCatalogMetadata;
+    };
+  }>;
+};
+
+export type CartProductSearchParams = {
+  query?: string;
+  id?: string;
+  slug?: string;
+  creatorUserId?: string;
+  page?: number;
+  perPage?: number;
+};
+
+/** Owner-scoped preparation lookup; unpublished Products remain private. */
+export type CartProductsMineParams = { page?: number; perPage?: number; releaseDraftId?: string; releaseContract?: Address };
+
+export type CartVariantSearchParams = {
+  query?: string;
+  sku?: Hex;
+  nft?: { contract: Address; tokenId: IntegerInput };
+  productId?: string;
+  creatorUserId?: string;
+  ownerUserId?: string;
+  page?: number;
+  perPage?: number;
+};
+
+export type CartProductSearchResult = CartApiPage<CartApiProduct>;
+export type CartVariantSearchResult = CartApiPage<CartCatalogVariant>;
+
+export type CartApiPage<T> = {
+  data: T[];
+  pagination: { page: number; perPage: number; hasNextPage: boolean };
+};
+
+export type CartApiListing = {
+  chainId: string;
+  cartAddress: Address;
+  listingDigest: Hex;
+  listing: {
+    listingSalt: Hex;
+    seller: Address;
+    sku: Hex;
+    fulfillmentKind: CartFulfillmentKind;
+    tokenContract: Address;
+    tokenId: string;
+    settlementCurrency: Address;
+    minimumUnitPrice: string;
+    availableQuantity: string;
+    paymentRecipient: Address;
+    splits: CartSplit[];
+  };
+  displayUnitPrice: string;
+  invalidatedAt: string | null;
+  authorized: boolean;
+  metadata: CartApiCatalogMetadata;
+};
+
+export type CartApiListingRoot = {
+  chainId: string;
+  cart: Address;
+  seller: Address;
+  root: {
+    listingsRoot: Hex;
+    nonce: string;
+    deadline: string;
+  };
+  signature: Hex;
+  listingCount: number;
+};
+
+export type CartApiListingSearchParams = {
+  /** Include open Listings and gated Listings the authenticated account can purchase. */
+  eligibility?: 'eligible';
+  query?: string;
+  sku?: Hex;
+  seller?: Address;
+  fulfillmentKind?: CartFulfillmentKind;
+  settlementCurrency?: Address;
+  productId?: string;
+  sortBy?: 'newest' | 'oldest' | 'priceAsc' | 'priceDesc' | 'deadlineAsc';
+  page?: number;
+  perPage?: number;
+};
+
+export type CartApiListingSearchResult = {
+  data: Array<{
+    id: Hex;
+    listingDigest: Hex;
+    chainId: string;
+    cartAddress: Address;
+    seller: Address;
+    listingSalt: Hex;
+    sku: Hex;
+    fulfillmentKind: string;
+    tokenContract?: Address | null;
+    tokenId?: string | null;
+    settlementCurrency: Address;
+    settlementCurrencySymbol?: string | null;
+    settlementCurrencyDecimals?: number;
+    paymentRecipient?: Address | null;
+    minimumUnitPrice: string;
+    displayUnitPrice: string;
+    displayUnitPriceUsdAmount: number | null;
+    availableQuantity: string;
+    observedFilledQuantity: string | null;
+    observedRemainingQuantity: string | null;
+    rootDeadline: number | null;
+    invalidatedAt: number | null;
+    authorizationState: string;
+    observedCancellation: boolean | null;
+    observedAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+    projectedAt: number;
+    priceUsdUpdatedAt: number | null;
+    skuMetadata: CartApiCatalogMetadata;
+    productPresentations: Array<{
+      productId: string;
+      productSlug: string | null;
+      position: number;
+      productMetadata: CartApiCatalogMetadata;
+      productSkuMetadata: CartApiCatalogMetadata;
+    }>;
+    productIds: string[];
+    productSlugs: string[];
+    productTitles: string[];
+    productDescriptions: string[];
+    productTags: string[];
+  }>;
+  pagination: {
+    page: number;
+    perPage: number;
+    totalCount: number;
+    totalPages: number;
+  };
+};
+
+type CartListingIntentTerms = {
+  fulfillmentKind?: CartSellerFulfillmentKind;
+  settlementCurrency: Address;
+  unitPrice: bigint;
+  quantity: bigint;
+  /** Maximum copies of this Listing in one checkout, separate from total supply. */
+  maxQuantityPerCheckout?: bigint;
+  paymentRecipient?: Address;
+  splits?: CartSplit[];
+};
+
+export type CartListingIntentItem = CartListingIntentTerms & (
+  | { sku: Hex; nft?: never }
+  | { sku?: never; nft: { contract: Address; tokenId: bigint } }
+);
+
+export type CartListingIntent = {
+  seller: Address;
+  listings: readonly CartListingIntentItem[];
+  deadline: bigint;
+  /** Attach the owned rule atomically when publishing every Listing in this root. */
+  eligibilityRuleId?: string;
+};
+
+export type CartListingPreviewWire = {
+  listings: Array<{
+    listingSalt: Hex;
+    seller: Address;
+    sku: Hex;
+    fulfillmentKind: number;
+    tokenContract: Address;
+    tokenId: string;
+    settlementCurrency: Address;
+    minimumUnitPrice: string;
+    availableQuantity: string;
+    paymentRecipient: Address;
+    splits: CartSplit[];
+  }>;
+};
+
+export type CartCheckoutIntentItem = {
+  kind: 'listing';
+  listingDigest: Hex;
+  quantity: bigint;
+  recipient?: Address;
+} | {
+  kind: 'swap';
+  mode: 'exact-output';
+  outputCurrency: Address;
+  outputAmount: bigint;
+  recipient?: Address;
+} | {
+  kind: 'swap';
+  mode: 'exact-input';
+  outputCurrency: Address;
+  inputAmount: bigint;
+  recipient?: Address;
+};
+
+/** Bind physical copies to the actual tokens minted by this checkout, in unit order. */
+export type CartPrintMintSelection = { preparationId: string; listingDigest: Hex; unitIndexes: number[] };
+export type CartDeliverySelection = {
+  mintSelections?: CartPrintMintSelection[];
+};
+
+export type CartCheckoutIntent = {
+  paymentCurrency: Address;
+  items: readonly CartCheckoutIntentItem[];
+  delivery?: ({ recipientDetails: ShippingDetails } | { savedAddressId: string }) & CartDeliverySelection;
+};
+export type CartDeliveryCheckout = CartCheckoutIntent & { delivery: NonNullable<CartCheckoutIntent['delivery']>; idempotencyKey: string };
+export type CartCheckoutBreakdown = {
+  displayPrice?: bigint;
+  displayPrices?: readonly { currency: Address; amount: bigint }[];
+  production: bigint;
+  shipping: bigint;
+  networkFee?: bigint;
+  total?: bigint;
+};
+export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' | 'preparedPurchase'> & {
+  orderId?: Hex;
+  preparedPurchase?: CartApiPreparedPurchase;
+};
+
+export type CartPaymentRequest = {
+  method: 'card';
+  preparation: CartCheckoutPreparation;
+  email: string;
+};
+export type CartPaymentMethods = {
+  enabled: boolean;
+  paymentCurrency: Address | null;
+  minimumCents: number;
+  maximumCentsExclusive: number;
+  directCard?: { merchantId: string; env: 'sandbox' };
+};
+export type CartCardCharge = {
+  orderId: Hex;
+  idempotencyKey: string;
+  reviewedTotalCents: number;
+  card: {
+    token: string;
+    expMonth: string;
+    expYear: string;
+    bin?: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    address1: string;
+    city: string;
+    country: string;
+    state?: string;
+    zip?: string;
+  };
+};
+export type CartCardChargeResult =
+  | { status: 'pending' }
+  | { status: 'accepted'; paymentId: string }
+  | { status: 'quote_changed'; totalCents: number };
+export type CartCardCheckout = {
+  checkoutJwtToken: string;
+  sessionKey: string;
+  config: { merchantId: string; env: 'sandbox' | 'prod' };
+  preparedPurchase: CartApiPreparedPurchase;
+};
+
+export type CartCheckoutFee = { label: string; currency: Address; amount: bigint };
+export type CartCheckoutSettlement = { currency: Address; amount: bigint };
+export type CartCheckoutQuoteEvidence = {
+  source: string;
+  quotedInput: bigint;
+  maximumInput: bigint;
+  quotedAt: string;
+  expiresAt: string;
+  summary: string;
+};
+
+/** All amounts are in base units of currency. Converted charges are grouped. */
+export type CartCheckoutQuote = {
+  currency: Address;
+  total: bigint;
+  expiresAt: string;
+  lines: readonly { kind: 'items' | 'fees' | 'converted'; amount: bigint }[];
+};
+
+export type CartCheckoutPreparation = {
+  quote?: CartCheckoutQuote;
+  schemaVersion: 1;
+  chainId: bigint;
+  cartAddress: Address;
+  preparedAt: string;
+  expiresAt: string;
+  preparationReference: string;
+  idempotencyKey?: string;
+  breakdown?: CartCheckoutBreakdown;
+  intent: CartCheckoutIntent;
+  paymentAmount: bigint;
+  fees: CartCheckoutFee[];
+  settlements: CartCheckoutSettlement[];
+  lines: CartOrderLine[];
+  route: CartPayoutRoute;
+};
+
+export type CartCheckoutPreviewWire = {
+  quote?: Omit<CartCheckoutQuote, 'total' | 'lines'> & {
+    total: string;
+    lines: readonly { kind: CartCheckoutQuote['lines'][number]['kind']; amount: string }[];
+  };
+  preparationReference: string;
+  preparation: CartApiPreparedPurchaseWire;
+  breakdown?: {
+    displayPrice?: string;
+    displayPrices?: readonly { currency: Address; amount: string }[];
+    production: string;
+    shipping: string;
+    networkFee?: string;
+    total?: string;
+  };
+};
+
+export type CartApiPreparedPurchaseWire = {
+  schemaVersion: 1;
+  chainId: string;
+  cartAddress: Address;
+  preparedAt: string;
+  executePurchase: {
+    order: {
+      orderId: Hex;
+      paymentCurrency: Address;
+      deadline: string;
+      paymentAmount: string;
+      spreadRecipient: Address;
+      orderLinesHash: Hex;
+      payoutRouteHash: Hex;
+      fulfillmentActionsHash: Hex;
+    };
+    lines: Array<{
+      sku: Hex;
+      listingDigest: Hex;
+      fulfillmentKind: number;
+      quantity: string;
+      settlementCurrency: Address;
+      amount: string;
+      paymentRecipient: Address;
+    }>;
+    listings: Array<{
+      listingSalt: Hex;
+      seller: Address;
+      sku: Hex;
+      fulfillmentKind: number;
+      tokenContract: Address;
+      tokenId: string;
+      settlementCurrency: Address;
+      minimumUnitPrice: string;
+      availableQuantity: string;
+      paymentRecipient: Address;
+      splits: CartSplit[];
+    }>;
+    authorization: {
+      listingRoots: Array<{ listingsRoot: Hex; nonce: string; deadline: string }>;
+      listingRootSignatures: Hex[];
+      listingRootIndexes: string[];
+      listingProofs: Hex[][];
+    };
+    route: { commands: Hex; inputs: Hex[]; routerValue: string };
+    actions: Array<{ lineIndex: string; quantity: string; recipient: Address }>;
+    platformSignature: Hex;
+  };
+};
+
+export type CartApiPreparedPurchase = {
+  schemaVersion: 1;
+  chainId: bigint;
+  cartAddress: Address;
+  preparedAt: string;
+  executePurchase: CartSignedOrder & {
+    listings: CartListing[];
+    authorization: CartListingAuthorizationBundle['authorization'];
+  };
+};
+
+export type CreateCartProduct = import('../../data-access/cart-schema.js').paths['/v1/cart/products']['post']['requestBody']['content']['application/json'];
+export type AddCartVariants = import('../../data-access/cart-schema.js').paths['/v1/cart/products/{productId}/variants']['post']['requestBody']['content']['application/json'];
+export type AttachCartSku = import('../../data-access/cart-schema.js').components['schemas']['CartProductSkuRequest'];
+export type CartProductSku = import('../../data-access/cart-schema.js').components['schemas']['CartProductSku'];
+
+export type CartApiNamespace = {
+  catalog: {
+    products: {
+      create: (input: CreateCartProduct, options?: { idempotencyKey?: string }) => Promise<CartApiProduct>;
+      attachSku: (productId: string, input: AttachCartSku) => Promise<CartProductSku>;
+      getMine: (id: string, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
+      listMine: (params?: CartProductsMineParams, options?: RareAuthRequestOptions) => Promise<CartProductSearchResult>;
+      update: (id: string, input: CreateCartProduct, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
+      publish: (id: string) => Promise<CartApiProduct>;
+      archive: (id: string) => Promise<CartApiProduct>;
+      search: (params?: CartProductSearchParams) => Promise<CartProductSearchResult>;
+      get: (id: string) => Promise<CartApiProduct>;
+    };
+    variants: {
+      add: (productId: string, input: AddCartVariants) => Promise<CartApiProduct>;
+      setVisibility: (productId: string, variantId: string, input: { isHidden: boolean }, options?: RareAuthRequestOptions) => Promise<CartApiProduct>;
+      search: (params?: CartVariantSearchParams) => Promise<CartVariantSearchResult>;
+    };
+  };
+  listing: {
+    preview: (intent: CartListingIntent) => Promise<CartListing[]>;
+    search: (params?: CartApiListingSearchParams) => Promise<CartApiListingSearchResult>;
+    get: (listingDigest: Hex) => Promise<CartApiListing>;
+    invalidate: (listingDigest: Hex, invalidatedAt?: string | null) => Promise<CartApiListing>;
+    publishPrintPreparations: (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;
+    publish: (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;
+  };
+  checkout: {
+    receipt: (orderId: Hex) => Promise<CartCheckoutReceipt>;
+    preview: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
+    prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
+    /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
+    recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
+    payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
+    paymentMethods: () => Promise<CartPaymentMethods>;
+    card: {
+      quote: (input: { email: string; subtotalCents: number }) => Promise<{ totalCents: number }>;
+      charge: (input: CartCardCharge) => Promise<CartCardChargeResult>;
+    };
+  };
+};
+
+export type CartListingRootArtifactWire = {
+  version: 1;
+  type: 'rare-cart-listing-root';
+  chainId: string;
+  cart: Address;
+  seller: Address;
+  root: { listingsRoot: Hex; nonce: string; deadline: string };
+  entries: Array<{
+    listing: {
+      listingSalt: Hex;
+      seller: Address;
+      sku: Hex;
+      fulfillmentKind: number;
+      tokenContract: Address;
+      tokenId: string;
+      settlementCurrency: Address;
+      minimumUnitPrice: string;
+      availableQuantity: string;
+      paymentRecipient: Address;
+      splits: CartSplit[];
+    };
+    listingDigest: Hex;
+    leaf: Hex;
+    proof: Hex[];
+  }>;
+  signature: Hex;
+};

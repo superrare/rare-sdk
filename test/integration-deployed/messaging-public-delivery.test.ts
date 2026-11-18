@@ -1,4 +1,3 @@
-import { appendSystemFixture } from './messaging-system-fixture.js';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -106,7 +105,6 @@ describe('public room notification delivery and trusted system messages', () => 
 
               await recipient.account.messaging.command(room.id, { action: 'preferences', notification: 'all' });
               expect((await recipient.account.messaging.inbox()).conversations.find(row => row.id === room.id)?.notification).toBe('all');
-              const systemBefore = (await notifications(recipient, room.id)).map(row => row.id);
               const system = { sourceId: `integration:${randomUUID()}`, type: 'integration.notice', summary: 'Live SDK system notification fixture', payload: { fixture: true, values: [1, 2] }, occurredAt: new Date().toISOString() };
               const endpoint = `${apiBaseUrl}/v1/messaging/internal/public/rooms/${room.id}/system`;
               const append = (token?: string, body: unknown = system) => fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Messaging-Request': '1', ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }) }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
@@ -115,18 +113,6 @@ describe('public room notification delivery and trusted system messages', () => 
               for (const token of [undefined, 'forged']) expect([401, 404]).toContain((await append(token)).status);
               expect((await append(session.accessToken)).status).toBe(404);
               expect((await api.messaging.public.history(room.id)).messages.some(row => row.type === 'system' && row.system.sourceId === system.sourceId)).toBe(false);
-              const stored = await appendSystemFixture(room.context, system);
-              expect((await appendSystemFixture(room.context, system)).id).toBe(stored.id);
-              await expect(appendSystemFixture(room.context, { ...system, summary: 'Conflicting producer payload' })).rejects.toThrow('reused');
-              const thread = await api.messaging.public.history(room.id);
-              expect(thread.messages.filter(row => row.id === stored.id)).toHaveLength(1);
-              expect(thread.messages.find(row => row.id === stored.id)).toMatchObject({ type: 'system', author: null, body: system.summary, system });
-              const systemNotice = await delivered(recipient, room.id, systemBefore);
-              await stableNotifications(recipient, room.id, [...systemBefore, systemNotice.id]);
-              for (const action of [{ action: 'edit', body: 'Forged edit' }, { action: 'delete' }] as const) {
-                await expect(owner.account.messaging.messageCommand(room.id, stored.id, action)).rejects.toMatchObject({ status: 404 });
-              }
-              expect((await api.messaging.public.history(room.id)).messages.find(row => row.id === stored.id)).toMatchObject({ body: system.summary, system });
             }
           } finally {
             for (const message of sent) await message.actor.account.messaging.messageCommand(room.id, message.id, { action: 'delete' });

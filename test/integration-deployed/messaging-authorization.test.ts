@@ -1,5 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { messagingOrigin, withMessagingActors } from './messaging-live.js';
 
@@ -98,9 +97,6 @@ describe('messaging authorization against deployed services', () => {
   }, 240_000);
 
   it('authorizes attachment bytes independently and rejects cross-room reuse, nonmembers and revoked membership', async () => {
-    const bucket = 'rare-api-private-upload-dev';
-    if (bucket.includes('prod') || !/^[a-z0-9-]+$/.test(bucket)) throw new Error('Use the non-production messaging bucket');
-    execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'buckets', 'describe', `gs://${bucket}`, '--format=value(name)'], { stdio: 'pipe' });
     await withMessagingActors(async (owner, member, outsider) => {
       const room = await owner.account.messaging.createRoom(roomInput());
       const second = await owner.account.messaging.createRoom(roomInput());
@@ -109,7 +105,6 @@ describe('messaging authorization against deployed services', () => {
       // A valid GIF comment makes this test's content-addressed object unique.
       const bytes = Buffer.concat([gif.subarray(0, -1), Buffer.from([0x21, 0xfe, marker.length]), marker, Buffer.from([0, 0x3b])]);
       const uploadId = randomUUID();
-      const object = `gs://${bucket}/${createHash('sha256').update(bytes).digest('hex')}`;
       try {
         await owner.account.messaging.command(room.id, { action: 'invite', userId: member.user.id });
         await member.account.messaging.command(room.id, { action: 'accept' });
@@ -135,11 +130,6 @@ describe('messaging authorization against deployed services', () => {
       } finally {
         await owner.account.messaging.command(room.id, { action: 'close' });
         await owner.account.messaging.command(second.id, { action: 'close' });
-        try { execFileSync('gcloud', ['--project=superrare-dev', 'storage', 'rm', object], { stdio: 'pipe' }); }
-        catch (error) {
-          const stderr = error !== null && typeof error === 'object' && 'stderr' in error && error.stderr instanceof Uint8Array ? Buffer.from(error.stderr).toString('utf8') : '';
-          if (!/No URLs matched|URLs matched no objects or files|HTTPError 404|does not exist/.test(stderr)) throw error;
-        }
       }
     });
   }, 240_000);

@@ -1,6 +1,5 @@
 import {
   isAddressEqual,
-  parseUnits,
   parseEventLogs,
   type Address,
   type Hex,
@@ -10,22 +9,20 @@ import { batchOfferAbi } from '../contracts/abis/batch-offer.js';
 import { tokenAbi } from '../contracts/abis/token.js';
 import { ETH_ADDRESS, chainIds, requireContractAddress, type SupportedChain } from '../contracts/addresses.js';
 import { approveNftContractIfNeeded, runWithApprovalSideEffectAlert } from './approvals-shell.js';
-import {
-  preparePaymentForSpender,
-  resolveCurrencyDecimals,
-} from './payments-shell.js';
+import { preparePaymentForSpender } from './payments-shell.js';
 import { requireInput } from './validation-core.js';
 import { requireWallet } from './wallet-shell.js';
-import { stringifyAmountInput } from './amounts-core.js';
 import type { RareClientConfig } from './types/client.js';
 import type { BatchOfferNamespace } from './types/batch-offer.js';
 import {
   planBatchOfferAccept,
   planBatchOfferCreate,
+  planBatchOfferCreateLocalInputs,
   planBatchOfferRoot,
   shapeBatchOfferRead,
   shapeBatchOfferStatus,
 } from './batch-offer-core.js';
+import { parseBatchTokenListArtifact } from './batch-core.js';
 import {
   generateApiNftMerkleRoot,
   isApiNftMerkleProofResolutionError,
@@ -45,6 +42,10 @@ export function createBatchOfferNamespace(
 ): BatchOfferNamespace {
   return {
     async create(params): ReturnType<BatchOfferNamespace['create']> {
+      planBatchOfferCreateLocalInputs({ ...params, currency: undefined }, currentUnixTimestamp());
+      if (params.artifact !== undefined) {
+        parseBatchTokenListArtifact(JSON.stringify(params.artifact));
+      }
       const batchOfferCreator = requireContractAddress(chain, 'batchOfferCreator');
       const marketplaceSettingsSource = requireContractAddress(chain, 'auction');
       const { walletClient, account, accountAddress } = requireWallet(config);
@@ -54,9 +55,7 @@ export function createBatchOfferNamespace(
         ? ETH_ADDRESS
         : resolveCurrencyForSdk(resolvedParams.currency, chain).address;
       const price = requireInput(resolvedParams.price, 'price');
-      const amount = typeof price === 'bigint'
-        ? price
-        : parseUnits(stringifyAmountInput(price, 'price'), await resolveCurrencyDecimals(publicClient, chain, currency));
+      const amount = price;
       const plan = planBatchOfferCreate({ ...resolvedParams, price: amount, currency }, block.timestamp);
       const payment = await preparePaymentForSpender({
         publicClient,
@@ -270,6 +269,10 @@ export function createBatchOfferNamespace(
       }, block.timestamp);
     },
   };
+}
+
+function currentUnixTimestamp(): bigint {
+  return BigInt(Math.floor(Date.now() / 1000));
 }
 
 async function resolveBatchOfferCreateParams(

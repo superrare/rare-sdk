@@ -9,6 +9,12 @@ describe('messaging pure contract parsing', () => {
     expect(parseMessagingConversation({ ...conversation, email: 'private@example.com' })).toEqual(conversation);
     expect(parseMessagingMessage({ ...message, author: { ...user, email: 'private@example.com' } })).toEqual(message);
   });
+  it('retains trusted purchase receipt references in private message reads and hides deleted receipts', () => {
+    const printOrder = { id: `0x${'ab'.repeat(32)}`, buyerUserId: '42', sellerUserId: '43', lineIndexes: [0, 2] };
+    expect(parseMessagingMessage({ ...message, printOrder })).toEqual({ ...message, printOrder });
+    expect(parseMessagingMessage({ ...message, deleted: true, printOrder })).not.toHaveProperty('printOrder');
+    expect(() => parseMessagingMessage({ ...message, printOrder: { ...printOrder, lineIndexes: [-1] } })).toThrow();
+  });
   it.each(['../room', 'a/b', '?id=other', '', '00000000-0000-0000-0000-000000000000'])('rejects unsafe conversation identifiers %s', value => expect(() => messagingId(value)).toThrow('invalid_messaging_id'));
   it('validates identifier ranges without number conversion', () => {
     expect(messagingAccountId('9223372036854775807')).toBe('9223372036854775807');
