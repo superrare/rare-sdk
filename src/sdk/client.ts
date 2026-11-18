@@ -51,7 +51,7 @@ export function createRareClient(config: RareManagedClientConfig | RareExternalC
   };
   if (config.publicClient === undefined) return features;
   const chain = createChainClient({ ...config, apiBaseUrl, apiFetch: publicApiFetch }, api);
-  return { ...features, ...chain, token: { ...chain.token, getPrice: api.getTokenPrice }, collection: { ...chain.collection, events: api.getCollectionEvents }, user: features.user, drops: features.drops, posts: features.posts, messaging: features.messaging };
+  return { ...features, ...chain, token: { ...chain.token, getPrice: api.getTokenPrice }, user: features.user, drops: features.drops, posts: features.posts, messaging: features.messaging };
 }
 
 function createPublicFeatures(api: RareApi): RarePublicFeatures {
@@ -62,9 +62,8 @@ function createPublicFeatures(api: RareApi): RarePublicFeatures {
     nft: {
       get: params => api.getNft(buildNftUniversalTokenId(params)),
       favoriteCount: params => api.getNftFavoriteCount(buildNftUniversalTokenId(params)),
-      events: (params, options) => api.getNftEvents(buildNftUniversalTokenId(params), options),
     },
-    collection: { get: api.getCollection, events: api.getCollectionEvents },
+    collection: { get: api.getCollection },
     liquidEdition: { get: params => api.getLiquidEdition(`${resolveIdentityChainId(params)}-${getAddress(params.contract)}`) },
     user: { get: api.getUser, followers: { list: api.getUserFollowers }, following: { list: api.getUserFollowing } },
     drops: { list: api.getDrops, get: api.getDrop },
