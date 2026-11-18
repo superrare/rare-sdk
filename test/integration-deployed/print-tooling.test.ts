@@ -317,7 +317,13 @@ describe('print tooling through deployed Rare API', () => {
             delivery: { savedAddressId: addressId } });
           if (!batch.intent.delivery || !batch.idempotencyKey) throw new Error('Batch quote lost its delivery identity.');
           expect(batch.intent.items).toHaveLength(5);
-          expect(batch.breakdown).toBeUndefined();
+          const breakdown = batch.breakdown;
+          if (!breakdown) throw new Error('Mixed delivery quote did not return the print cost breakdown.');
+          expect(breakdown.displayPrice).toBe(300_000_000n);
+          expect(breakdown.production).toBeGreaterThan(0n);
+          expect(breakdown.shipping).toBeGreaterThanOrEqual(0n);
+          expect(breakdown.networkFee).toBe(0n);
+          expect(breakdown.total).toBe(breakdown.displayPrice + breakdown.production + breakdown.shipping);
           expect(batch.paymentAmount).toBeGreaterThan(0n);
           expect(batch.settlements).toContainEqual({
             currency: getAddress(resolveCurrency('rare', 'sepolia')), amount: outputAmount,
