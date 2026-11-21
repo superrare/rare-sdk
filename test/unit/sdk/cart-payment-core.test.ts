@@ -22,6 +22,27 @@ describe('payment selection for a prepared Cart checkout', () => {
       idempotencyKey: physical.idempotencyKey, delivery: { ...physical.intent, idempotencyKey: physical.idempotencyKey },
     });
   });
+  it('uses the saved delivery quote ID and keeps the original payment attempt', () => {
+    const idempotencyKey = '22222222-2222-4222-8222-222222222222';
+    const physical: CartCheckoutPreparation = {
+      ...preparation,
+      idempotencyKey,
+      intent: { ...preparation.intent, delivery: { savedAddressId: preparation.preparationReference } },
+      quote: {
+        id: preparation.preparationReference,
+        currency: zeroAddress,
+        expiresAt: preparation.expiresAt,
+        lines: [{ kind: 'items', amount: preparation.paymentAmount }],
+        total: preparation.paymentAmount,
+      },
+    };
+    expect(planCartPayment({ method: 'card', preparation: physical, email: 'buyer@example.com' }, scope)).toEqual({
+      preparationReference: preparation.preparationReference,
+      quoteId: preparation.preparationReference,
+      idempotencyKey,
+      email: 'buyer@example.com',
+    });
+  });
   it('rejects cross-deployment preparations and malformed contact information before an API request', () => {
     expect(() => planCartPayment({ method: 'card', preparation: { ...preparation, chainId: 1n }, email: 'buyer@example.com' }, scope)).toThrow('another deployment');
     expect(() => planCartPayment({ method: 'card', preparation, email: 'invalid' }, scope)).toThrow();
