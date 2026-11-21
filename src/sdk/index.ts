@@ -77,3 +77,5 @@ export { PrintRequestUncertainError } from './print-write-shell.js';
 export { createPrintDropRequest, createPrintListingRequest } from './print-request-shell.js';
 export type * from './types/shipping-addresses.js';
 export type * from './types/orders.js';
+
+export { createCartCheckoutClient } from './cart-api.js';

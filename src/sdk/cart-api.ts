@@ -41,6 +41,7 @@ import type {
   AttachCartSku,
   CartProductSku,
   CartDeliveryCheckout,
+  CartQuoteReference,
   CartCardCheckout,
   CartCardCharge,
   CartCardChargeResult,
@@ -241,6 +242,10 @@ export function createCartApiNamespace(
         currency: getAddress(wire.quote.currency),
         total: BigInt(wire.quote.total),
         expiresAt: wire.quote.expiresAt,
+        id: wire.quote.id,
+        totalKind: wire.quote.totalKind,
+        items: wire.quote.items?.map(item => ({ ...item, quantity: BigInt(item.quantity), lineTotal: BigInt(item.lineTotal) })),
+        adjustments: wire.quote.adjustments?.map(adjustment => ({ ...adjustment, amount: BigInt(adjustment.amount) })),
         lines: wire.quote.lines.map(line => ({ ...line, amount: BigInt(line.amount) })),
       };
       if (quote !== undefined && (
@@ -250,6 +255,17 @@ export function createCartApiNamespace(
         quote.lines.some(line => line.amount < 0n) ||
         quote.lines.reduce((total, line) => total + line.amount, 0n) !== quote.total
       )) throw new Error('Rare API returned an inconsistent Cart quote.');
+      if (quote !== undefined && (
+        (quote.id !== undefined && quote.id !== wire.preparationReference) ||
+        (quote.totalKind !== undefined && quote.totalKind !== 'EXACT' && quote.totalKind !== 'MAXIMUM') ||
+        ((quote.items === undefined) !== (quote.adjustments === undefined)) ||
+        (quote.items !== undefined && quote.adjustments !== undefined && (
+          quote.items.some(item => !isHex(item.sku) || !isHex(item.listingDigest) || item.quantity <= 0n || item.lineTotal < 0n) ||
+          quote.adjustments.some(adjustment => adjustment.amount < 0n || (adjustment.effect !== 'CHARGE' && adjustment.effect !== 'DISCOUNT')) ||
+          quote.items.reduce((sum, item) => sum + item.lineTotal, 0n) +
+            quote.adjustments.reduce((sum, adjustment) => sum + (adjustment.effect === 'CHARGE' ? adjustment.amount : -adjustment.amount), 0n) !== quote.total
+        ))
+      )) throw new Error('Rare API returned inconsistent Cart quote itemization.');
       return { ...preparation,
         ...(quote === undefined ? {} : { quote, expiresAt: quote.expiresAt }),        ...(intent.delivery === undefined ? {} : { idempotencyKey: globalThis.crypto.randomUUID() }),
         ...(wire.breakdown === undefined ? {} : { breakdown: {
@@ -263,12 +279,14 @@ export function createCartApiNamespace(
         } }),
       };
     },
-    prepare: async (input: string | CartDeliveryCheckout): Promise<CartApiPreparedPurchase> => {
+    prepare: async (input: string | CartDeliveryCheckout | CartQuoteReference): Promise<CartApiPreparedPurchase> => {
       const wire = await getWrappedData<CartApiPreparedPurchaseWire>(
         protectedClient.POST('/v1/cart/checkout/prepare', {
           params: { query: { chainId, cartAddress: cartAddress() } },
-          ...(typeof input === 'string' ? {} : { headers: { 'idempotency-key': input.idempotencyKey } }),
-          body: typeof input === 'string' ? { preparationReference: input } : toWireCheckoutIntent(input),
+          ...(typeof input === 'string' || input.idempotencyKey === undefined ? {} : { headers: { 'idempotency-key': input.idempotencyKey } }),
+          body: typeof input === 'string'
+            ? { preparationReference: input }
+            : 'quoteId' in input ? { quoteId: input.quoteId } : toWireCheckoutIntent(input),
         }),
         'Rare API did not return the signed Cart Purchase.',
       );
@@ -306,7 +324,11 @@ export function createCartApiNamespace(
         protectedClient.POST('/v1/cart/checkout/coinflow', {
           params: { query: { chainId, cartAddress: cartAddress() } },
           headers: { 'idempotency-key': plan.idempotencyKey },
-          body: plan.delivery === undefined ? { preparationReference: plan.preparationReference, email: plan.email } : toWireCheckoutIntent(plan.delivery),
+          body: plan.quoteId !== undefined
+            ? { quoteId: plan.quoteId, email: plan.email }
+            : plan.delivery === undefined
+              ? { preparationReference: plan.preparationReference, email: plan.email }
+              : toWireCheckoutIntent(plan.delivery),
         }), 'Rare API did not return the card checkout session.',
       );
       return { ...wire, preparedPurchase: normalizePreparedPurchase(wire.preparedPurchase) };
@@ -489,4 +511,17 @@ function normalizeProduct(value: CartApiProduct): CartApiProduct {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/** Server-side Cart checkout transport. Supply an authenticated fetch for delivery and preparation. */
+export function createCartCheckoutClient(options: RareApiOptions & { chainId: CartChainId; cartAddress: Address }) {
+  const checkout = createCartApiNamespace(options, options).checkout;
+  return {
+    async quote(intent: CartCheckoutIntent) {
+      const { quote, preparationReference } = await checkout.preview(intent);
+      if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
+      return { ...quote, id: quote.id ?? preparationReference };
+    },
+    prepare: checkout.prepare,
+  };
 }
