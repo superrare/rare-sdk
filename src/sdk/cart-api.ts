@@ -553,20 +553,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function cartQuoteReader(preview: CartApiNamespace['checkout']['preview']) {
-  return async (intent: CartCheckoutIntent) => {
-    const { quote, preparationReference } = await preview(intent);
-    if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
-    return { ...quote, id: quote.id ?? preparationReference };
-  };
-}
-
-/** Server-side Cart checkout transport. Supply an authenticated fetch for delivery and preparation. */
-export function createCartCheckoutClient(options: RareApiOptions & { chainId: CartChainId; cartAddress: Address }) {
-  const { checkout } = createCartApiNamespace(options, options);
-  return { quote: cartQuoteReader(checkout.preview), prepare: checkout.prepare };
-}
-
 /** Cart and print API calls for server-side checkout adapters using JSON order payloads. */
 export function createCartCommerceClient(options: RareApiOptions & { chainId: CartChainId; cartAddress: Address }) {
   const { checkout, listing, wire } = createCartApiNamespace(options, options);
@@ -576,7 +562,11 @@ export function createCartCommerceClient(options: RareApiOptions & { chainId: Ca
     skus: { get: wire.sku },
     prints: { drops: { get: prints.drops.get }, products: { get: prints.products.get } },
     checkout: {
-      quote: cartQuoteReader(checkout.preview),
+      async quote(intent: CartCheckoutIntent) {
+        const { quote, preparationReference } = await checkout.preview(intent);
+        if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
+        return { ...quote, id: quote.id ?? preparationReference };
+      },
       prepare: wire.prepare,
       recover: wire.recover,
       card: {
