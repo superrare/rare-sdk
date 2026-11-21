@@ -12,6 +12,8 @@ import type {
 } from './types/cart.js';
 import { buildCartVariantSearchQuery, validateCartCheckoutIntent, type CartChainId } from './cart-core.js';
 import { generateCartListingSalt } from './cart-listing-shell.js';
+import { createPrintsNamespace } from './prints.js';
+import type { components as CartComponents } from '../data-access/cart-schema.js';
 import { planCartPayment } from './cart-payment-core.js';
 import { validateCartCheckoutRecovery } from './cart-checkout-recovery-core.js';
 import type {
@@ -57,6 +59,25 @@ type CartApiTransport = {
   POST: (path: string, options?: unknown) => Promise<{ data?: unknown }>;
 };
 
+type DirectCartCardInput = CartDeliveryCheckout | { quoteId: string; email: string; idempotencyKey: string };
+type PrepareCartRequest = (input: string | CartDeliveryCheckout | CartQuoteReference) => Promise<CartApiPreparedPurchaseWire>;
+
+type CartCheckoutRecoveryWire = Omit<CartCheckoutRecovery, 'preparedPurchase'> & {
+  preparedPurchase?: CartApiPreparedPurchaseWire;
+};
+
+type CartApiOperations = Omit<CartApiNamespace, 'checkout'> & {
+  checkout: CartApiNamespace['checkout'] & {
+    paymentMethods: (mode?: 'direct') => Promise<CartPaymentMethods>;
+  };
+  wire: {
+    prepare: PrepareCartRequest;
+    recover: (idempotencyKey: string) => Promise<CartCheckoutRecoveryWire>;
+    prepareDirectCard: (input: DirectCartCardInput) => Promise<{ preparedPurchase: CartApiPreparedPurchaseWire }>;
+    sku: (sku: Hex) => Promise<CartComponents['schemas']['CartSku']>;
+  };
+};
+
 type CartApiScope = {
   chainId: CartChainId;
   cartAddress?: Address;
@@ -66,7 +87,7 @@ export function createCartApiNamespace(
   options: RareApiOptions,
   scope: CartApiScope,
   authenticatedFetch?: typeof globalThis.fetch,
-): CartApiNamespace {
+): CartApiOperations {
   const apiClient = createCartApiClient(options.baseUrl, options.fetch);
   const authenticatedClient = authenticatedFetch === undefined ? apiClient : createCartApiClient(options.baseUrl, authenticatedFetch);
   const client = apiClient as unknown as CartApiTransport;
@@ -218,6 +239,23 @@ export function createCartApiNamespace(
     ),
   };
 
+  const prepareRequest: PrepareCartRequest = (input) =>
+    getWrappedData<CartApiPreparedPurchaseWire>(
+      protectedClient.POST('/v1/cart/checkout/prepare', {
+        params: { query: { chainId, cartAddress: cartAddress() } },
+        ...(typeof input === 'string' || input.idempotencyKey === undefined ? {} : { headers: { 'idempotency-key': input.idempotencyKey } }),
+        body: typeof input === 'string'
+          ? { preparationReference: input }
+          : 'quoteId' in input ? { quoteId: input.quoteId } : toWireCheckoutIntent(input),
+      }),
+      'Rare API did not return the signed Cart Purchase.',
+    );
+  const recoverRequest = (idempotencyKey: string) => getWrappedData<CartCheckoutRecoveryWire>(
+    protectedClient.GET('/v1/account/orders/checkout/{idempotencyKey}', {
+      params: { path: { idempotencyKey } },
+    }), 'Rare API did not return the saved checkout status.',
+  );
+
   const checkout = {
     receipt: async (orderId: Hex): Promise<CartCheckoutReceipt> => getWrappedData(
       client.GET('/v1/cart/orders/{orderId}/receipt', { params: { path: { orderId } } }),
@@ -279,33 +317,18 @@ export function createCartApiNamespace(
         } }),
       };
     },
-    prepare: async (input: string | CartDeliveryCheckout | CartQuoteReference): Promise<CartApiPreparedPurchase> => {
-      const wire = await getWrappedData<CartApiPreparedPurchaseWire>(
-        protectedClient.POST('/v1/cart/checkout/prepare', {
-          params: { query: { chainId, cartAddress: cartAddress() } },
-          ...(typeof input === 'string' || input.idempotencyKey === undefined ? {} : { headers: { 'idempotency-key': input.idempotencyKey } }),
-          body: typeof input === 'string'
-            ? { preparationReference: input }
-            : 'quoteId' in input ? { quoteId: input.quoteId } : toWireCheckoutIntent(input),
-        }),
-        'Rare API did not return the signed Cart Purchase.',
-      );
-      return normalizePreparedPurchase(wire);
-    },
+    prepare: async (input: string | CartDeliveryCheckout | CartQuoteReference): Promise<CartApiPreparedPurchase> =>
+      normalizePreparedPurchase(await prepareRequest(input)),
     recover: async (idempotencyKey: string): Promise<CartCheckoutRecovery> => {
-      const wire = await getWrappedData<Omit<CartCheckoutRecovery, 'preparedPurchase'> & { preparedPurchase?: CartApiPreparedPurchaseWire }>(
-        protectedClient.GET('/v1/account/orders/checkout/{idempotencyKey}', {
-          params: { path: { idempotencyKey } },
-        }), 'Rare API did not return the saved checkout status.',
-      );
+      const wire = await recoverRequest(idempotencyKey);
       const recovery = { ...wire, preparedPurchase: wire.preparedPurchase === undefined
         ? undefined : normalizePreparedPurchase(wire.preparedPurchase) };
       const validation = validateCartCheckoutRecovery(recovery, { chainId: BigInt(chainId), cart: cartAddress() });
       if (!validation.isValid) throw new Error(validation.message);
       return recovery;
     },
-    paymentMethods: () => getWrappedData<CartPaymentMethods>(
-      client.GET('/v1/cart/checkout/coinflow/config', { params: { query: { chainId } } }),
+    paymentMethods: (mode?: 'direct') => getWrappedData<CartPaymentMethods>(
+      client.GET('/v1/cart/checkout/coinflow/config', { params: { query: { chainId, ...(mode === undefined ? {} : { paymentMode: mode }) } } }),
       'Rare API did not return card payment availability.',
     ),
     card: {
@@ -335,7 +358,24 @@ export function createCartApiNamespace(
     },
   };
 
-  return { catalog, listing, checkout };
+  return {
+    catalog, listing, checkout,
+    wire: {
+      prepare: prepareRequest,
+      recover: recoverRequest,
+      prepareDirectCard: (input) => getWrappedData(
+        protectedClient.POST('/v1/cart/checkout/coinflow', {
+          params: { query: { cartAddress: cartAddress(), chainId, paymentMode: 'direct' } },
+          headers: { 'idempotency-key': input.idempotencyKey },
+          body: 'quoteId' in input ? { quoteId: input.quoteId, email: input.email } : toWireCheckoutIntent(input),
+        }), 'Rare API did not return the direct card order.',
+      ),
+      sku: (sku) => getWrappedData(
+        apiClient.GET('/v1/cart/skus/{sku}', { params: { path: { sku } } }),
+        'Rare API did not return the Cart SKU.',
+      ),
+    },
+  };
 }
 
 export function toCartListingRootArtifactWire(
@@ -513,15 +553,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function cartQuoteReader(preview: CartApiNamespace['checkout']['preview']) {
+  return async (intent: CartCheckoutIntent) => {
+    const { quote, preparationReference } = await preview(intent);
+    if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
+    return { ...quote, id: quote.id ?? preparationReference };
+  };
+}
+
 /** Server-side Cart checkout transport. Supply an authenticated fetch for delivery and preparation. */
 export function createCartCheckoutClient(options: RareApiOptions & { chainId: CartChainId; cartAddress: Address }) {
-  const checkout = createCartApiNamespace(options, options).checkout;
+  const { checkout } = createCartApiNamespace(options, options);
+  return { quote: cartQuoteReader(checkout.preview), prepare: checkout.prepare };
+}
+
+/** Cart and print API calls for server-side checkout adapters using JSON order payloads. */
+export function createCartCommerceClient(options: RareApiOptions & { chainId: CartChainId; cartAddress: Address }) {
+  const { checkout, listing, wire } = createCartApiNamespace(options, options);
+  const prints = createPrintsNamespace({ apiBaseUrl: options.baseUrl, apiFetch: options.fetch });
   return {
-    async quote(intent: CartCheckoutIntent) {
-      const { quote, preparationReference } = await checkout.preview(intent);
-      if (quote === undefined) throw new Error('Rare API did not return a Cart quote.');
-      return { ...quote, id: quote.id ?? preparationReference };
+    listings: { get: listing.get, search: listing.search },
+    skus: { get: wire.sku },
+    prints: { drops: { get: prints.drops.get }, products: { get: prints.products.get } },
+    checkout: {
+      quote: cartQuoteReader(checkout.preview),
+      prepare: wire.prepare,
+      recover: wire.recover,
+      card: {
+        configuration: () => checkout.paymentMethods('direct'),
+        prepare: wire.prepareDirectCard,
+        ...checkout.card,
+      },
     },
-    prepare: checkout.prepare,
   };
 }

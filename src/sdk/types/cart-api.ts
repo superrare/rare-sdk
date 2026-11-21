@@ -310,6 +310,8 @@ export type CartCardCharge = {
 export type CartCardChargeResult =
   | { status: 'pending' }
   | { status: 'accepted'; paymentId: string }
+  | { status: 'declined' }
+  | { status: 'authentication_required'; challenge: { transactionId: string; url: string; creq: string } }
   | { status: 'quote_changed'; totalCents: number };
 export type CartCardCheckout = {
   checkoutJwtToken: string;
