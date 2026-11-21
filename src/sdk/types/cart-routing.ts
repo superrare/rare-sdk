@@ -54,6 +54,13 @@ export type CartRoutingQuoteEvidence = {
   routeDescription: string;
 };
 
+export type CartRoutingConversion = {
+  settlementCurrencies: readonly Address[];
+  settlementAmount: bigint;
+  expectedInput: bigint;
+  maximumInput: bigint;
+};
+
 export type CartRoutingQuoteResult = {
   schemaVersion: 1;
   chain: SupportedChain;
@@ -64,6 +71,7 @@ export type CartRoutingQuoteResult = {
   maximumPaymentInput: bigint;
   directPaymentInput: bigint;
   settlements: CartRoutingSettlement[];
+  conversions?: readonly CartRoutingConversion[];
   route: CartRoutingRoute;
   quotedAt: string;
   expiresAt: string;

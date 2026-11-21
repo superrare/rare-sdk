@@ -13,6 +13,7 @@ import type { UniswapQuoteResponse, UniswapSwapResponse } from '../swap/uniswap-
 import { appendCartNativeRefund, normalizeCartRouterProgram } from './cart-router-program-core.js';
 import { applyCartQuoteSpread } from './cart-core.js';
 import type {
+  CartRoutingConversion,
   CartRoutingErrorCode,
   CartRoutingMode,
   CartRoutingQuoteParams,
@@ -168,6 +169,29 @@ export function refineCartRoutingExactInput(input: bigint, minimumOutput: bigint
   return protectCartRoutingExactInput(requiredInput);
 }
 
+export function cartRoutingConversion(
+  plan: CartRoutingPlan,
+  obligation: CartRoutingForeignObligation,
+  expectedInput: bigint,
+  maximumInput: bigint,
+): CartRoutingConversion {
+  const wrapped = getWrappedEthAddress(plan.chain);
+  const combinesWrappedEth = isAddressEqual(obligation.settlementCurrency, ETH_ADDRESS) &&
+    wrapped !== null &&
+    !plan.foreignObligations.some(({ settlementCurrency }) => isAddressEqual(settlementCurrency, wrapped));
+  return {
+    settlementCurrencies: plan.settlements
+      .filter(({ routed, settlementCurrency }) => routed && (
+        isAddressEqual(settlementCurrency, obligation.settlementCurrency) ||
+        (combinesWrappedEth && isAddressEqual(settlementCurrency, wrapped))
+      ))
+      .map(({ settlementCurrency }) => settlementCurrency),
+    settlementAmount: obligation.amount,
+    expectedInput,
+    maximumInput,
+  };
+}
+
 export function buildCartRoutingQuoteResult(
   plan: CartRoutingPlan,
   universalRouter: Address,
@@ -186,6 +210,7 @@ export function buildCartRoutingQuoteResult(
   const quoteIds: string[] = [];
   const compilerRequestIds: string[] = [];
   const descriptions: string[] = [];
+  const conversions: CartRoutingConversion[] = [];
   let routedExpectedInput = 0n;
   let routedMaximumInput = 0n;
 
@@ -194,6 +219,7 @@ export function buildCartRoutingQuoteResult(
     const execution = validateExecutionQuote(plan, obligation, obligation.executionResponse, baseline.maximumInput);
     const program = decodeAndValidateRouterProgram(plan, universalRouter, obligation.swapResponse);
     programs.push(program);
+    conversions.push(cartRoutingConversion(plan, obligation, execution.expectedInput, execution.maximumInput));
     routedExpectedInput += execution.expectedInput;
     routedMaximumInput += execution.maximumInput;
     quoteIds.push(obligation.exactOutputResponse.quote.quoteId);
@@ -240,6 +266,7 @@ export function buildCartRoutingQuoteResult(
     maximumPaymentInput,
     directPaymentInput: plan.directPaymentInput,
     settlements: plan.settlements,
+    conversions,
     route: { commands, inputs, routerValue },
     quotedAt,
     expiresAt,
