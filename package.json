@@ -81,6 +81,66 @@
         "default": "./dist/sdk/wallet.cjs"
       }
     },
+    "./contracts/addresses": {
+      "import": {
+        "types": "./dist/contracts/addresses.d.ts",
+        "default": "./dist/contracts/addresses.js"
+      },
+      "require": {
+        "types": "./dist/contracts/addresses.d.cts",
+        "default": "./dist/contracts/addresses.cjs"
+      }
+    },
+    "./swap/build-route": {
+      "import": {
+        "types": "./dist/swap/build-route.d.ts",
+        "default": "./dist/swap/build-route.js"
+      },
+      "require": {
+        "types": "./dist/swap/build-route.d.cts",
+        "default": "./dist/swap/build-route.cjs"
+      }
+    },
+    "./swap/known-pools": {
+      "import": {
+        "types": "./dist/swap/known-pools.d.ts",
+        "default": "./dist/swap/known-pools.js"
+      },
+      "require": {
+        "types": "./dist/swap/known-pools.d.cts",
+        "default": "./dist/swap/known-pools.cjs"
+      }
+    },
+    "./swap/liquid-edition": {
+      "import": {
+        "types": "./dist/swap/liquid-edition.d.ts",
+        "default": "./dist/swap/liquid-edition.js"
+      },
+      "require": {
+        "types": "./dist/swap/liquid-edition.d.cts",
+        "default": "./dist/swap/liquid-edition.cjs"
+      }
+    },
+    "./swap/route-encoding": {
+      "import": {
+        "types": "./dist/swap/route-encoding.d.ts",
+        "default": "./dist/swap/route-encoding.js"
+      },
+      "require": {
+        "types": "./dist/swap/route-encoding.d.cts",
+        "default": "./dist/swap/route-encoding.cjs"
+      }
+    },
+    "./swap/route-types": {
+      "import": {
+        "types": "./dist/swap/route-types.d.ts",
+        "default": "./dist/swap/route-types.js"
+      },
+      "require": {
+        "types": "./dist/swap/route-types.d.cts",
+        "default": "./dist/swap/route-types.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

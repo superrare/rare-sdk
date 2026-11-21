@@ -38,7 +38,7 @@ describe('frozen print Listing terms', () => {
     }
   });
   it('requires physical print details and keeps NFT attribution separate from creation and response identity', () => {
-    expectTypeOf<CreatePrintDrop['chainId']>().toEqualTypeOf<'11155111'>();
+    expectTypeOf<CreatePrintDrop['chainId']>().toEqualTypeOf<'1' | '11155111'>();
     expectTypeOf<CreatePrintDrop['print']>().toEqualTypeOf<NonNullable<CreatePrintDrop['print']>>();
     expectTypeOf<CreatePrintDrop['print']>().toHaveProperty('productionUploadKey').toEqualTypeOf<string>();
     expectTypeOf<CreatePrintDrop['print']>().toHaveProperty('sourceUniversalTokenId');

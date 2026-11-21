@@ -1100,7 +1100,7 @@ export interface paths {
                         /** Format: uuid */
                         idempotencyKey: string;
                         /** @enum {string} */
-                        chainId: "11155111";
+                        chainId: "1" | "11155111";
                         productId?: string;
                         print: {
                             sourceUniversalTokenId?: components["schemas"]["UniversalTokenId"];

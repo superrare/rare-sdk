@@ -131,6 +131,10 @@ describe('Cart routing functional core', () => {
       { settlementCurrency: eth, amount: 500n },
       { settlementCurrency: rare, amount: 750n },
     ]);
+    expect(result.conversions).toEqual([
+      { settlementCurrencies: [eth], settlementAmount: 500n, expectedInput: 1000n, maximumInput: 1100n },
+      { settlementCurrencies: [rare], settlementAmount: 750n, expectedInput: 1000n, maximumInput: 1100n },
+    ]);
     const [, inputs] = decodeAbiParameters(parseAbiParameters('bytes,bytes[]'), result.route.inputs[0]!);
     expect(decodeAbiParameters(parseAbiParameters('address,uint256'), inputs[2]!)).toEqual([weth, 500n]);
   });

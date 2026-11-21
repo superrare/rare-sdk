@@ -42,7 +42,9 @@ describe('package exports', () => {
     expect(typeof utils.getCurvePresetDefinition).toBe('function');
     expect(typeof utils.parseCurveConfig).toBe('function');
     expect(typeof wallet.createRareWalletClient).toBe('function');
-    expect(typeof (await import(packageNames.dataAccess)).createApiClient).toBe('function');
+    const dataAccess = await import(packageNames.dataAccess);
+    expect(typeof dataAccess.createApiClient).toBe('function');
+    expect(typeof dataAccess.createCartCommerceClient).toBe('function');
   });
 
   it('resolves the CommonJS entry points', () => {
@@ -58,6 +60,7 @@ describe('package exports', () => {
     expect(client.createRareClient).toBe(root.createRareClient);
     expect(typeof root.MinterApprovalRequiredError).toBe('function');
     expect(typeof dataAccess.createApiClient).toBe('function');
+    expect(typeof dataAccess.createCartCommerceClient).toBe('function');
     expect(typeof utils.getCurvePresetDefinition).toBe('function');
     expect(typeof utils.parseCurveConfig).toBe('function');
     expect(typeof wallet.createRareWalletClient).toBe('function');
@@ -80,7 +83,6 @@ describe('package exports', () => {
     'payments-shell',
     'transaction-fallback-shell',
     'swap/trade-core',
-    'contracts/addresses',
     'contracts/abis/auction',
     'data-access/errors',
   ])('rejects private runtime subpath %s', async (subpath) => {
@@ -108,8 +110,7 @@ describe('package exports', () => {
       'payments-shell',
       'transaction-fallback-shell',
       'swap/trade-core',
-      'contracts/addresses',
-      'contracts/abis/auction',
+        'contracts/abis/auction',
       'data-access/errors',
     ]) {
       const specifier = `@rareprotocol/rare-sdk/${subpath}`;

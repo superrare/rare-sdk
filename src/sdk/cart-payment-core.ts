@@ -12,6 +12,7 @@ const paymentIdentity = (value: unknown) => identifierSchema.parse(value);
 export function planCartPayment(input: CartPaymentRequest, scope: { chainId: string | number; cartAddress: Address }): {
   idempotencyKey: string;
   preparationReference: string;
+  quoteId?: string;
   email: string;
   delivery?: CartDeliveryCheckout;
 } {
@@ -24,6 +25,7 @@ export function planCartPayment(input: CartPaymentRequest, scope: { chainId: str
   const intent = preparation.intent;
   const validation = validateCartCheckoutIntent(intent);
   if (!validation.isValid) throw new Error('Cart checkout intent is invalid.');
+  if (preparation.quote?.id !== undefined) return { idempotencyKey, preparationReference, email, quoteId: paymentIdentity(preparation.quote.id) };
   if (intent.delivery === undefined) return { idempotencyKey, preparationReference, email };
   return { idempotencyKey, preparationReference, email, delivery: { ...intent, delivery: intent.delivery, idempotencyKey } };
 }
