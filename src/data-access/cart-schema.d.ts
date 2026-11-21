@@ -4767,6 +4767,11 @@ export interface components {
             total: string;
             /** Format: date-time */
             expiresAt: string;
+            conversions?: {
+                settlementCurrencies: string[];
+                settlementAmount: string;
+                paymentAmount: string;
+            }[];
             lines: {
                 /** @enum {string} */
                 kind: "items" | "fees" | "converted";

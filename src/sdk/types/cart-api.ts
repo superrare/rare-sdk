@@ -334,6 +334,11 @@ export type CartCheckoutQuote = {
   currency: Address;
   total: bigint;
   expiresAt: string;
+  conversions?: readonly {
+    settlementCurrencies: readonly Address[];
+    settlementAmount: bigint;
+    paymentAmount: bigint;
+  }[];
   lines: readonly { kind: 'items' | 'fees' | 'converted'; amount: bigint }[];
 };
 
@@ -356,8 +361,13 @@ export type CartCheckoutPreparation = {
 };
 
 export type CartCheckoutPreviewWire = {
-  quote?: Omit<CartCheckoutQuote, 'total' | 'lines'> & {
+  quote?: Omit<CartCheckoutQuote, 'total' | 'lines' | 'conversions'> & {
     total: string;
+    conversions?: readonly {
+      settlementCurrencies: readonly Address[];
+      settlementAmount: string;
+      paymentAmount: string;
+    }[];
     lines: readonly { kind: CartCheckoutQuote['lines'][number]['kind']; amount: string }[];
   };
   preparationReference: string;

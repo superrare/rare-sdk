@@ -241,6 +241,13 @@ export function createCartApiNamespace(
         currency: getAddress(wire.quote.currency),
         total: BigInt(wire.quote.total),
         expiresAt: wire.quote.expiresAt,
+        ...(wire.quote.conversions === undefined ? {} : {
+          conversions: wire.quote.conversions.map(conversion => ({
+            settlementCurrencies: conversion.settlementCurrencies.map(currency => getAddress(currency)),
+            settlementAmount: BigInt(conversion.settlementAmount),
+            paymentAmount: BigInt(conversion.paymentAmount),
+          })),
+        }),
         lines: wire.quote.lines.map(line => ({ ...line, amount: BigInt(line.amount) })),
       };
       if (quote !== undefined && (
