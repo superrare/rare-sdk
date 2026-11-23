@@ -341,9 +341,6 @@ export function createCartApiNamespace(
       'Rare API did not return card payment availability.',
     ),
     card: {
-      configuration: () => checkout.paymentMethods('direct'),
-      prepare: async (input: { quoteId: string; email: string; idempotencyKey: string }) =>
-        normalizePreparedPurchase((await prepareDirectCard(input)).preparedPurchase),
       quote: (input: { email: string; subtotalCents: number }) => getWrappedData<{ totalCents: number }>(
         protectedClient.POST('/v1/cart/checkout/coinflow/quote', { params: { query: { chainId } }, body: input }),
         'Rare API did not return the card total.',
@@ -577,7 +574,12 @@ export function createCartCommerceClient(options: RareApiOptions & { chainId: Ca
       recover: wire.recover,
       card: {
         ...checkout.card,
+        configuration: () => checkout.paymentMethods('direct'),
         prepare: wire.prepareDirectCard,
+        async preparePurchase(input: DirectCartCardInput): Promise<CartApiPreparedPurchase> {
+          const { preparedPurchase } = await wire.prepareDirectCard(input);
+          return normalizePreparedPurchase(preparedPurchase);
+        },
       },
     },
   };

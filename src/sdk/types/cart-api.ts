@@ -488,8 +488,6 @@ export type CartApiNamespace = {
     payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
     paymentMethods: () => Promise<CartPaymentMethods>;
     card: {
-      configuration: () => Promise<CartPaymentMethods>;
-      prepare: (input: { quoteId: string; email: string; idempotencyKey: string }) => Promise<CartApiPreparedPurchase>;
       quote: (input: { email: string; subtotalCents: number }) => Promise<{ totalCents: number }>;
       charge: (input: CartCardCharge) => Promise<CartCardChargeResult>;
     };
