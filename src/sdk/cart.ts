@@ -236,6 +236,9 @@ export function createCartNamespace(
         return quote;
       },
       async pay(params) {
+        if (params.method !== 'wallet') {
+          throw new CartPreparationError('invalid_preparation', 'The SDK supports wallet checkout only.');
+        }
         const preparation = preparations.get(params.quote);
         if (preparation === undefined) {
           throw new CartPreparationError('invalid_preparation', 'Use a quote from this Cart client.');
@@ -243,16 +246,7 @@ export function createCartNamespace(
         if (Date.parse(preparation.expiresAt) <= Date.now()) {
           throw new CartPreparationError('quote_changed', 'The checkout quote expired. Review a fresh quote before paying.');
         }
-        const generatedAttemptId = preparation.idempotencyKey ?? preparation.preparationReference;
-        if (params.method === 'card') {
-          const attemptId = params.attemptId ?? generatedAttemptId;
-          await params.onAttempt?.(attemptId);
-          const session = await api.checkout.payment({
-            method: 'card', preparation: { ...preparation, idempotencyKey: attemptId }, email: params.email,
-          });
-          return { method: 'card', attemptId, session };
-        }
-        const attemptId = generatedAttemptId;
+        const attemptId = preparation.idempotencyKey ?? preparation.preparationReference;
         await params.onAttempt?.(attemptId);
         const purchase = await purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, {
           preparation, autoApprove: params.autoApprove,
@@ -268,9 +262,6 @@ export function createCartNamespace(
       receipt: api.checkout.receipt,
       recover: api.checkout.recover,
       authorize(preparation) { return authorizeCartCheckout(api, chainId, requireCart(), preparation); },
-      payment: api.checkout.payment,
-      paymentMethods: api.checkout.paymentMethods,
-      card: api.checkout.card,
       prepare: prepareCheckout,
       purchase(params) { return purchaseCartCheckout(publicClient, config, api, chainId, requireCart(), addresses.cartLens, params); },
       execute(params) { return executeCartCheckout(publicClient, config, chainId, requireCart(), addresses.cartLens, params); },

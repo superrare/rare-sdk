@@ -47,6 +47,27 @@ describe('package exports', () => {
     expect(typeof dataAccess.createCartCommerceClient).toBe('function');
   });
 
+  it('exposes wallet checkout and shared Cart quotes without Coinflow methods', async () => {
+    const { createRareClient } = await import(packageNames.root);
+    const { createCartCommerceClient } = await import(packageNames.dataAccess);
+    const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+    const rare = createRareClient({ publicClient });
+    const commerce = createCartCommerceClient({
+      chainId: sepolia.id,
+      cartAddress: rare.contracts.cart,
+    });
+
+    expect(rare.cart.checkout.pay).toBeTypeOf('function');
+    expect(commerce.checkout.quote).toBeTypeOf('function');
+    expect(commerce.checkout.prepare).toBeTypeOf('function');
+    for (const checkout of [rare.cart.checkout, commerce.checkout]) {
+      expect(checkout).not.toHaveProperty('payment');
+      expect(checkout).not.toHaveProperty('paymentMethods');
+      expect(checkout).not.toHaveProperty('card');
+    }
+    await expect(rare.cart.checkout.pay({ method: 'card' })).rejects.toThrow('The SDK supports wallet checkout only.');
+  });
+
   it('resolves the CommonJS entry points', () => {
     const root = require(packageNames.root);
     const client = require(packageNames.client);

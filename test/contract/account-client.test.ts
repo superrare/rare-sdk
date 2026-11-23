@@ -426,36 +426,6 @@ describe('account authentication over HTTP', () => {
 
   });
 
-  it('uses one payment entry for a digital checkout and reads server-owned card capabilities', async () => {
-    const storage = createMemoryAccountSessionStore();
-    await storage.set(session());
-    const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
-    const preparationId = '11111111-1111-4111-8111-111111111111';
-    const preparation: import('../../src/sdk/types/cart-api.js').CartCheckoutPreparation = {
-      schemaVersion: 1, chainId: 11155111n, cartAddress: rare.contracts.cart ?? '0x0000000000000000000000000000000000000000',
-      preparedAt: '2026-11-02T00:00:00Z', expiresAt: '2026-11-02T01:00:00Z', preparationReference: preparationId,
-      intent: { paymentCurrency: '0x0000000000000000000000000000000000000000', items: [{ kind: 'listing', listingDigest: `0x${'11'.repeat(32)}`, quantity: 1n }] },
-      paymentAmount: 1n, fees: [], settlements: [], lines: [], route: { commands: '0x', inputs: [], routerValue: 0n },
-    };
-    handler = async (request, response, body) => {
-      const url = new URL(request.url ?? '', origin);
-      if (request.method === 'GET') {
-        expect(url.pathname).toBe('/v1/cart/checkout/coinflow/config');
-        expect(url.searchParams.get('chainId')).toBe('11155111');
-        reply(response, { data: { enabled: false, paymentCurrency: null, minimumCents: 1050, maximumCentsExclusive: 500000 } });
-      } else {
-        expect(url.pathname).toBe('/v1/cart/checkout/coinflow');
-        expect(request.headers.authorization).toBe('Bearer access-1');
-        expect(request.headers['idempotency-key']).toBe(preparationId);
-        expect(JSON.parse(body)).toEqual({ preparationReference: preparationId, email: 'buyer@example.com' });
-        reply(response, { error: 'captured' }, 409);
-      }
-    };
-    expect(await rare.cart.checkout.paymentMethods()).toEqual({ enabled: false, paymentCurrency: null, minimumCents: 1050, maximumCentsExclusive: 500000 });
-    await expect(rare.cart.checkout.payment({ method: 'card', preparation, email: 'buyer@example.com' })).rejects.toMatchObject({ status: 409 });
-    expect(rare.cart.checkout).not.toHaveProperty('coinflow');
-  });
-
   it('reads backend-created purchase chat destinations and participant-scoped cards without an insertion method', async () => {
     const storage = createMemoryAccountSessionStore();
     await storage.set(session());
@@ -479,7 +449,7 @@ describe('account authentication over HTTP', () => {
     expect(rare.messaging).not.toHaveProperty('attachPrintOrder');
   });
 
-  it('serializes print mint associations consistently for preview, authorization and card checkout', async () => {
+  it('serializes print mint associations consistently for preview and authorization', async () => {
     const storage = createMemoryAccountSessionStore();
     await storage.set(session());
     const rare = createRareClient({ publicClient: createPublicClient({ chain: sepolia, transport: http() }), apiBaseUrl: origin, sessionStore: storage });
@@ -498,13 +468,7 @@ describe('account authentication over HTTP', () => {
     };
     await expect(rare.cart.checkout.prepare(intent)).rejects.toMatchObject({ status: 409 });
     await expect(rare.cart.checkout.authorize({ ...intent, idempotencyKey: preparationId })).rejects.toMatchObject({ status: 409 });
-    const preparation: import('../../src/sdk/types/cart-api.js').CartCheckoutPreparation = {
-      schemaVersion: 1, chainId: 11155111n, cartAddress: rare.contracts.cart ?? '0x0000000000000000000000000000000000000000',
-      preparedAt: '2026-11-02T00:00:00Z', expiresAt: '2026-11-02T01:00:00Z', preparationReference: preparationId,
-      idempotencyKey: preparationId, intent, paymentAmount: 1n, fees: [], settlements: [], lines: [], route: { commands: '0x', inputs: [], routerValue: 0n },
-    };
-    await expect(rare.cart.checkout.payment({ method: 'card', preparation, email: 'buyer@example.com' })).rejects.toMatchObject({ status: 409 });
-    expect(requests).toHaveLength(3);
+    expect(requests).toHaveLength(2);
     for (const request of requests) expect(request).toEqual({
       paymentCurrency: intent.paymentCurrency,
       items: [{ kind: 'listing', listingDigest, quantity: '1' }],

@@ -276,50 +276,6 @@ export type CartCheckoutRecovery = Omit<AccountCheckoutRecoveryWire, 'orderId' |
   preparedPurchase?: CartApiPreparedPurchase;
 };
 
-export type CartPaymentRequest = {
-  method: 'card';
-  preparation: CartCheckoutPreparation;
-  email: string;
-};
-export type CartPaymentMethods = {
-  enabled: boolean;
-  paymentCurrency: Address | null;
-  minimumCents: number;
-  maximumCentsExclusive: number;
-  directCard?: { merchantId: string; env: 'sandbox' | 'prod' };
-};
-export type CartCardCharge = {
-  orderId: Hex;
-  idempotencyKey: string;
-  reviewedTotalCents: number;
-  card: {
-    token: string;
-    expMonth: string;
-    expYear: string;
-    bin?: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    address1: string;
-    city: string;
-    country: string;
-    state?: string;
-    zip?: string;
-  };
-};
-export type CartCardChargeResult =
-  | { status: 'pending' }
-  | { status: 'accepted'; paymentId: string }
-  | { status: 'declined' }
-  | { status: 'authentication_required'; challenge: { transactionId: string; url: string; creq: string } }
-  | { status: 'quote_changed'; totalCents: number };
-export type CartCardCheckout = {
-  checkoutJwtToken: string;
-  sessionKey: string;
-  config: { merchantId: string; env: 'sandbox' | 'prod' };
-  preparedPurchase: CartApiPreparedPurchase;
-};
-
 export type CartCheckoutFee = { label: string; currency: Address; amount: bigint };
 export type CartCheckoutSettlement = { currency: Address; amount: bigint };
 export type CartCheckoutQuoteEvidence = {
@@ -485,12 +441,6 @@ export type CartApiNamespace = {
     prepare: (input: string | CartDeliveryCheckout | CartQuoteReference) => Promise<CartApiPreparedPurchase>;
     /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
     recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
-    payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;
-    paymentMethods: () => Promise<CartPaymentMethods>;
-    card: {
-      quote: (input: { email: string; subtotalCents: number }) => Promise<{ totalCents: number }>;
-      charge: (input: CartCardCharge) => Promise<CartCardChargeResult>;
-    };
   };
 };
 

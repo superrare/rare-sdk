@@ -4,7 +4,7 @@ import type { Account, Address, Hash, Hex, TransactionReceipt } from 'viem';
 import type {
   CartApiListingRoot, CartApiNamespace, CartApiPreparedPurchase, CartCheckoutIntent,
   CartCheckoutPreparation, CartListingIntent, CartDeliveryCheckout,
-  CartCheckoutQuote, CartCheckoutRecovery, CartCheckoutReceipt, CartCardCheckout,
+  CartCheckoutQuote, CartCheckoutRecovery, CartCheckoutReceipt,
 } from './cart-api.js';
 import type { CartRoutingNamespace } from './cart-routing.js';
 import type { PurchaseEligibilityNamespace } from './eligibility.js';
@@ -96,13 +96,14 @@ export type CartCheckoutResult = {
   txHash: Hash; receipt: TransactionReceipt; approvalTxHash?: Hash; orderId: Hex; payer: Address;
   paymentCurrency: Address; paymentAmount: bigint; lineCount: number; actionCount: number;
 };
-export type CartPayParams = { quote: CartCheckoutQuote; onAttempt?: (attemptId: string) => void | Promise<void> } & (
-  | { method: 'wallet'; autoApprove?: boolean; onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void> }
-  | { method: 'card'; email: string; attemptId?: string }
-);
-export type CartPaymentStart =
-  | { method: 'wallet'; attemptId: string; purchase: CartPurchaseResult }
-  | { method: 'card'; attemptId: string; session: CartCardCheckout };
+export type CartPayParams = {
+  quote: CartCheckoutQuote;
+  method: 'wallet';
+  autoApprove?: boolean;
+  onAttempt?: (attemptId: string) => void | Promise<void>;
+  onAuthorized?: (purchase: CartApiPreparedPurchase) => void | Promise<void>;
+};
+export type CartPaymentStart = { method: 'wallet'; attemptId: string; purchase: CartPurchaseResult };
 export type CartPaymentResume = Pick<CartCheckoutRecovery, 'status' | 'orderId'> & { receipt?: CartCheckoutReceipt };
 
 export type CartPurchaseParams = { preparation: CartCheckoutPreparation; autoApprove?: boolean };
@@ -179,9 +180,6 @@ export type CartNamespace = {
     /** Authorizes a reviewed quote and reserves any required claims, without paying. */
     authorize: (input: CartCheckoutAuthorization) => Promise<CartApiPreparedPurchase>;
     prepare: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
-    payment: CartApiNamespace['checkout']['payment'];
-    paymentMethods: CartApiNamespace['checkout']['paymentMethods'];
-    card: CartApiNamespace['checkout']['card'];
     purchase: (params: CartPurchaseParams) => Promise<CartPurchaseResult>;
     execute: (params: CartCheckoutParams) => Promise<CartCheckoutResult>;
   };
