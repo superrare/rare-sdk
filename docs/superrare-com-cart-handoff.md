@@ -498,14 +498,6 @@ Do not generate a new key because a request timed out or the buyer retries.
 If the finalized total increases, the SDK rejects execution and requires a fresh
 review rather than silently raising the spending cap.
 
-For cards, call `rare.cart.checkout.payment({ method: 'card', preparation, email })`
-with the original preparation. Use `rare.cart.checkout.paymentMethods()` to read
-server-owned availability and amount limits. Digital and physical purchases use
-the same method. It returns the provider session and prepared Cart Order for the
-card UI. Card checkout requires USDC as its payment currency. Keep card setup
-and crypto execution under one checkout UI, and do not expose provider session
-credentials in logs.
-
 ## Read Cart orders and display fulfillment progress
 
 Use `rare.cart.orders.list({ page, perPage })` for `{ data, pagination }` pages,

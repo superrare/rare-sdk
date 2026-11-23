@@ -5,6 +5,9 @@ project follows semantic versioning.
 
 ## Unreleased
 
+- **Breaking:** remove Coinflow methods from the Cart SDK. For card checkout,
+  call Rare API from your application server. Wallet checkout uses the same SDK methods.
+
 - Check Cart payer balances before allowance approval, preventing durable ERC-20
   approvals for purchases the connected wallet cannot fund.
 - **Breaking:** replace implementation-shaped Cart Listing Root methods with
