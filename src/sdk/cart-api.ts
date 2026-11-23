@@ -256,6 +256,15 @@ export function createCartApiNamespace(
     }), 'Rare API did not return the saved checkout status.',
   );
 
+  const prepareDirectCard = (input: DirectCartCardInput) =>
+    getWrappedData<{ preparedPurchase: CartApiPreparedPurchaseWire }>(
+      protectedClient.POST('/v1/cart/checkout/coinflow', {
+        params: { query: { cartAddress: cartAddress(), chainId, paymentMode: 'direct' } },
+        headers: { 'idempotency-key': input.idempotencyKey },
+        body: 'quoteId' in input ? { quoteId: input.quoteId, email: input.email } : toWireCheckoutIntent(input),
+      }), 'Rare API did not return the direct card order.',
+    );
+
   const checkout = {
     receipt: async (orderId: Hex): Promise<CartCheckoutReceipt> => getWrappedData(
       client.GET('/v1/cart/orders/{orderId}/receipt', { params: { path: { orderId } } }),
@@ -332,6 +341,9 @@ export function createCartApiNamespace(
       'Rare API did not return card payment availability.',
     ),
     card: {
+      configuration: () => checkout.paymentMethods('direct'),
+      prepare: async (input: { quoteId: string; email: string; idempotencyKey: string }) =>
+        normalizePreparedPurchase((await prepareDirectCard(input)).preparedPurchase),
       quote: (input: { email: string; subtotalCents: number }) => getWrappedData<{ totalCents: number }>(
         protectedClient.POST('/v1/cart/checkout/coinflow/quote', { params: { query: { chainId } }, body: input }),
         'Rare API did not return the card total.',
@@ -363,13 +375,7 @@ export function createCartApiNamespace(
     wire: {
       prepare: prepareRequest,
       recover: recoverRequest,
-      prepareDirectCard: (input) => getWrappedData(
-        protectedClient.POST('/v1/cart/checkout/coinflow', {
-          params: { query: { cartAddress: cartAddress(), chainId, paymentMode: 'direct' } },
-          headers: { 'idempotency-key': input.idempotencyKey },
-          body: 'quoteId' in input ? { quoteId: input.quoteId, email: input.email } : toWireCheckoutIntent(input),
-        }), 'Rare API did not return the direct card order.',
-      ),
+      prepareDirectCard,
       sku: (sku) => getWrappedData(
         apiClient.GET('/v1/cart/skus/{sku}', { params: { path: { sku } } }),
         'Rare API did not return the Cart SKU.',
@@ -570,9 +576,8 @@ export function createCartCommerceClient(options: RareApiOptions & { chainId: Ca
       prepare: wire.prepare,
       recover: wire.recover,
       card: {
-        configuration: () => checkout.paymentMethods('direct'),
-        prepare: wire.prepareDirectCard,
         ...checkout.card,
+        prepare: wire.prepareDirectCard,
       },
     },
   };
