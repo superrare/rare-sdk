@@ -353,9 +353,11 @@ async function authorizeCartCheckout(
   if (delivery !== undefined && idempotencyKey === undefined) {
     throw new CartPreparationError('invalid_preparation', 'Delivery checkout requires its original idempotency key.');
   }
-  const preparedPurchase = await api.checkout.prepare(delivery === undefined || idempotencyKey === undefined
-    ? preparation.preparationReference
-    : { ...preparation.intent, delivery, idempotencyKey });
+  const preparedPurchase = await api.checkout.prepare(preparation.quote?.id !== undefined
+    ? { quoteId: preparation.quote.id, idempotencyKey }
+    : delivery === undefined || idempotencyKey === undefined
+      ? preparation.preparationReference
+      : { ...preparation.intent, delivery, idempotencyKey });
   if (preparedPurchase.executePurchase.order.paymentAmount > preparation.paymentAmount) {
     throw new CartPreparationError('quote_changed', 'The checkout total increased. Review a fresh quote before purchasing.');
   }

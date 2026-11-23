@@ -11,7 +11,7 @@ import { runPrintBatch } from './prints-batch-shell.js';
 import { validatePrintListingQuantityLimit } from './prints-core.js';
 import { validatePrintQuote, validatePrintFileInput, validatePrintMockupId } from './print-configuration-core.js';
 
-export function createPrintsNamespace(config: RareClientConfig, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
+export function createPrintsNamespace(config: Pick<RareClientConfig, 'apiBaseUrl' | 'apiFetch'>, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
   const publicClient = createApiClient(config.apiBaseUrl, config.apiFetch);
   const client = createApiClient(config.apiBaseUrl, authenticatedFetch ?? config.apiFetch);
   const page = async <T>(request: Promise<{ data?: SearchPageResponse<T> }>): Promise<SearchPageResponse<T>> => {

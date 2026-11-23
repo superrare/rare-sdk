@@ -21,6 +21,7 @@ import {
   CartRoutingCoreError,
   cartRoutingDefaultQuoteLifetimeMs,
   cartRoutingMaxCommands,
+  cartRoutingConversion,
   type CartRoutingPlan,
 } from './cart-routing-core.js';
 import type { CartRoutingQuoteResult } from './types/cart-routing.js';
@@ -157,6 +158,12 @@ export function buildKnownPoolCartRoutingResult(
     schemaVersion: 1, chain: plan.chain, chainId: plan.chainId, paymentCurrency: plan.paymentCurrency, mode: plan.mode,
     expectedPaymentInput: expected, maximumPaymentInput: maximum, directPaymentInput: plan.directPaymentInput,
     settlements: plan.settlements,
+    conversions: plan.foreignObligations.flatMap((obligation, index) => {
+      const conversion = compiled[index];
+      return conversion === undefined
+        ? []
+        : [cartRoutingConversion(plan, obligation, conversion.expectedInput, conversion.maximumInput)];
+    }),
     route: {
       commands: program.commands,
       inputs,

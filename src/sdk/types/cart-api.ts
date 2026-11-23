@@ -310,6 +310,8 @@ export type CartCardCharge = {
 export type CartCardChargeResult =
   | { status: 'pending' }
   | { status: 'accepted'; paymentId: string }
+  | { status: 'declined' }
+  | { status: 'authentication_required'; challenge: { transactionId: string; url: string; creq: string } }
   | { status: 'quote_changed'; totalCents: number };
 export type CartCardCheckout = {
   checkoutJwtToken: string;
@@ -329,8 +331,18 @@ export type CartCheckoutQuoteEvidence = {
   summary: string;
 };
 
-/** All amounts are in base units of currency. Converted charges are grouped. */
+/** All amounts are in base units of the payment currency. */
+export type CartQuoteItem = { sku: Hex; listingDigest: Hex; quantity: bigint; lineTotal: bigint };
+export type CartQuoteAdjustment = {
+  code: string; effect: 'CHARGE' | 'DISCOUNT'; amount: bigint; sku?: Hex; listingDigest?: Hex;
+};
+export type CartQuoteReference = { quoteId: string; idempotencyKey?: string };
+
 export type CartCheckoutQuote = {
+  id?: string;
+  totalKind?: 'EXACT' | 'MAXIMUM';
+  items?: readonly CartQuoteItem[];
+  adjustments?: readonly CartQuoteAdjustment[];
   currency: Address;
   total: bigint;
   expiresAt: string;
@@ -356,8 +368,10 @@ export type CartCheckoutPreparation = {
 };
 
 export type CartCheckoutPreviewWire = {
-  quote?: Omit<CartCheckoutQuote, 'total' | 'lines'> & {
+  quote?: Omit<CartCheckoutQuote, 'total' | 'lines' | 'items' | 'adjustments'> & {
     total: string;
+    items?: readonly (Omit<CartQuoteItem, 'quantity' | 'lineTotal'> & { quantity: string; lineTotal: string })[];
+    adjustments?: readonly (Omit<CartQuoteAdjustment, 'amount'> & { amount: string })[];
     lines: readonly { kind: CartCheckoutQuote['lines'][number]['kind']; amount: string }[];
   };
   preparationReference: string;
@@ -468,7 +482,7 @@ export type CartApiNamespace = {
   checkout: {
     receipt: (orderId: Hex) => Promise<CartCheckoutReceipt>;
     preview: (intent: CartCheckoutIntent) => Promise<CartCheckoutPreparation>;
-    prepare: (input: string | CartDeliveryCheckout) => Promise<CartApiPreparedPurchase>;
+    prepare: (input: string | CartDeliveryCheckout | CartQuoteReference) => Promise<CartApiPreparedPurchase>;
     /** Resolve the original attempt without signing, paying, or replacing an unknown order. */
     recover: (idempotencyKey: string) => Promise<CartCheckoutRecovery>;
     payment: (input: CartPaymentRequest) => Promise<CartCardCheckout>;

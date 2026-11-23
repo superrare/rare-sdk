@@ -4571,7 +4571,7 @@ export interface components {
         };
         CartCheckoutFinalizationRequest: {
             preparationReference: string;
-        } | components["schemas"]["CartDeliveryCheckoutRequest"];
+        } | { quoteId: string } | components["schemas"]["CartDeliveryCheckoutRequest"];
         CartDeliveryCheckoutRequest: {
             paymentCurrency: string;
             items: ({
@@ -4763,6 +4763,10 @@ export interface components {
             };
         };
         CartCheckoutQuote: {
+            id: string;
+            totalKind: "EXACT" | "MAXIMUM";
+            items?: { sku: string; listingDigest: string; quantity: string; lineTotal: string }[];
+            adjustments?: { code: string; effect: "CHARGE" | "DISCOUNT"; amount: string; sku?: string; listingDigest?: string }[];
             currency: string;
             total: string;
             /** Format: date-time */

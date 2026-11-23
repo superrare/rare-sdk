@@ -177,12 +177,19 @@ The package intentionally exposes only these supported entry points:
 | `@rareprotocol/rare-sdk` (or `./client`) | `createRareClient` + SDK namespaces |
 | `@rareprotocol/rare-sdk/contracts` | contract addresses + ABIs per chain |
 | `@rareprotocol/rare-sdk/utils` | public helpers |
-| `@rareprotocol/rare-sdk/data-access` | typed Rare API client and errors |
+| `@rareprotocol/rare-sdk/data-access` | typed Rare API client, server-side Cart commerce client, and errors |
 | `@rareprotocol/rare-sdk/wallet` | compatible viem wallet client for direct writes |
 
 Implementation modules, including planners, shell helpers, individual ABI
 files, and data-access internals, are private. Consumers should use only the
 documented root, `client`, `contracts`, `utils`, `data-access`, and `wallet` entry points.
+
+For server-side Cart checkout adapters, use `createCartCommerceClient` from
+`@rareprotocol/rare-sdk/data-access` with the Cart chain, contract address, and
+a request-scoped authenticated fetch. It provides listings, exact SKU reads,
+public print details, and Cart wallet and direct card checkout. Payment
+preparation and recovery return JSON order payloads for forwarding to clients.
+
 
 For direct viem writes outside SDK namespaces, `createRareWalletClient` from
 `@rareprotocol/rare-sdk/wallet` applies the same Reown wallet compatibility
