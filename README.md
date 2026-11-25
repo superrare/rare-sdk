@@ -1036,8 +1036,18 @@ their URLs in `print.images`. Every draft requires an explicit `chainId` and
 `print.sourceUniversalTokenId` attributes a creator-owned NFT and appears in
 `drop.metadata.sourceUniversalTokenId`. The SDK does not publish master download URLs.
 
-Use the seller's authenticated account session to find Cart listing roots for a
-published artwork:
+Use the seller's authenticated account session to find the signed roots for a
+Cart listing, including standalone prints and other listings without an NFT:
+
+```ts
+const { rootDigests } = await rare.cart.listing.getRoots(listingDigest);
+```
+
+The Cart client supplies the chain and Cart address. The lookup returns recorded
+root digests, regardless of their on-chain status. Canceling a root affects all
+listings it authorizes.
+
+To find published print listings by their source artwork instead:
 
 ```ts
 const { roots, individualListings } =

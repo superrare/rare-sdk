@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createPublicClient, http, zeroAddress } from 'viem';
 import { sepolia } from 'viem/chains';
+import { getCartAddress } from '../../src/sdk/contracts.js';
 import { createRareClient, type ArtworkPrintListingRoots } from '../../src/sdk/index.js';
 import { createMemoryAccountSessionStore } from '../../src/sdk/account-session-store.js';
 
@@ -29,6 +30,33 @@ async function createClient(apiFetch: typeof fetch) {
     publicClient: createPublicClient({ chain: sepolia, transport: http('http://127.0.0.1:1') }),
   });
 }
+
+describe('Cart listing roots by digest', () => {
+  it('uses the authenticated Cart deployment and requires no NFT identifier', async () => {
+    const cartAddress = getCartAddress('sepolia');
+    const data = { ...scope, cartAddress, listingDigest: digest, rootDigests: [rootDigest] };
+    const rare = await createClient(async (input, init) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      expect(url.pathname).toBe(`/v1/cart/listings/${digest}/roots`);
+      expect(url.searchParams.get('chainId')).toBe(scope.chainId);
+      expect(url.searchParams.get('cartAddress')).toBe(cartAddress);
+      expect(url.searchParams.has('universalTokenId')).toBe(false);
+      expect(request.headers.get('authorization')).toBe('Bearer print-access');
+      return Response.json({ data });
+    });
+
+    await expect(rare.cart.listing.getRoots(digest)).resolves.toEqual(data);
+  });
+
+  it('rejects a response for a different listing in the same deployment', async () => {
+    const rare = await createClient(async () => Response.json({
+      data: { ...scope, cartAddress: getCartAddress('sepolia'), listingDigest: rootDigest, rootDigests: [rootDigest] },
+    }));
+
+    await expect(rare.cart.listing.getRoots(digest)).rejects.toThrow('mismatched Cart listing roots');
+  });
+});
 
 describe('print listing roots', () => {
   it('uses the account session and returns digests suitable for wallet cancellation', async () => {

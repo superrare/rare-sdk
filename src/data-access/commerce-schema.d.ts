@@ -1903,7 +1903,7 @@ export interface paths {
         };
         /**
          * Find Cart listing roots for your published artwork prints
-         * @description Returns roots whose full membership consists of your published prints for this artwork, plus listings that need individual cancellation because an authorization belongs to a shared root or has no recorded root.
+         * @description Returns roots whose recorded members are all published prints for this artwork, plus listings that need individual cancellation because an authorization belongs to a recorded shared root or has no recorded root. Canceling a root affects every listing it authorizes.
          */
         get: {
             parameters: {

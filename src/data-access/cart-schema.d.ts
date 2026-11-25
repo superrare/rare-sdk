@@ -3279,6 +3279,133 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cart/listings/{listingDigest}/roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find recorded Cart roots for a listing you sell
+         * @description Looks up a Cart listing by its digest regardless of fulfillment type. Each returned digest identifies a signed root; canceling that root affects every listing it authorizes.
+         */
+        get: {
+            parameters: {
+                query: {
+                    chainId: string | number;
+                    cartAddress: string;
+                };
+                header?: never;
+                path: {
+                    listingDigest: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recorded roots for the seller’s Cart listing */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["CartListingRootsLookup"];
+                        };
+                    };
+                };
+                /** @description Invalid Cart request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart account authentication is required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Commerce request body read timed out */
+                408: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart request conflicts with current state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Commerce request exceeds the request byte budget */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart request cannot be executed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart request failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+                /** @description Cart dependency is unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CartErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cart/listings/{listingDigest}/invalidate": {
         parameters: {
             query?: never;
@@ -4231,6 +4358,13 @@ export interface components {
                 /** @enum {string} */
                 type: "TOKEN_CREATOR";
             };
+        };
+        CartListingRootsLookup: {
+            chainId: string | number;
+            cartAddress: string;
+            seller: string;
+            listingDigest: string;
+            rootDigests: string[];
         };
         CartErrorResponse: {
             error: {
