@@ -125,6 +125,15 @@ export type CartApiListingRoot = {
   listingCount: number;
 };
 
+/** Signed roots recorded for a Cart listing, regardless of fulfillment type. */
+export type CartApiListingRoots = {
+  chainId: string;
+  cartAddress: Address;
+  seller: Address;
+  listingDigest: Hex;
+  rootDigests: Hex[];
+};
+
 export type CartApiListingSearchParams = {
   /** Include open Listings and gated Listings the authenticated account can purchase. */
   eligibility?: 'eligible';
@@ -431,6 +440,7 @@ export type CartApiNamespace = {
     preview: (intent: CartListingIntent) => Promise<CartListing[]>;
     search: (params?: CartApiListingSearchParams) => Promise<CartApiListingSearchResult>;
     get: (listingDigest: Hex) => Promise<CartApiListing>;
+    getRoots: (listingDigest: Hex, options?: RareAuthRequestOptions) => Promise<CartApiListingRoots>;
     invalidate: (listingDigest: Hex, invalidatedAt?: string | null) => Promise<CartApiListing>;
     publishPrintPreparations: (preparationIds: string[], artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;
     publish: (intent: CartListingIntent, artifact: CartListingRootArtifact & { signature: Hex }) => Promise<CartApiListingRoot>;

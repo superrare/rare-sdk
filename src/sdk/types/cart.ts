@@ -160,6 +160,7 @@ export type CartNamespace = {
     };
     search: CartApiNamespace['listing']['search'];
     get: CartApiNamespace['listing']['get'];
+    getRoots: CartApiNamespace['listing']['getRoots'];
     invalidate: CartApiNamespace['listing']['invalidate'];
     cancel: (listingDigest: Hex) => Promise<{ txHash: Hash; receipt: TransactionReceipt }>;
     cancelRoot: (rootDigest: Hex) => Promise<{ txHash: Hash; receipt: TransactionReceipt }>;

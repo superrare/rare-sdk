@@ -1894,6 +1894,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prints/listing-roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find Cart listing roots for your published artwork prints
+         * @description Returns roots whose recorded members are all published prints for this artwork, plus listings that need individual cancellation because an authorization belongs to a recorded shared root or has no recorded root. Canceling a root affects every listing it authorizes.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Canonical NFT identifier in chainId-contractAddress-tokenId format. */
+                    universalTokenId: components["schemas"]["UniversalTokenId"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Artwork print listing roots and individual listing references */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ArtworkPrintListingRoots"];
+                        };
+                    };
+                };
+                /** @description Invalid artwork identifier */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Account authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description Print dependency unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/prints/listings/prepare": {
         parameters: {
             query?: never;
@@ -3400,6 +3471,29 @@ export interface components {
          * @example 1-0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0-12345
          */
         UniversalTokenId: string;
+        ArtworkPrintListingRoots: {
+            roots: {
+                chainId: string;
+                cartAddress: string;
+                seller: string;
+                rootDigest: string;
+                listingDigests: string[];
+            }[];
+            individualListings: {
+                chainId: string;
+                cartAddress: string;
+                seller: string;
+                listingDigest: string;
+            }[];
+        };
+        ApiError: {
+            error: string;
+            code: string;
+            details?: {
+                field: string;
+                message: string;
+            }[];
+        };
     };
     responses: never;
     parameters: never;

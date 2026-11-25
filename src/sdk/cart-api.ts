@@ -1,7 +1,7 @@
 import { runPrintWrite } from './print-write-shell.js';
 import type { RareAuthRequestOptions } from './types/account.js';
 import { cartCatalogPage } from './cart-pagination-core.js';
-import { getAddress, isAddress, isHex, type Address, type Hex } from 'viem';
+import { getAddress, isAddress, isHash, isHex, type Address, type Hex } from 'viem';
 import { createCartApiClient } from '../data-access/client.js';
 import type { RareApiOptions } from './api.js';
 import type {
@@ -19,6 +19,7 @@ import type {
   CartCheckoutIntentItem,
   CartApiListing,
   CartApiListingRoot,
+  CartApiListingRoots,
   CartApiListingSearchParams,
   CartApiListingSearchResult,
   CartApiNamespace,
@@ -188,6 +189,30 @@ export function createCartApiNamespace(
       client.GET(`/v1/cart/listings/${encodeURIComponent(listingDigest)}`, { params: { query: { chainId, cartAddress: cartAddress() } } }),
       'Rare API did not return the Cart Listing.',
     ),
+    getRoots: async (listingDigest: Hex, options: RareAuthRequestOptions = {}): Promise<CartApiListingRoots> => {
+      if (!isHash(listingDigest)) throw new Error('Provide a valid Cart listing digest.');
+      const deployment = cartAddress();
+      const roots = await getWrappedData<CartComponents['schemas']['CartListingRootsLookup']>(
+        authenticatedClient.GET('/v1/cart/listings/{listingDigest}/roots', {
+          params: { path: { listingDigest }, query: { chainId, cartAddress: deployment } },
+          signal: options.signal,
+        }),
+        'Rare API did not return the Cart listing roots.',
+      );
+      const cart = getAddress(roots.cartAddress);
+      if (String(roots.chainId) !== chainId || cart !== deployment ||
+          !isHash(roots.listingDigest) || roots.listingDigest.toLowerCase() !== listingDigest.toLowerCase() ||
+          !roots.rootDigests.every(isHash)) {
+        throw new Error('Rare API returned invalid or mismatched Cart listing roots.');
+      }
+      return {
+        chainId,
+        cartAddress: cart,
+        seller: getAddress(roots.seller),
+        listingDigest: roots.listingDigest,
+        rootDigests: roots.rootDigests,
+      };
+    },
     invalidate: async (listingDigest: Hex, invalidatedAt?: string | null): Promise<CartApiListing> => getWrappedData(
       protectedClient.POST(`/v1/cart/listings/${encodeURIComponent(listingDigest)}/invalidate`, {
         params: { query: { chainId, cartAddress: cartAddress() } },

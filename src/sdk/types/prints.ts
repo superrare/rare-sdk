@@ -1,7 +1,7 @@
 import type { RareAuthRequestOptions } from './account.js';
 import type { paths } from '../../data-access/commerce-schema.js';
 import type { CartListingRootArtifact } from './cart.js';
-import type { Hex } from 'viem';
+import type { Address, Hex } from 'viem';
 import type { SearchPageResponse } from '../api.js';
 
 export type PrintQuoteInput = paths['/v1/prints/estimates']['post']['requestBody']['content']['application/json'];
@@ -31,6 +31,17 @@ export type PrintMockup = paths['/v1/prints/mockups/{id}']['get']['responses'][2
 export type PrintProduct = paths['/v1/prints/products/{id}']['get']['responses'][200]['content']['application/json']['data'];
 /** Request cancellation is separate from the product identifier and response. */
 export type PrintProductRequestOptions = { signal?: AbortSignal };
+
+type PrintListingScope = {
+  chainId: string;
+  cartAddress: Address;
+  seller: Address;
+};
+/** Root digests can be passed to Cart cancelRoot for the matching seller and deployment. */
+export type ArtworkPrintListingRoots = {
+  roots: (PrintListingScope & { rootDigest: Hex; listingDigests: Hex[] })[];
+  individualListings: (PrintListingScope & { listingDigest: Hex })[];
+};
 
 export type SignedPrintListingArtifact = CartListingRootArtifact & { signature: Hex };
 export type PrintBatchItem<T> = { key: string; input: T };
@@ -89,6 +100,7 @@ export type PrintsNamespace = {
   options: { configure: PrintConfigureOperation };
   listings: {
     prepare: PrintPrepareOperation;
+    rootsForArtwork: (universalTokenId: string, options?: RareAuthRequestOptions) => Promise<ArtworkPrintListingRoots>;
     getPreparation: (id: string, options?: RareAuthRequestOptions) => Promise<PrintListingPreparation>;
   };
 };

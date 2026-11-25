@@ -221,6 +221,7 @@ export function createCartNamespace(
       publish: publishListing,
       search: api.listing.search,
       get: api.listing.get,
+      getRoots: api.listing.getRoots,
       invalidate: api.listing.invalidate,
       cancel(listingDigest) { return writeSimple('cancelListing', [listingDigest]); },
       cancelRoot(rootDigest) { return writeSimple('cancelListingRoot', [rootDigest]); },

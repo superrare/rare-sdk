@@ -8,7 +8,7 @@ import { createPrintDropRequest, createPrintListingRequest, retainPrintIdentifie
 import { runPrintWrite } from './print-write-shell.js';
 import { isPrintBatch, printBatchInputDigest, printBatchItems } from './prints-batch-core.js';
 import { runPrintBatch } from './prints-batch-shell.js';
-import { validatePrintListingQuantityLimit } from './prints-core.js';
+import { normalizeArtworkPrintListingRoots, validatePrintListingQuantityLimit } from './prints-core.js';
 import { validatePrintQuote, validatePrintFileInput, validatePrintMockupId } from './print-configuration-core.js';
 
 export function createPrintsNamespace(config: Pick<RareClientConfig, 'apiBaseUrl' | 'apiFetch'>, authenticatedFetch?: typeof globalThis.fetch): PrintsNamespace {
@@ -98,6 +98,11 @@ export function createPrintsNamespace(config: Pick<RareClientConfig, 'apiBaseUrl
     options: { configure },
     listings: {
       prepare,
+      rootsForArtwork: async (universalTokenId, options = {}) => normalizeArtworkPrintListingRoots(
+        await data(client.GET('/v1/prints/listing-roots', {
+          params: { query: { universalTokenId } }, signal: options.signal,
+        })),
+      ),
       getPreparation: (id, options = {}) => data(client.GET('/v1/prints/listings/preparations/{id}', {
         params: { path: { id } }, signal: options.signal,
       })),

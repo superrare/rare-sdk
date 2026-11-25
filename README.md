@@ -1036,6 +1036,30 @@ their URLs in `print.images`. Every draft requires an explicit `chainId` and
 `print.sourceUniversalTokenId` attributes a creator-owned NFT and appears in
 `drop.metadata.sourceUniversalTokenId`. The SDK does not publish master download URLs.
 
+Use the seller's authenticated account session to find the signed roots for a
+Cart listing, including standalone prints and other listings without an NFT:
+
+```ts
+const { rootDigests } = await rare.cart.listing.getRoots(listingDigest);
+```
+
+The Cart client supplies the chain and Cart address. The lookup returns recorded
+root digests, regardless of their on-chain status. Canceling a root affects all
+listings it authorizes.
+
+To find published print listings by their source artwork instead:
+
+```ts
+const { roots, individualListings } =
+  await rare.prints.listings.rootsForArtwork(universalTokenId);
+```
+
+Each returned root contains its signed digest, seller, Cart deployment, and
+listing digests. Use a Cart client configured for that deployment and seller
+when calling `rare.cart.listing.cancelRoot(rootDigest)`. An entry in
+`individualListings` requires per-listing cancellation because it also has an
+authorization under a shared root or has no recorded root.
+
 Prepare seller terms with `rare.prints.listings.prepare`, then call
 `rare.cart.listing.publish({ printPreparations: preparation })` to sign and publish the frozen
 terms. This helper checks the chain, configured Cart contract, seller, and Listing
