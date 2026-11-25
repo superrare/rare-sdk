@@ -1,6 +1,7 @@
+import type { paths } from '../data-access/commerce-schema.js';
 import { getAddress, isAddress, isHex } from 'viem';
 import type { CartListing } from './types/cart.js';
-import type { PreparePrintListing, PrintListingPreparation } from './types/prints.js';
+import type { ArtworkPrintListingRoots, PreparePrintListing, PrintListingPreparation } from './types/prints.js';
 export function validatePrintListingQuantityLimit(input: Pick<PreparePrintListing, 'maxQuantityPerCheckout'>): { valid: true } | { valid: false; message: string } {
   const quantity = input.maxQuantityPerCheckout ?? '1';
   if (typeof quantity !== 'string' || !/^[1-9][0-9]*$/u.test(quantity) || quantity.length > 4 || BigInt(quantity) > 1000n) {
@@ -10,8 +11,8 @@ export function validatePrintListingQuantityLimit(input: Pick<PreparePrintListin
 }
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-const hex = (value: unknown) => {
-  if (typeof value !== 'string' || !isHex(value) || value.length !== 66) throw new Error('Print preparation contains an invalid digest.');
+const hex = (value: unknown, message = 'Print preparation contains an invalid digest.') => {
+  if (typeof value !== 'string' || !isHex(value) || value.length !== 66) throw new Error(message);
   return value;
 };
 const address = (value: unknown) => {
@@ -50,4 +51,26 @@ export function parsePrintListingTerms(preparation: PrintListingPreparation): { 
     paymentRecipient: address(value.paymentRecipient), splits,
   };
   return { dropId: snapshot.dropId, deadline: integer(snapshot.intent.deadline), listing };
+}
+
+type ArtworkPrintListingRootsWire = paths['/v1/prints/listing-roots']['get']['responses'][200]['content']['application/json']['data'];
+
+const listingDigest = (value: string) => hex(value, 'Rare API returned an invalid Cart digest.');
+
+export function normalizeArtworkPrintListingRoots(value: ArtworkPrintListingRootsWire): ArtworkPrintListingRoots {
+  return {
+    roots: value.roots.map(root => ({
+      chainId: root.chainId,
+      cartAddress: getAddress(root.cartAddress),
+      seller: getAddress(root.seller),
+      rootDigest: listingDigest(root.rootDigest),
+      listingDigests: root.listingDigests.map(listingDigest),
+    })),
+    individualListings: value.individualListings.map(listing => ({
+      chainId: listing.chainId,
+      cartAddress: getAddress(listing.cartAddress),
+      seller: getAddress(listing.seller),
+      listingDigest: listingDigest(listing.listingDigest),
+    })),
+  };
 }
